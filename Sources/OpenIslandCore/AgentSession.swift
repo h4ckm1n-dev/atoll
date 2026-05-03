@@ -165,6 +165,12 @@ public struct PermissionRequest: Equatable, Identifiable, Codable, Sendable {
     public var secondaryActionTitle: String
     public var toolName: String?
     public var toolUseID: String?
+    /// Raw `tool_input` JSON from the agent's PreToolUse hook, kept around
+    /// so the approval card can render an inline diff preview for
+    /// file-mutating tools without re-parsing the transcript. Optional
+    /// because not every approval carries a structured tool input (e.g.
+    /// Codex Bash approvals).
+    public var toolInput: CodexHookJSONValue?
     public var suggestedUpdates: [ClaudePermissionUpdate]
     public var requiresTerminalApproval: Bool
 
@@ -177,6 +183,7 @@ public struct PermissionRequest: Equatable, Identifiable, Codable, Sendable {
         secondaryActionTitle: String = "Deny",
         toolName: String? = nil,
         toolUseID: String? = nil,
+        toolInput: CodexHookJSONValue? = nil,
         suggestedUpdates: [ClaudePermissionUpdate] = [],
         requiresTerminalApproval: Bool = false
     ) {
@@ -188,6 +195,7 @@ public struct PermissionRequest: Equatable, Identifiable, Codable, Sendable {
         self.secondaryActionTitle = secondaryActionTitle
         self.toolName = toolName
         self.toolUseID = toolUseID
+        self.toolInput = toolInput
         self.suggestedUpdates = suggestedUpdates
         self.requiresTerminalApproval = requiresTerminalApproval
     }

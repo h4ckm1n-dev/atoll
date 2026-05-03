@@ -19,7 +19,7 @@ private struct ContentHeightKey: PreferenceKey {
 
 /// Auto-height container: renders content directly (auto-sizing).
 /// When content exceeds maxHeight, wraps in ScrollView at fixed maxHeight.
-private struct AutoHeightScrollView<Content: View>: View {
+struct AutoHeightScrollView<Content: View>: View {
     let maxHeight: CGFloat
     @ViewBuilder let content: () -> Content
     @State private var contentHeight: CGFloat = 0
@@ -1397,6 +1397,17 @@ private struct IslandSessionRow: View {
         }
     }
 
+    /// Inline diff to show in the approval card, or nil when the requested
+    /// tool isn't a recognized file mutator (Edit / Write / MultiEdit /
+    /// apply_patch). When nil, the card falls back to the legacy
+    /// command-preview block.
+    private var approvalToolDiff: ToolDiff? {
+        ToolDiffExtractor.diff(
+            toolName: session.permissionRequest?.toolName,
+            toolInput: session.permissionRequest?.toolInput
+        )
+    }
+
     @ViewBuilder
     private var actionableBody: some View {
         switch session.phase {
@@ -1424,31 +1435,35 @@ private struct IslandSessionRow: View {
                     .foregroundStyle(.orange)
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text(commandPreviewText)
-                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .fixedSize(horizontal: false, vertical: true)
+            if let toolDiff = approvalToolDiff {
+                InlineDiffView(diff: toolDiff)
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(commandPreviewText)
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .fixedSize(horizontal: false, vertical: true)
 
-                if let path = session.permissionRequest?.affectedPath.trimmedForNotificationCard,
-                   !path.isEmpty {
-                    Text(path)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.42))
-                        .lineLimit(1)
+                    if let path = session.permissionRequest?.affectedPath.trimmedForNotificationCard,
+                       !path.isEmpty {
+                        Text(path)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.42))
+                            .lineLimit(1)
+                    }
                 }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color(red: 0.11, green: 0.08, blue: 0.03))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(.orange.opacity(0.18))
+                )
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color(red: 0.11, green: 0.08, blue: 0.03))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(.orange.opacity(0.18))
-            )
 
             HStack(spacing: 8) {
                 Button("No") { onApprove?(.deny) }

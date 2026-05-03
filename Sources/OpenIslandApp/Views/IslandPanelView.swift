@@ -741,6 +741,10 @@ struct IslandPanelView: View {
                     onReply: TerminalTextSender.canReply(to: session, enabled: model.completionReplyEnabled)
                         ? { model.replyToSession(session, text: $0) } : nil,
                     contextUsage: model.contextUsageRegistry.usage(for: session.id),
+                    planState: model.planModeRegistry.plan(for: session.id),
+                    onTogglePlanStep: { stepID in
+                        model.planModeRegistry.toggleCheck(sessionID: session.id, stepID: stepID)
+                    },
                     onJump: { model.jumpToSession(session) }
                 )
 
@@ -771,6 +775,10 @@ struct IslandPanelView: View {
                         onReply: TerminalTextSender.canReply(to: session, enabled: model.completionReplyEnabled)
                             ? { model.replyToSession(session, text: $0) } : nil,
                         contextUsage: model.contextUsageRegistry.usage(for: session.id),
+                    planState: model.planModeRegistry.plan(for: session.id),
+                    onTogglePlanStep: { stepID in
+                        model.planModeRegistry.toggleCheck(sessionID: session.id, stepID: stepID)
+                    },
                         onJump: { model.jumpToSession(session) },
                         onDismiss: session.isRemote ? { model.dismissSession(session.id) } : nil
                     )
@@ -1200,6 +1208,9 @@ private struct IslandSessionRow: View {
     var onAnswer: ((QuestionPromptResponse) -> Void)?
     var onReply: ((String) -> Void)?
     var contextUsage: ContextUsage? = nil
+    var planState: PlanState? = nil
+    var onTogglePlanStep: ((String) -> Void)? = nil
+    @State private var planExpanded: Bool = false
     let onJump: () -> Void
     var onDismiss: (() -> Void)?
 
@@ -1262,6 +1273,10 @@ private struct IslandSessionRow: View {
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(activityColor(for: presence).opacity(0.94))
                             .lineLimit(1)
+                    }
+
+                    if let planState, session.phase != .waitingForApproval {
+                        planDisclosure(state: planState)
                     }
 
                     if showsExpandedContent,
@@ -1408,6 +1423,75 @@ private struct IslandSessionRow: View {
         )
     }
 
+    /// Pre-approval plan checklist parsed from the ExitPlanMode tool's
+    /// `plan` markdown. Returned only when the current approval is for
+    /// ExitPlanMode itself; otherwise nil and the regular approval body
+    /// renders.
+    private var approvalPlanState: PlanState? {
+        guard session.permissionRequest?.toolName == "ExitPlanMode",
+              case let .object(fields) = session.permissionRequest?.toolInput ?? .null,
+              case let .string(planMarkdown) = fields["plan"] ?? .null else {
+            return nil
+        }
+        let steps = PlanModeParser.parse(planMarkdown)
+        guard !steps.isEmpty else { return nil }
+        return PlanState(steps: steps)
+    }
+
+    /// Compact plan-progress button that expands into a full interactive
+    /// checklist when tapped. Visible during the running/completed phases
+    /// (after the user has approved the plan); the pre-approval body
+    /// renders the same data as a read-only review block instead.
+    @ViewBuilder
+    private func planDisclosure(state: PlanState) -> some View {
+        let total = state.steps.count
+        let checked = state.checkedIDs.count
+
+        VStack(alignment: .leading, spacing: 6) {
+            Button {
+                planExpanded.toggle()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: planExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                    Image(systemName: "list.bullet.rectangle")
+                        .font(.system(size: 10))
+                    Text("Plan (\(checked)/\(total))")
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                }
+                .foregroundStyle(checked == total && total > 0
+                    ? Color(red: 0.45, green: 0.85, blue: 0.55).opacity(0.92)
+                    : .white.opacity(0.72))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(.white.opacity(0.06), in: Capsule())
+            }
+            .buttonStyle(.plain)
+
+            if planExpanded {
+                AutoHeightScrollView(maxHeight: 240) {
+                    PlanChecklistView(
+                        state: state,
+                        interactive: true,
+                        onToggle: { onTogglePlanStep?($0) }
+                    )
+                    .padding(.vertical, 4)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.black.opacity(0.32))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(.white.opacity(0.06))
+                )
+            }
+        }
+    }
+
     @ViewBuilder
     private var actionableBody: some View {
         switch session.phase {
@@ -1435,7 +1519,9 @@ private struct IslandSessionRow: View {
                     .foregroundStyle(.orange)
             }
 
-            if let toolDiff = approvalToolDiff {
+            if let planState = approvalPlanState {
+                planApprovalBody(planState)
+            } else if let toolDiff = approvalToolDiff {
                 InlineDiffView(diff: toolDiff)
             } else {
                 VStack(alignment: .leading, spacing: 8) {
@@ -1488,6 +1574,39 @@ private struct IslandSessionRow: View {
                 replyFallbackInput
             }
         }
+    }
+
+    /// Pre-approval plan body — read-only checklist showing the plan
+    /// structure so the user can scan it before approving. Once approved
+    /// (state moves out of waitingForApproval), the same plan reappears
+    /// as an interactive checklist via the row's plan disclosure.
+    private func planApprovalBody(_ state: PlanState) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "list.bullet.rectangle")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.white.opacity(0.65))
+                Text("Plan (\(state.steps.count) steps)")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.75))
+            }
+
+            AutoHeightScrollView(maxHeight: 240) {
+                PlanChecklistView(state: state, interactive: false)
+                    .padding(.vertical, 4)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.black.opacity(0.32))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(.white.opacity(0.06))
+        )
     }
 
     // MARK: - Question action area

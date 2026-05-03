@@ -372,7 +372,24 @@ final class AppModel {
         return ProjectColorRegistry(storeURL: supportDir.appendingPathComponent("project-colors.json"))
     }()
     let contextUsageRegistry = ContextUsageRegistry()
+    let planModeRegistry = PlanModeRegistry()
     private var _cachedStatusColors: [SessionPhase: Color] = [:]
+
+    /// When a session enters waitingForApproval with the ExitPlanMode tool,
+    /// extract the plan markdown from `tool_input.plan` and feed the plan
+    /// registry. Idempotent for identical plans (registry preserves prior
+    /// checkbox state when steps match).
+    private func capturePlanIfPresent(in event: AgentEvent) {
+        guard case let .permissionRequested(payload) = event else { return }
+        guard payload.request.toolName == "ExitPlanMode" else { return }
+        guard case let .object(fields) = payload.request.toolInput,
+              case let .string(planMarkdown) = fields["plan"] ?? .null else {
+            return
+        }
+        let steps = PlanModeParser.parse(planMarkdown)
+        guard !steps.isEmpty else { return }
+        planModeRegistry.recordPlan(sessionID: payload.sessionID, steps: steps)
+    }
 
     private func refreshContextUsageRegistry() {
         let activeIDs = Set(state.sessions.map(\.id))
@@ -1277,6 +1294,7 @@ final class AppModel {
         }
 
         state.apply(event)
+        capturePlanIfPresent(in: event)
         reconcileIslandSurfaceAfterStateChange()
         if ingress == .bridge {
             monitoring.markSessionAttached(for: event)

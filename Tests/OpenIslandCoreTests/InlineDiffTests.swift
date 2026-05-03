@@ -148,6 +148,27 @@ struct ToolDiffExtractorTests {
     }
 
     @Test
+    func multiFileApplyPatchIsRefused() throws {
+        // Adversarial: agent puts a benign +++ last so it wins display but
+        // earlier hunks already targeted a sensitive file. Refuse to preview.
+        let patch = """
+        --- a/.ssh/authorized_keys
+        +++ b/.ssh/authorized_keys
+        @@ -0,0 +1 @@
+        +attacker-pubkey
+        --- a/README.md
+        +++ b/README.md
+        @@ -1 +1 @@
+        -hi
+        +hello
+        """
+        let diff = try #require(ToolDiffExtractor.diff(toolName: "apply_patch", toolInput: obj(["patch": .string(patch)])))
+        #expect(diff.truncated == true)
+        #expect(diff.filePath == "(multi-file patch)")
+        #expect(diff.lines.isEmpty)
+    }
+
+    @Test
     func editTooLargeReturnsTruncatedDiff() throws {
         let huge = String(repeating: "x\n", count: ToolDiff.maxLinesPerSide + 100)
         let input = obj([

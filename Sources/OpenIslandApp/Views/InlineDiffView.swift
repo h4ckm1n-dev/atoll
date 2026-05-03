@@ -17,12 +17,19 @@ struct InlineDiffView: View {
         LightweightSyntaxHighlighter.language(forFilePath: diff.filePath)
     }
 
+    private var truncationMessage: String {
+        if diff.filePath == "(multi-file patch)" {
+            return "Multi-file patch detected. Open the terminal to review each affected file before approving — preview hidden to prevent filename spoofing."
+        }
+        return "Diff too large to preview (\(diff.additionCount) lines). Click Yes to apply, or open the file to review."
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             header
 
             if diff.truncated {
-                Text("Diff too large to preview (\(diff.additionCount) lines). Click Yes to apply, or open the file to review.")
+                Text(truncationMessage)
                     .font(.system(size: 11))
                     .foregroundStyle(.white.opacity(0.6))
                     .padding(.horizontal, Self.rowHorizontalPadding)
@@ -55,23 +62,36 @@ struct InlineDiffView: View {
     }
 
     private var header: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "doc.text.fill")
-                .font(.system(size: 10))
-                .foregroundStyle(.white.opacity(0.55))
-            Text(displayName(for: diff.filePath))
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.white.opacity(0.85))
-                .lineLimit(1)
-                .truncationMode(.middle)
+        let pathRisk = PathRiskClassifier.classify(diff.filePath)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Image(systemName: pathRisk.iconName)
+                    .font(.system(size: 10))
+                    .foregroundStyle(pathRisk.iconColor)
+                // Render the full path with middle truncation by AppKit.
+                // Pre-truncating to the last two components hid traversal
+                // targets like /Users/x/.ssh/authorized_keys behind a
+                // benign-looking ".ssh/authorized_keys" tail.
+                Text(diff.filePath)
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
 
-            Spacer(minLength: 6)
+                Spacer(minLength: 6)
 
-            if diff.additionCount > 0 {
-                stat(symbol: "+", count: diff.additionCount, tint: Color(red: 0.45, green: 0.85, blue: 0.55))
+                if diff.additionCount > 0 {
+                    stat(symbol: "+", count: diff.additionCount, tint: Color(red: 0.45, green: 0.85, blue: 0.55))
+                }
+                if diff.removalCount > 0 {
+                    stat(symbol: "−", count: diff.removalCount, tint: Color(red: 0.94, green: 0.46, blue: 0.46))
+                }
             }
-            if diff.removalCount > 0 {
-                stat(symbol: "−", count: diff.removalCount, tint: Color(red: 0.94, green: 0.46, blue: 0.46))
+
+            if let warning = pathRisk.warningMessage {
+                Text(warning)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Color.yellow.opacity(0.92))
             }
         }
         .padding(.horizontal, Self.rowHorizontalPadding)
@@ -85,15 +105,24 @@ struct InlineDiffView: View {
     }
 
     private func row(for line: DiffLine) -> some View {
-        HStack(alignment: .top, spacing: 0) {
+        let sanitized = DiffTextSanitizer.sanitize(line.text)
+        return HStack(alignment: .top, spacing: 0) {
             Text(prefix(for: line))
                 .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 .foregroundStyle(prefixColor(for: line))
                 .frame(width: Self.prefixWidth, alignment: .leading)
 
-            Text(LightweightSyntaxHighlighter.attribute(line.text, language: language))
+            Text(LightweightSyntaxHighlighter.attribute(sanitized.text, language: language))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if sanitized.hadHiddenCharacters {
+                Image(systemName: "eye.trianglebadge.exclamationmark")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.yellow.opacity(0.9))
+                    .help("This line contains hidden Unicode characters that have been replaced with visible placeholders. Review carefully before approving.")
+                    .padding(.leading, 4)
+            }
         }
         .padding(.horizontal, Self.rowHorizontalPadding)
         .padding(.vertical, Self.rowVerticalPadding)
@@ -124,15 +153,54 @@ struct InlineDiffView: View {
         }
     }
 
-    /// Trim the file path to a tail-friendly form so a deep nested path
-    /// still shows the filename. We keep the last two path components
-    /// (parent dir + filename) when possible.
-    private func displayName(for path: String) -> String {
-        let url = URL(fileURLWithPath: path)
-        let components = url.pathComponents.filter { $0 != "/" }
-        if components.count >= 2 {
-            return components.suffix(2).joined(separator: "/")
+}
+
+/// Classifies a `file_path` from a tool input into a risk band so the
+/// approval card can call out paths that traverse outside the user's
+/// home directory or contain `..` segments. Backstops the F1 hardening
+/// (full path display) by warning the user when the displayed path
+/// touches sensitive locations even if the rendering itself can't be
+/// spoofed.
+enum PathRiskClassifier {
+    struct Risk {
+        var iconName: String
+        var iconColor: Color
+        var warningMessage: String?
+    }
+
+    static let benign = Risk(
+        iconName: "doc.text.fill",
+        iconColor: .white.opacity(0.55),
+        warningMessage: nil
+    )
+
+    static func classify(_ path: String) -> Risk {
+        if path.isEmpty || path == "(patch)" {
+            return benign
         }
-        return url.lastPathComponent.isEmpty ? path : url.lastPathComponent
+        if containsDotDotTraversal(path) {
+            return Risk(
+                iconName: "exclamationmark.triangle.fill",
+                iconColor: .yellow,
+                warningMessage: "Path contains '..' traversal — verify the resolved target before approving."
+            )
+        }
+        if path.hasPrefix("/") && !isUnderUserHome(path) {
+            return Risk(
+                iconName: "exclamationmark.triangle.fill",
+                iconColor: .yellow,
+                warningMessage: "Writes outside your home directory — uncommon for project edits."
+            )
+        }
+        return benign
+    }
+
+    private static func containsDotDotTraversal(_ path: String) -> Bool {
+        path.split(separator: "/").contains(where: { $0 == ".." })
+    }
+
+    private static func isUnderUserHome(_ path: String) -> Bool {
+        let home = NSHomeDirectory()
+        return path == home || path.hasPrefix(home + "/")
     }
 }

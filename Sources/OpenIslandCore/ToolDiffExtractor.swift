@@ -98,6 +98,25 @@ public enum ToolDiffExtractor {
         guard let raw = string(fields["patch"]) ?? string(fields["diff"]) else {
             return nil
         }
+
+        // Multi-file patches let an attacker spoof the displayed filename:
+        // put a benign +++ header last (it wins under last-write-wins) while
+        // earlier hunks modify a sensitive file. Refuse to preview these and
+        // tell the user to review the patch in the terminal instead.
+        let plusHeaderCount = raw
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .filter { $0.hasPrefix("+++ ") }
+            .count
+        if plusHeaderCount > 1 {
+            return ToolDiff(
+                filePath: "(multi-file patch)",
+                lines: [],
+                additionCount: 0,
+                removalCount: 0,
+                truncated: true
+            )
+        }
+
         var lines: [DiffLine] = []
         var filePath: String? = nil
         for rawLine in raw.split(separator: "\n", omittingEmptySubsequences: false) {

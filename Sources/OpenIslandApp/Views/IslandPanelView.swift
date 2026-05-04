@@ -1423,19 +1423,42 @@ private struct IslandSessionRow: View {
         )
     }
 
-    /// Pre-approval plan checklist parsed from the ExitPlanMode tool's
-    /// `plan` markdown. Returned only when the current approval is for
-    /// ExitPlanMode itself; otherwise nil and the regular approval body
+    /// Pre-approval plan checklist parsed from the active tool input.
+    /// Recognizes both the native ExitPlanMode flow and skill-driven
+    /// plan writes (brainstorming + writing-plans skills writing
+    /// `docs/plans/*.md`); otherwise nil and the regular approval body
     /// renders.
     private var approvalPlanState: PlanState? {
-        guard session.permissionRequest?.toolName == "ExitPlanMode",
-              case let .object(fields) = session.permissionRequest?.toolInput ?? .null,
-              case let .string(planMarkdown) = fields["plan"] ?? .null else {
+        guard let toolName = session.permissionRequest?.toolName,
+              case let .object(fields) = session.permissionRequest?.toolInput ?? .null else {
             return nil
         }
+
+        let planMarkdown: String?
+        switch toolName {
+        case "ExitPlanMode":
+            planMarkdown = stringValue(in: fields, key: "plan")
+        case "Write":
+            guard let path = stringValue(in: fields, key: "file_path"),
+                  PlanFilePathClassifier.looksLikePlan(path) else {
+                return nil
+            }
+            planMarkdown = stringValue(in: fields, key: "content")
+        default:
+            return nil
+        }
+
+        guard let planMarkdown else { return nil }
         let steps = PlanModeParser.parse(planMarkdown)
         guard !steps.isEmpty else { return nil }
         return PlanState(steps: steps)
+    }
+
+    private func stringValue(in fields: [String: CodexHookJSONValue], key: String) -> String? {
+        if case let .string(value) = fields[key] ?? .null {
+            return value
+        }
+        return nil
     }
 
     /// Compact plan-progress button that expands into a full interactive

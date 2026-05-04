@@ -375,20 +375,53 @@ final class AppModel {
     let planModeRegistry = PlanModeRegistry()
     private var _cachedStatusColors: [SessionPhase: Color] = [:]
 
-    /// When a session enters waitingForApproval with the ExitPlanMode tool,
-    /// extract the plan markdown from `tool_input.plan` and feed the plan
-    /// registry. Idempotent for identical plans (registry preserves prior
-    /// checkbox state when steps match).
+    /// Captures a session's plan into `planModeRegistry` from any of the
+    /// flows that produce one:
+    ///   1. Native Claude Code plan mode — `ExitPlanMode` tool with the
+    ///      markdown carried in `tool_input.plan`.
+    ///   2. Skill-driven plans — the brainstorming skill (Write to
+    ///      `docs/plans/...-design.md`) and the writing-plans skill (Write
+    ///      to `docs/plans/...md`). These don't go through ExitPlanMode;
+    ///      we recognize them by the `file_path` shape of the Write tool
+    ///      and extract the plan from the file `content`.
+    /// Idempotent — the registry preserves prior checkbox state when the
+    /// step list is unchanged, so the same plan re-arriving (e.g. retry of
+    /// the brainstorming skill) doesn't lose progress.
     private func capturePlanIfPresent(in event: AgentEvent) {
         guard case let .permissionRequested(payload) = event else { return }
-        guard payload.request.toolName == "ExitPlanMode" else { return }
-        guard case let .object(fields) = payload.request.toolInput,
-              case let .string(planMarkdown) = fields["plan"] ?? .null else {
+        guard let toolName = payload.request.toolName,
+              case let .object(fields) = payload.request.toolInput else {
             return
         }
+
+        let planMarkdown: String?
+        switch toolName {
+        case "ExitPlanMode":
+            planMarkdown = string(in: fields, key: "plan")
+        case "Write":
+            // Skill-driven plan files: only treat the write as a plan when
+            // the file path looks plan-shaped, otherwise we'd flood the
+            // registry with arbitrary markdown writes.
+            guard let path = string(in: fields, key: "file_path"),
+                  PlanFilePathClassifier.looksLikePlan(path) else {
+                return
+            }
+            planMarkdown = string(in: fields, key: "content")
+        default:
+            return
+        }
+
+        guard let planMarkdown else { return }
         let steps = PlanModeParser.parse(planMarkdown)
         guard !steps.isEmpty else { return }
         planModeRegistry.recordPlan(sessionID: payload.sessionID, steps: steps)
+    }
+
+    private func string(in fields: [String: CodexHookJSONValue], key: String) -> String? {
+        if case let .string(value) = fields[key] ?? .null {
+            return value
+        }
+        return nil
     }
 
     private func refreshContextUsageRegistry() {

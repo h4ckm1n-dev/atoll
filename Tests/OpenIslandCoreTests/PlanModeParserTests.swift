@@ -116,3 +116,43 @@ struct PlanModeParserTests {
         #expect(PlanModeParser.parse("-foo") == [])
     }
 }
+
+struct PlanFilePathClassifierTests {
+    @Test
+    func docsPlansPathRecognized() {
+        #expect(PlanFilePathClassifier.looksLikePlan("docs/plans/2026-05-04-foo.md"))
+        #expect(PlanFilePathClassifier.looksLikePlan("/abs/path/docs/plans/x-design.md"))
+    }
+
+    @Test
+    func gsdPlanningRecognized() {
+        #expect(PlanFilePathClassifier.looksLikePlan(".planning/phase-1/PLAN.md"))
+        #expect(PlanFilePathClassifier.looksLikePlan("/repo/.planning/foo.md"))
+    }
+
+    @Test
+    func planSuffixRecognized() {
+        #expect(PlanFilePathClassifier.looksLikePlan("foo-plan.md"))
+        #expect(PlanFilePathClassifier.looksLikePlan("foo_plan.md"))
+        #expect(PlanFilePathClassifier.looksLikePlan("plan.md"))
+    }
+
+    @Test
+    func nonMarkdownIsNotAPlan() {
+        #expect(!PlanFilePathClassifier.looksLikePlan("docs/plans/foo.txt"))
+        #expect(!PlanFilePathClassifier.looksLikePlan("docs/plans/script.swift"))
+    }
+
+    @Test
+    func unrelatedMarkdownIsNotAPlan() {
+        #expect(!PlanFilePathClassifier.looksLikePlan("README.md"))
+        #expect(!PlanFilePathClassifier.looksLikePlan("docs/architecture.md"))
+        #expect(!PlanFilePathClassifier.looksLikePlan("CHANGELOG.md"))
+    }
+
+    @Test
+    func caseInsensitive() {
+        #expect(PlanFilePathClassifier.looksLikePlan("DOCS/PLANS/foo.md"))
+        #expect(PlanFilePathClassifier.looksLikePlan(".PLANNING/foo.md"))
+    }
+}

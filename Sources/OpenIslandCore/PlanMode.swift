@@ -16,6 +16,38 @@ public struct PlanStep: Equatable, Codable, Sendable, Identifiable {
     }
 }
 
+/// Classifies whether a `file_path` looks like a plan markdown that we
+/// should capture into the plan registry alongside the native ExitPlanMode
+/// flow. Covers the two skill-driven flows that produce plan files:
+///   - `superpowers:brainstorming` writes `docs/plans/YYYY-MM-DD-<topic>-design.md`
+///   - `superpowers:writing-plans` writes `docs/plans/YYYY-MM-DD-<topic>.md`
+/// Plus GSD-style `.planning/` paths and any markdown filename containing
+/// `plan`/`PLAN`. Conservative on purpose — false positives would feed
+/// unrelated markdown into the plan registry.
+public enum PlanFilePathClassifier {
+    public static func looksLikePlan(_ path: String) -> Bool {
+        let lower = path.lowercased()
+        guard lower.hasSuffix(".md") else { return false }
+
+        let components = lower.split(separator: "/").map(String.init)
+
+        // `docs/plans/...` or any directory named `plans`/`plan`/`.planning`.
+        if components.contains(where: { $0 == "plans" || $0 == "plan" || $0 == ".planning" }) {
+            return true
+        }
+
+        // Filename ending in `-plan.md`, `_plan.md`, or simply called `plan.md`/`PLAN.md`.
+        guard let filename = components.last else { return false }
+        if filename == "plan.md" {
+            return true
+        }
+        if filename.hasSuffix("-plan.md") || filename.hasSuffix("_plan.md") {
+            return true
+        }
+        return false
+    }
+}
+
 /// Parses the markdown body Claude Code submits via the ExitPlanMode tool
 /// into a flat ordered list of `PlanStep`. Recognized line shapes:
 /// - `## Heading` / `### Heading` → step at depth 0/1

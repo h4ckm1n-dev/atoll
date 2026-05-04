@@ -7,6 +7,12 @@ import OpenIslandCore
 /// can decide without switching back to the terminal.
 struct InlineDiffView: View {
     let diff: ToolDiff
+    let palette: ThemePalette
+
+    init(diff: ToolDiff, palette: ThemePalette = .mocha) {
+        self.diff = diff
+        self.palette = palette
+    }
 
     private static let maxBodyHeight: CGFloat = 240
     private static let rowVerticalPadding: CGFloat = 1
@@ -15,6 +21,10 @@ struct InlineDiffView: View {
 
     private var language: LightweightSyntaxHighlighter.Language? {
         LightweightSyntaxHighlighter.language(forFilePath: diff.filePath)
+    }
+
+    private var tokenColors: LightweightSyntaxHighlighter.TokenColors {
+        LightweightSyntaxHighlighter.TokenColors.from(palette: palette)
     }
 
     private var truncationMessage: String {
@@ -31,12 +41,12 @@ struct InlineDiffView: View {
             if diff.truncated {
                 Text(truncationMessage)
                     .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(palette.subtext0.swiftUIColor)
                     .padding(.horizontal, Self.rowHorizontalPadding)
             } else if diff.lines.isEmpty {
                 Text("(empty)")
                     .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(palette.overlay0.swiftUIColor)
                     .padding(.horizontal, Self.rowHorizontalPadding)
             } else {
                 AutoHeightScrollView(maxHeight: Self.maxBodyHeight) {
@@ -53,45 +63,41 @@ struct InlineDiffView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.black.opacity(0.32))
+                .fill(palette.crust.swiftUIColor.opacity(0.65))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(.white.opacity(0.06))
+                .strokeBorder(palette.surface0.swiftUIColor.opacity(0.55))
         )
     }
 
     private var header: some View {
-        let pathRisk = PathRiskClassifier.classify(diff.filePath)
+        let pathRisk = PathRiskClassifier.classify(diff.filePath, palette: palette)
         return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Image(systemName: pathRisk.iconName)
                     .font(.system(size: 10))
                     .foregroundStyle(pathRisk.iconColor)
-                // Render the full path with middle truncation by AppKit.
-                // Pre-truncating to the last two components hid traversal
-                // targets like /Users/x/.ssh/authorized_keys behind a
-                // benign-looking ".ssh/authorized_keys" tail.
                 Text(diff.filePath)
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(palette.text.swiftUIColor)
                     .lineLimit(1)
                     .truncationMode(.middle)
 
                 Spacer(minLength: 6)
 
                 if diff.additionCount > 0 {
-                    stat(symbol: "+", count: diff.additionCount, tint: Color(red: 0.45, green: 0.85, blue: 0.55))
+                    stat(symbol: "+", count: diff.additionCount, tint: palette.green.swiftUIColor)
                 }
                 if diff.removalCount > 0 {
-                    stat(symbol: "−", count: diff.removalCount, tint: Color(red: 0.94, green: 0.46, blue: 0.46))
+                    stat(symbol: "−", count: diff.removalCount, tint: palette.red.swiftUIColor)
                 }
             }
 
             if let warning = pathRisk.warningMessage {
                 Text(warning)
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(Color.yellow.opacity(0.92))
+                    .foregroundStyle(palette.yellow.swiftUIColor)
             }
         }
         .padding(.horizontal, Self.rowHorizontalPadding)
@@ -112,14 +118,14 @@ struct InlineDiffView: View {
                 .foregroundStyle(prefixColor(for: line))
                 .frame(width: Self.prefixWidth, alignment: .leading)
 
-            Text(LightweightSyntaxHighlighter.attribute(sanitized.text, language: language))
+            Text(LightweightSyntaxHighlighter.attribute(sanitized.text, language: language, colors: tokenColors))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
 
             if sanitized.hadHiddenCharacters {
                 Image(systemName: "eye.trianglebadge.exclamationmark")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Color.yellow.opacity(0.9))
+                    .foregroundStyle(palette.yellow.swiftUIColor)
                     .help("This line contains hidden Unicode characters that have been replaced with visible placeholders. Review carefully before approving.")
                     .padding(.leading, 4)
             }
@@ -139,16 +145,16 @@ struct InlineDiffView: View {
 
     private func prefixColor(for line: DiffLine) -> Color {
         switch line {
-        case .add:     return Color(red: 0.45, green: 0.85, blue: 0.55)
-        case .remove:  return Color(red: 0.94, green: 0.46, blue: 0.46)
-        case .context: return .white.opacity(0.35)
+        case .add:     return palette.green.swiftUIColor
+        case .remove:  return palette.red.swiftUIColor
+        case .context: return palette.overlay0.swiftUIColor
         }
     }
 
     private func rowBackground(for line: DiffLine) -> Color {
         switch line {
-        case .add:     return Color(red: 0.12, green: 0.30, blue: 0.16).opacity(0.55)
-        case .remove:  return Color(red: 0.32, green: 0.13, blue: 0.13).opacity(0.55)
+        case .add:     return palette.green.swiftUIColor.opacity(0.18)
+        case .remove:  return palette.red.swiftUIColor.opacity(0.20)
         case .context: return .clear
         }
     }
@@ -168,31 +174,33 @@ enum PathRiskClassifier {
         var warningMessage: String?
     }
 
-    static let benign = Risk(
-        iconName: "doc.text.fill",
-        iconColor: .white.opacity(0.55),
-        warningMessage: nil
-    )
+    static func benign(palette: ThemePalette) -> Risk {
+        Risk(
+            iconName: "doc.text.fill",
+            iconColor: palette.overlay1.swiftUIColor,
+            warningMessage: nil
+        )
+    }
 
-    static func classify(_ path: String) -> Risk {
+    static func classify(_ path: String, palette: ThemePalette) -> Risk {
         if path.isEmpty || path == "(patch)" {
-            return benign
+            return benign(palette: palette)
         }
         if containsDotDotTraversal(path) {
             return Risk(
                 iconName: "exclamationmark.triangle.fill",
-                iconColor: .yellow,
+                iconColor: palette.yellow.swiftUIColor,
                 warningMessage: "Path contains '..' traversal — verify the resolved target before approving."
             )
         }
         if path.hasPrefix("/") && !isUnderUserHome(path) {
             return Risk(
                 iconName: "exclamationmark.triangle.fill",
-                iconColor: .yellow,
+                iconColor: palette.yellow.swiftUIColor,
                 warningMessage: "Writes outside your home directory — uncommon for project edits."
             )
         }
-        return benign
+        return benign(palette: palette)
     }
 
     private static func containsDotDotTraversal(_ path: String) -> Bool {

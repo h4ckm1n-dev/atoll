@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 import Testing
 @testable import OpenIslandApp
+@testable import OpenIslandCore
 
 @MainActor
 struct LightweightSyntaxHighlighterTests {
@@ -18,25 +19,27 @@ struct LightweightSyntaxHighlighterTests {
         #expect(LightweightSyntaxHighlighter.language(forFilePath: "weird.unknown") == nil)
     }
 
+    private var colors: LightweightSyntaxHighlighter.TokenColors {
+        LightweightSyntaxHighlighter.TokenColors.from(palette: .mocha)
+    }
+
     @Test
     func returnsAttributedStringWithMonoFont() {
-        let attributed = LightweightSyntaxHighlighter.attribute("let a = 1", language: .swift)
+        let attributed = LightweightSyntaxHighlighter.attribute("let a = 1", language: .swift, colors: colors)
         // Sanity: same characters round-tripped.
         #expect(String(attributed.characters) == "let a = 1")
     }
 
     @Test
     func emptyInputReturnsEmptyAttributedString() {
-        let attributed = LightweightSyntaxHighlighter.attribute("", language: .swift)
+        let attributed = LightweightSyntaxHighlighter.attribute("", language: .swift, colors: colors)
         #expect(String(attributed.characters) == "")
     }
 
     @Test
     func unknownLanguageStillProducesValidOutput() {
-        // No keywords colored, but strings/numbers still highlighted via
-        // universal rules. Input must round-trip unchanged.
         let source = #"const x = "hello"; // 42"#
-        let attributed = LightweightSyntaxHighlighter.attribute(source, language: nil)
+        let attributed = LightweightSyntaxHighlighter.attribute(source, language: nil, colors: colors)
         #expect(String(attributed.characters) == source)
     }
 
@@ -48,7 +51,7 @@ struct LightweightSyntaxHighlighterTests {
             return a
         }
         """
-        let attributed = LightweightSyntaxHighlighter.attribute(source, language: .swift)
+        let attributed = LightweightSyntaxHighlighter.attribute(source, language: .swift, colors: colors)
         #expect(String(attributed.characters) == source)
     }
 }

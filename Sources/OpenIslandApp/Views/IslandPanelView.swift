@@ -745,6 +745,7 @@ struct IslandPanelView: View {
                     onTogglePlanStep: { stepID in
                         model.planModeRegistry.toggleCheck(sessionID: session.id, stepID: stepID)
                     },
+                    themePalette: model.themeManager.palette,
                     onJump: { model.jumpToSession(session) }
                 )
 
@@ -779,6 +780,7 @@ struct IslandPanelView: View {
                     onTogglePlanStep: { stepID in
                         model.planModeRegistry.toggleCheck(sessionID: session.id, stepID: stepID)
                     },
+                    themePalette: model.themeManager.palette,
                         onJump: { model.jumpToSession(session) },
                         onDismiss: session.isRemote ? { model.dismissSession(session.id) } : nil
                     )
@@ -1210,6 +1212,7 @@ private struct IslandSessionRow: View {
     var contextUsage: ContextUsage? = nil
     var planState: PlanState? = nil
     var onTogglePlanStep: ((String) -> Void)? = nil
+    var themePalette: ThemePalette = .mocha
     @State private var planExpanded: Bool = false
     let onJump: () -> Void
     var onDismiss: (() -> Void)?
@@ -1545,7 +1548,7 @@ private struct IslandSessionRow: View {
             if let planState = approvalPlanState {
                 planApprovalBody(planState)
             } else if let toolDiff = approvalToolDiff {
-                InlineDiffView(diff: toolDiff)
+                InlineDiffView(diff: toolDiff, palette: themePalette)
             } else {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(commandPreviewText)

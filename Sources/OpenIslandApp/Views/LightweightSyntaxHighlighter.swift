@@ -1,5 +1,6 @@
 import AppKit
 import Foundation
+import OpenIslandCore
 import SwiftUI
 
 /// Tiny cross-language regex highlighter for inline diff previews. Not a
@@ -10,22 +11,45 @@ import SwiftUI
 /// Language is detected from the file path's extension; unknown extensions
 /// fall back to the universal rule set (no keywords).
 enum LightweightSyntaxHighlighter {
-    enum TokenColor {
-        static let keyword = Color(red: 0.85, green: 0.40, blue: 0.79)
-        static let string = Color(red: 0.65, green: 0.86, blue: 0.50)
-        static let comment = Color(red: 0.55, green: 0.60, blue: 0.55)
-        static let number = Color(red: 0.93, green: 0.69, blue: 0.32)
-        static let plain = Color.white.opacity(0.92)
+    /// Per-token foreground colors. Drive these from the active
+    /// `ThemePalette` at the call site so theme switches recolor the
+    /// diff without re-rendering content. Catppuccin convention is
+    /// mauve for keywords, green for strings, overlay0 for comments,
+    /// peach for numbers, text for plain code.
+    struct TokenColors {
+        var keyword: Color
+        var string: Color
+        var comment: Color
+        var number: Color
+        var plain: Color
+
+        /// Builds a token palette from a `ThemePalette`. Call this once
+        /// per render pass (not per token) to keep `Color` allocation
+        /// out of the inner loop.
+        static func from(palette: ThemePalette) -> TokenColors {
+            TokenColors(
+                keyword: palette.mauve.swiftUIColor,
+                string: palette.green.swiftUIColor,
+                comment: palette.overlay0.swiftUIColor,
+                number: palette.peach.swiftUIColor,
+                plain: palette.text.swiftUIColor
+            )
+        }
     }
 
     /// Returns an `AttributedString` with monospaced font and per-token
-    /// foreground colors. Whitespace and unrecognized text use `plain`.
-    static func attribute(_ source: String, language: Language?) -> AttributedString {
+    /// foreground colors. Whitespace and unrecognized text use the
+    /// `plain` color from `colors`.
+    static func attribute(
+        _ source: String,
+        language: Language?,
+        colors: TokenColors
+    ) -> AttributedString {
         var attributed = AttributedString(source)
         attributed.font = .system(size: 11, design: .monospaced)
-        attributed.foregroundColor = TokenColor.plain
+        attributed.foregroundColor = colors.plain
 
-        for rule in rules(for: language) {
+        for rule in rules(for: language, colors: colors) {
             apply(rule: rule, to: &attributed, in: source)
         }
         return attributed
@@ -88,45 +112,29 @@ enum LightweightSyntaxHighlighter {
         }
     }
 
-    private static let universalStringRules: [Rule] = [
-        Rule(#""([^"\\\n]|\\.)*""#, color: TokenColor.string),
-        Rule(#"'([^'\\\n]|\\.)*'"#, color: TokenColor.string),
-    ].compactMap { $0 }
-
-    private static let universalNumberRule: Rule? = Rule(
-        #"\b\d+(\.\d+)?\b"#,
-        color: TokenColor.number
-    )
-
-    private static let lineCommentSlashSlash: Rule? = Rule(#"//[^\n]*"#, color: TokenColor.comment)
-    private static let lineCommentHash: Rule? = Rule(#"#[^\n]*"#, color: TokenColor.comment)
-    private static let lineCommentDashDash: Rule? = Rule(#"--[^\n]*"#, color: TokenColor.comment)
-    private static let blockCommentC: Rule? = Rule(
-        #"/\*[\s\S]*?\*/"#,
-        color: TokenColor.comment,
-        options: [.dotMatchesLineSeparators]
-    )
-
     /// Rules are applied in order; later rules override earlier ones for
     /// overlapping ranges, so put strings/comments last so they don't get
     /// recolored by keyword matching that happened first.
-    private static func rules(for language: Language?) -> [Rule] {
+    private static func rules(for language: Language?, colors: TokenColors) -> [Rule] {
         var rules: [Rule] = []
 
         if let language {
-            rules.append(contentsOf: keywordRules(for: language))
+            rules.append(contentsOf: keywordRules(for: language, color: colors.keyword))
         }
-        if let numberRule = universalNumberRule {
+        if let numberRule = Rule(#"\b\d+(\.\d+)?\b"#, color: colors.number) {
             rules.append(numberRule)
         }
-        rules.append(contentsOf: universalStringRules)
+        if let r1 = Rule(#""([^"\\\n]|\\.)*""#, color: colors.string) { rules.append(r1) }
+        if let r2 = Rule(#"'([^'\\\n]|\\.)*'"#, color: colors.string) { rules.append(r2) }
 
         switch language {
         case .swift, .typescript, .javascript, .rust, .go:
-            if let r = lineCommentSlashSlash { rules.append(r) }
-            if let r = blockCommentC { rules.append(r) }
+            if let r = Rule(#"//[^\n]*"#, color: colors.comment) { rules.append(r) }
+            if let r = Rule(#"/\*[\s\S]*?\*/"#, color: colors.comment, options: [.dotMatchesLineSeparators]) {
+                rules.append(r)
+            }
         case .python, .ruby, .shell:
-            if let r = lineCommentHash { rules.append(r) }
+            if let r = Rule(#"#[^\n]*"#, color: colors.comment) { rules.append(r) }
         case .generic, .none:
             // Be conservative: only treat // as comments when we know the
             // host language uses them (avoids breaking JSON values like
@@ -136,7 +144,7 @@ enum LightweightSyntaxHighlighter {
         return rules
     }
 
-    private static func keywordRules(for language: Language) -> [Rule] {
+    private static func keywordRules(for language: Language, color: Color) -> [Rule] {
         let keywords: [String]
         switch language {
         case .swift:
@@ -174,7 +182,7 @@ enum LightweightSyntaxHighlighter {
         }
 
         let pattern = "\\b(?:" + keywords.joined(separator: "|") + ")\\b"
-        guard let rule = Rule(pattern, color: TokenColor.keyword) else { return [] }
+        guard let rule = Rule(pattern, color: color) else { return [] }
         return [rule]
     }
 

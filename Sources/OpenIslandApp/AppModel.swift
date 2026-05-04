@@ -373,6 +373,7 @@ final class AppModel {
     }()
     let contextUsageRegistry = ContextUsageRegistry()
     let planModeRegistry = PlanModeRegistry()
+    let themeManager = ThemeManager()
     private var _cachedStatusColors: [SessionPhase: Color] = [:]
 
     /// Captures a session's plan into `planModeRegistry` from any of the

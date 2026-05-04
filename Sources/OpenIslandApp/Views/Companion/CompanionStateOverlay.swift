@@ -4,6 +4,7 @@ import OpenIslandCore
 
 struct CompanionStateOverlay: View {
     let state: CompanionState
+    var palette: ThemePalette = .mocha
 
     @State private var rotation: Double = 0
     @State private var pulseScale: CGFloat = 1
@@ -12,19 +13,19 @@ struct CompanionStateOverlay: View {
         ZStack(alignment: .bottomTrailing) {
             switch state {
             case .idle:
-                glyph("zzz", tint: .white.opacity(0.4))
+                glyph("zzz", tint: palette.overlay0.swiftUIColor)
             case .working:
-                glyph("gear", tint: .cyan.opacity(0.85))
+                glyph("gear", tint: palette.sapphire.swiftUIColor.opacity(0.92))
                     .rotationEffect(.degrees(rotation))
                     .onAppear { animateRotation() }
             case .waiting:
                 Circle()
-                    .fill(Color.orange)
+                    .fill(palette.peach.swiftUIColor)
                     .frame(width: 6, height: 6)
                     .scaleEffect(pulseScale)
                     .onAppear { animatePulse() }
             case .celebrating:
-                glyph("sparkles", tint: .yellow)
+                glyph("sparkles", tint: palette.yellow.swiftUIColor)
             }
         }
         .frame(width: 8, height: 8)

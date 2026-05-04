@@ -146,7 +146,7 @@ extension AppTheme {
 extension ProjectColor {
     /// Parse a `#RRGGBB` or `RRGGBB` hex string. Falls back to (0,0,0) on
     /// malformed input so a typo doesn't crash the renderer mid-frame.
-    static func fromHex(_ raw: String) -> ProjectColor {
+    public static func fromHex(_ raw: String) -> ProjectColor {
         var s = raw
         if s.hasPrefix("#") { s.removeFirst() }
         guard s.count == 6, let value = UInt32(s, radix: 16) else {

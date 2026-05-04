@@ -3,6 +3,7 @@ import OpenIslandCore
 
 struct ContextLeftBadge: View {
     let usage: ContextUsage
+    var palette: ThemePalette = .mocha
 
     static let barWidth: CGFloat = 18
     static let barHeight: CGFloat = 4
@@ -14,18 +15,18 @@ struct ContextLeftBadge: View {
     var body: some View {
         if usage.percentLeft < 1 {
             Circle()
-                .fill(Color.red)
+                .fill(palette.red.swiftUIColor)
                 .frame(width: 6, height: 6)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)
-                .background(Color.white.opacity(0.04), in: Capsule())
+                .background(palette.surface0.swiftUIColor.opacity(0.4), in: Capsule())
                 .accessibilityLabel("\(Int(usage.percentUsed.rounded()))% context used")
                 .allowsHitTesting(false)
         } else {
             HStack(spacing: 4) {
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(Color.white.opacity(0.12))
+                        .fill(palette.surface1.swiftUIColor.opacity(0.6))
                         .frame(width: Self.barWidth, height: Self.barHeight)
                     RoundedRectangle(cornerRadius: 2)
                         .fill(swiftUIColor(for: fillColor))
@@ -33,11 +34,11 @@ struct ContextLeftBadge: View {
                 }
                 Text("\(Int(usage.percentUsed.rounded()))%")
                     .font(.system(size: 8, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(.white.opacity(0.7))
+                    .foregroundStyle(palette.subtext0.swiftUIColor)
             }
             .padding(.horizontal, 4)
             .padding(.vertical, 1)
-            .background(Color.white.opacity(0.04), in: Capsule())
+            .background(palette.surface0.swiftUIColor.opacity(0.4), in: Capsule())
             .accessibilityLabel("\(Int(usage.percentUsed.rounded()))% context used")
             .allowsHitTesting(false)
         }
@@ -59,10 +60,10 @@ struct ContextLeftBadge: View {
 
     private func swiftUIColor(for fill: FillColor) -> Color {
         switch fill {
-        case .green: return .green
-        case .yellow: return .yellow
-        case .orange: return .orange
-        case .red: return .red
+        case .green:  return palette.green.swiftUIColor
+        case .yellow: return palette.yellow.swiftUIColor
+        case .orange: return palette.peach.swiftUIColor
+        case .red:    return palette.red.swiftUIColor
         }
     }
 }

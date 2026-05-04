@@ -374,19 +374,23 @@ struct AppearanceSettingsPane: View {
 
     // MARK: - Project colors
 
+    /// Catppuccin Mocha accents across the color wheel + three muted
+    /// overlays. Coupled to Mocha (not the active theme) so a workspace's
+    /// chosen color stays stable when the user switches themes — only
+    /// rendering through palette-aware helpers shifts.
     private static let projectColorPresets: [ProjectColor] = [
-        ProjectColor(red: 0.94, green: 0.40, blue: 0.40),  // red
-        ProjectColor(red: 0.96, green: 0.62, blue: 0.32),  // orange
-        ProjectColor(red: 0.95, green: 0.84, blue: 0.36),  // yellow
-        ProjectColor(red: 0.55, green: 0.85, blue: 0.45),  // green
-        ProjectColor(red: 0.40, green: 0.83, blue: 0.69),  // teal
-        ProjectColor(red: 0.36, green: 0.74, blue: 0.94),  // sky
-        ProjectColor(red: 0.45, green: 0.55, blue: 0.95),  // blue
-        ProjectColor(red: 0.65, green: 0.46, blue: 0.95),  // purple
-        ProjectColor(red: 0.92, green: 0.50, blue: 0.85),  // pink
-        ProjectColor(red: 0.78, green: 0.78, blue: 0.78),  // light gray
-        ProjectColor(red: 0.50, green: 0.50, blue: 0.50),  // mid gray
-        ProjectColor(red: 0.30, green: 0.30, blue: 0.30),  // dark gray
+        ProjectColor.fromHex("f38ba8"),  // red
+        ProjectColor.fromHex("fab387"),  // peach
+        ProjectColor.fromHex("f9e2af"),  // yellow
+        ProjectColor.fromHex("a6e3a1"),  // green
+        ProjectColor.fromHex("94e2d5"),  // teal
+        ProjectColor.fromHex("89dceb"),  // sky
+        ProjectColor.fromHex("89b4fa"),  // blue
+        ProjectColor.fromHex("cba6f7"),  // mauve
+        ProjectColor.fromHex("f5c2e7"),  // pink
+        ProjectColor.fromHex("9399b2"),  // overlay2
+        ProjectColor.fromHex("7f849c"),  // overlay1
+        ProjectColor.fromHex("6c7086"),  // overlay0
     ]
 
     @ViewBuilder

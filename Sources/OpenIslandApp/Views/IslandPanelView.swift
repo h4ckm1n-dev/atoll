@@ -462,7 +462,7 @@ struct IslandPanelView: View {
                                 )
                                 .matchedGeometryEffect(id: "island-icon", in: notchNamespace, isSource: true)
 
-                                CompanionStateOverlay(state: companionState)
+                                CompanionStateOverlay(state: companionState, palette: model.themeManager.palette)
                                     .offset(x: 2, y: 2)
                             }
                         } else {
@@ -1253,7 +1253,7 @@ private struct IslandSessionRow: View {
                                              tint: BadgeColors.terminal(terminalBadge, palette: themePalette).opacity(presence == .inactive ? 0.4 : 1.0))
                             }
                             if presence != .inactive, let usage = contextUsage {
-                                ContextLeftBadge(usage: usage)
+                                ContextLeftBadge(usage: usage, palette: themePalette)
                             }
                             compactBadge(session.spotlightAgeBadge, presence: presence)
                             if let onDismiss {

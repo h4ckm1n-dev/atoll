@@ -2,39 +2,41 @@ import SwiftUI
 import OpenIslandCore
 
 enum BadgeColors {
-    /// Distinct per-agent tint for the agent badge text. Picked to match the
-    /// agent's brand association where one is obvious; otherwise a stable
-    /// hash-friendly hue from the standard SwiftUI palette.
-    static func agent(_ tool: AgentTool) -> Color {
+    /// Distinct per-agent tint for the agent badge text. Picked to match
+    /// the agent's brand association where one is obvious (Claude=peach,
+    /// Codex=green, etc.) and remapped to the active `ThemePalette` so the
+    /// reconnaissable hue follows the theme: switching to Latte (light)
+    /// turns Claude's orange into Latte's peach, not raw `Color.orange`.
+    static func agent(_ tool: AgentTool, palette: ThemePalette = .mocha) -> Color {
         switch tool {
-        case .claudeCode: return Color.orange
-        case .codex:      return Color.green
-        case .cursor:     return Color.cyan
-        case .geminiCLI:  return Color.purple
-        case .openCode:   return Color.teal
-        case .qoder:      return Color.pink
-        case .qwenCode:   return Color.red
-        case .factory:    return Color.yellow
-        case .codebuddy:  return Color(red: 0.95, green: 0.55, blue: 0.85)  // hot pink
-        case .kimiCLI:    return Color(red: 0.55, green: 0.95, blue: 0.65)  // mint
+        case .claudeCode: return palette.peach.swiftUIColor
+        case .codex:      return palette.green.swiftUIColor
+        case .cursor:     return palette.sky.swiftUIColor
+        case .geminiCLI:  return palette.mauve.swiftUIColor
+        case .openCode:   return palette.teal.swiftUIColor
+        case .qoder:      return palette.pink.swiftUIColor
+        case .qwenCode:   return palette.red.swiftUIColor
+        case .factory:    return palette.yellow.swiftUIColor
+        case .codebuddy:  return palette.flamingo.swiftUIColor
+        case .kimiCLI:    return palette.lavender.swiftUIColor
         }
     }
 
-    /// Distinct per-terminal tint. Substring match on the terminal app/badge
-    /// name — falls back to neutral gray for unknowns.
-    static func terminal(_ name: String) -> Color {
+    /// Distinct per-terminal tint. Substring match on the terminal
+    /// app/badge name — falls back to overlay tone for unknowns.
+    static func terminal(_ name: String, palette: ThemePalette = .mocha) -> Color {
         let lower = name.lowercased()
-        if lower.contains("cmux") || lower.contains("tmux")     { return Color.green }
-        if lower.contains("ghostty")                            { return Color.purple }
-        if lower.contains("iterm")                              { return Color(red: 0.4, green: 0.7, blue: 1.0) }
-        if lower.contains("terminal")                           { return Color.white.opacity(0.85) }
-        if lower.contains("warp")                               { return Color.orange }
-        if lower.contains("wezterm")                            { return Color.red }
-        if lower.contains("zellij")                             { return Color.yellow }
-        if lower.contains("kaku")                               { return Color.pink }
-        if lower.contains("vs code") || lower.contains("vscode") { return Color.blue }
-        if lower.contains("cursor")                             { return Color.cyan }
-        if lower.contains("windsurf")                           { return Color.teal }
-        return Color.white.opacity(0.7)
+        if lower.contains("cmux") || lower.contains("tmux")     { return palette.green.swiftUIColor }
+        if lower.contains("ghostty")                            { return palette.mauve.swiftUIColor }
+        if lower.contains("iterm")                              { return palette.sapphire.swiftUIColor }
+        if lower.contains("terminal")                           { return palette.subtext1.swiftUIColor }
+        if lower.contains("warp")                               { return palette.peach.swiftUIColor }
+        if lower.contains("wezterm")                            { return palette.maroon.swiftUIColor }
+        if lower.contains("zellij")                             { return palette.yellow.swiftUIColor }
+        if lower.contains("kaku")                               { return palette.pink.swiftUIColor }
+        if lower.contains("vs code") || lower.contains("vscode") { return palette.blue.swiftUIColor }
+        if lower.contains("cursor")                             { return palette.sky.swiftUIColor }
+        if lower.contains("windsurf")                           { return palette.teal.swiftUIColor }
+        return palette.subtext0.swiftUIColor
     }
 }

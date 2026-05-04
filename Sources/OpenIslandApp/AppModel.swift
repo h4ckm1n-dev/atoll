@@ -30,11 +30,15 @@ final class AppModel {
     private static let ambientThemeOpacityDefaultsKey = "appearance.ambientTheme.opacity"
     private static let celebrationsEnabledDefaultsKey = "appearance.celebrations.enabled"
 
+    /// Defaults pulled from the Catppuccin Mocha palette so the phase
+    /// indicators match the active theme out of the box. Users can still
+    /// override per phase via Settings → Appearance → Status colors; the
+    /// override path stores hex in UserDefaults under `islandStatusColorsDefaultsKey`.
     static let defaultStatusColors: [SessionPhase: String] = [
-        .running: "#6E9FFF",
-        .waitingForApproval: "#FFB547",
-        .waitingForAnswer: "#FFD95A",
-        .completed: "#42E86B",
+        .running:            "#89b4fa", // Mocha blue
+        .waitingForApproval: "#fab387", // Mocha peach
+        .waitingForAnswer:   "#f9e2af", // Mocha yellow
+        .completed:          "#a6e3a1", // Mocha green
     ]
     private static let syntheticClaudeSessionPrefix = "claude-process:"
     private static let liveSessionStalenessWindow: TimeInterval = 15 * 60

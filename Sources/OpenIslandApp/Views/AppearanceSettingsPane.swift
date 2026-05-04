@@ -10,6 +10,21 @@ struct AppearanceSettingsPane: View {
 
     var body: some View {
         Form {
+            Section(lang.t("settings.theme.title")) {
+                Picker(lang.t("settings.theme.title"), selection: Binding(
+                    get: { model.themeManager.theme },
+                    set: { model.themeManager.setTheme($0) }
+                )) {
+                    ForEach(AppTheme.allCases, id: \.self) { theme in
+                        Text(theme.displayName).tag(theme)
+                    }
+                }
+                themePreviewRow(palette: model.themeManager.palette)
+                Text(lang.t("settings.theme.help"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             Section(lang.t("settings.appearance.mode")) {
                 Picker(lang.t("settings.appearance.mode"), selection: Binding(
                     get: { model.islandAppearanceMode },
@@ -370,6 +385,33 @@ struct AppearanceSettingsPane: View {
         case .blocks: lang.t("settings.appearance.pixelShape.blocks")
         case .custom: lang.t("settings.appearance.pixelShape.custom")
         }
+    }
+
+    /// 8-swatch row showing the active palette's notable accents so the
+    /// user can preview the flavor before committing. The swatches don't
+    /// react to taps — Picker above is the source of truth.
+    @ViewBuilder
+    private func themePreviewRow(palette: ThemePalette) -> some View {
+        HStack(spacing: 6) {
+            swatch(palette.base)
+            swatch(palette.surface0)
+            swatch(palette.text)
+            swatch(palette.green)
+            swatch(palette.yellow)
+            swatch(palette.peach)
+            swatch(palette.red)
+            swatch(palette.mauve)
+        }
+    }
+
+    private func swatch(_ color: ProjectColor) -> some View {
+        RoundedRectangle(cornerRadius: 4, style: .continuous)
+            .fill(color.swiftUIColor)
+            .frame(width: 18, height: 14)
+            .overlay(
+                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.06))
+            )
     }
 
     // MARK: - Project colors

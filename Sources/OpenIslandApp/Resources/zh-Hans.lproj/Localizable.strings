@@ -46,6 +46,8 @@
 
 /* Settings - Appearance */
 "settings.tab.appearance" = "个性化";
+"settings.theme.title" = "主题";
+"settings.theme.help" = "为通知岛外观、徽章、差异颜色和状态指示器选择 Catppuccin 配色家族。系统主题保留之前的外观。";
 "settings.appearance.mode" = "模式";
 "settings.appearance.mode.default" = "默认";
 "settings.appearance.mode.custom" = "自定义";

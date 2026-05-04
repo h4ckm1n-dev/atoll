@@ -46,6 +46,8 @@
 
 /* Settings - Appearance */
 "settings.tab.appearance" = "個人化";
+"settings.theme.title" = "主題";
+"settings.theme.help" = "為通知島外觀、徽章、差異顏色和狀態指示器選擇 Catppuccin 配色家族。系統主題保留之前的外觀。";
 "settings.appearance.mode" = "模式";
 "settings.appearance.mode.default" = "預設";
 "settings.appearance.mode.custom" = "自訂";

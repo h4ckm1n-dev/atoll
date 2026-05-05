@@ -172,6 +172,9 @@ struct SettingsView: View {
 struct GeneralSettingsPane: View {
     var model: AppModel
 
+    @AppStorage("appearance.showMenuBarIcon")
+    private var showMenuBarIcon: Bool = true
+
     private var lang: LanguageManager { model.lang }
 
     var body: some View {
@@ -181,6 +184,8 @@ struct GeneralSettingsPane: View {
                     get: { model.launchAtLoginEnabled },
                     set: { model.launchAtLoginEnabled = $0 }
                 ))
+
+                Toggle(lang.t("settings.general.showMenuBarIcon"), isOn: $showMenuBarIcon)
 
                 Picker(lang.t("settings.general.monitor"), selection: Binding(
                     get: { model.overlayDisplaySelectionID },

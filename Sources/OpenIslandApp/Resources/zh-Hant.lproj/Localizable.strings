@@ -17,6 +17,7 @@
 
 /* Settings - General */
 "settings.general.launchAtLogin" = "登入時開啟";
+"settings.general.showMenuBarIcon" = "顯示選單列圖示";
 "settings.general.monitor" = "顯示器";
 "settings.general.automatic" = "自動";
 "settings.general.behavior" = "行為";

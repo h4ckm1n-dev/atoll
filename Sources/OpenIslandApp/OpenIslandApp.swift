@@ -102,6 +102,13 @@ struct OpenIslandApp: App {
 
     @Environment(\.openWindow) private var openWindow
 
+    /// Drives the visibility of the `MenuBarExtra` icon. Persisted via
+    /// UserDefaults so the user's choice survives restarts. Default is
+    /// `true` — hiding the icon is opt-in. When false the user can still
+    /// open settings via Cmd+, since that command remains registered.
+    @AppStorage("appearance.showMenuBarIcon")
+    private var showMenuBarIcon: Bool = true
+
     var body: some Scene {
         Window("Open Island Settings", id: "settings") {
             SettingsWindowContent(model: appDelegate.model)
@@ -123,10 +130,10 @@ struct OpenIslandApp: App {
         }
         #endif
 
-        MenuBarExtra {
+        MenuBarExtra(isInserted: $showMenuBarIcon) {
             MenuBarContentView(model: appDelegate.model)
         } label: {
-            OpenIslandBrandMark(size: 18, style: .template)
+            IslandCoconutGlyph(size: 18)
                 .accessibilityLabel("Open Island")
                 .background(SettingsOpenerRegistrar(model: appDelegate.model))
         }

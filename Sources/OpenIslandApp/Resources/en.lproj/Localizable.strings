@@ -17,6 +17,7 @@
 
 /* Settings - General */
 "settings.general.launchAtLogin" = "Launch at Login";
+"settings.general.showMenuBarIcon" = "Show menu bar icon";
 "settings.general.monitor" = "Monitor";
 "settings.general.automatic" = "Automatic";
 "settings.general.behavior" = "Behavior";

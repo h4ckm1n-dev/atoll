@@ -17,6 +17,7 @@
 
 /* Settings - General */
 "settings.general.launchAtLogin" = "登录时打开";
+"settings.general.showMenuBarIcon" = "显示菜单栏图标";
 "settings.general.monitor" = "显示器";
 "settings.general.automatic" = "自动";
 "settings.general.behavior" = "行为";

@@ -20,9 +20,15 @@ struct ThemeTests {
 
     @Test
     func mochaPaletteMatchesPublishedHexValues() {
-        // Spot-check a handful of well-known Catppuccin Mocha values.
+        // Accents stay on the official Catppuccin Mocha spec so muscle
+        // memory across catppuccin'd apps still applies. The layered
+        // surface tones (base/mantle/crust/surface*) intentionally
+        // deviate — pushed toward a deeper blue-teal so the panel reads
+        // as ocean-night rather than the flat purple-grey of canonical
+        // Mocha. See Theme.swift for the full rationale.
         let p = ThemePalette.mocha
-        #expect(approximatelyEqual(p.base, hex: "1e1e2e"))
+        #expect(approximatelyEqual(p.base, hex: "162232"))
+        #expect(approximatelyEqual(p.crust, hex: "0a1220"))
         #expect(approximatelyEqual(p.text, hex: "cdd6f4"))
         #expect(approximatelyEqual(p.green, hex: "a6e3a1"))
         #expect(approximatelyEqual(p.red, hex: "f38ba8"))

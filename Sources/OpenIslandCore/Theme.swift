@@ -66,8 +66,14 @@ public struct ThemePalette: Equatable, Sendable {
     /// specific theme name.
     public var isLight: Bool
 
+    /// Mocha base/mantle/crust/surface tones are pushed toward a deeper
+    /// blue-teal than the canonical Catppuccin Mocha (which leans purple).
+    /// This matches Open Island's "tropical island" identity — the panel
+    /// reads as a calm ocean-night rather than a flat dark grey. Accent
+    /// values (rosewater → lavender) stay on-spec so any cross-app
+    /// muscle memory for Catppuccin colors still applies.
     public static let mocha = ThemePalette.from(hex: [
-        "1e1e2e", "181825", "11111b", "313244", "45475a", "585b70",
+        "162232", "10182a", "0a1220", "263347", "37475e", "4a5b75",
         "cdd6f4", "bac2de", "a6adc8", "9399b2", "7f849c", "6c7086",
         "f5e0dc", "f2cdcd", "f5c2e7", "cba6f7", "f38ba8", "eba0ac",
         "fab387", "f9e2af", "a6e3a1", "94e2d5", "89dceb", "74c7ec",

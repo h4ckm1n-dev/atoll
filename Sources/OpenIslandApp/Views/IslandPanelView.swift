@@ -304,10 +304,20 @@ struct IslandPanelView: View {
         let hidesClosedSurfaceChrome = showsIdleEdgeWhenCollapsed && !usesOpenedVisualState
         let idleEdgeWidth = closedNotchWidth + (isPopping ? 18 : 0)
 
+        // When the panel is opened, fill the surface from the active
+        // palette's `crust` (the deepest layered tone) so picking
+        // catppuccin actually tints the panel — pure black hid the
+        // theme entirely. When collapsed onto a notched display we
+        // still blend with the physical notch by going pure black,
+        // because palette.crust is not OLED-perfect black on most
+        // flavors (Mocha crust = #0a1220, blue-tinted).
+        let openedSurfaceFill: Color = usesOpenedVisualState
+            ? model.themeManager.palette.crust.swiftUIColor
+            : .black
         VStack(spacing: 0) {
             ZStack(alignment: .top) {
                 surfaceShape
-                    .fill(Color.black.opacity(hidesClosedSurfaceChrome ? 0 : 1))
+                    .fill(openedSurfaceFill.opacity(hidesClosedSurfaceChrome ? 0 : 1))
                     .frame(width: surfaceWidth, height: surfaceHeight)
 
                 AmbientThemeOverlay(
@@ -1579,9 +1589,9 @@ private struct IslandSessionRow: View {
 
             HStack(spacing: 8) {
                 Button("No") { onApprove?(.deny) }
-                    .buttonStyle(IslandWideButtonStyle(kind: .secondary))
+                    .buttonStyle(IslandWideButtonStyle(kind: .secondary, palette: themePalette))
                 Button("Yes") { onApprove?(.allowOnce) }
-                    .buttonStyle(IslandWideButtonStyle(kind: .warning))
+                    .buttonStyle(IslandWideButtonStyle(kind: .warning, palette: themePalette))
                 if let toolName = session.permissionRequest?.toolName {
                     Button("Always Allow (\(toolName))") {
                         let rule = ClaudePermissionRuleValue(toolName: toolName)
@@ -1592,7 +1602,7 @@ private struct IslandSessionRow: View {
                         )
                         onApprove?(.allowWithUpdates([update]))
                     }
-                    .buttonStyle(IslandWideButtonStyle(kind: .danger))
+                    .buttonStyle(IslandWideButtonStyle(kind: .danger, palette: themePalette))
                 }
             }
 
@@ -1642,6 +1652,7 @@ private struct IslandSessionRow: View {
             StructuredQuestionPromptView(
                 prompt: session.questionPrompt,
                 lang: lang,
+                palette: themePalette,
                 onAnswer: { onAnswer?($0) }
             )
 
@@ -1924,6 +1935,7 @@ private struct IslandSessionRow: View {
 private struct StructuredQuestionPromptView: View {
     let prompt: QuestionPrompt?
     var lang: LanguageManager = .shared
+    var palette: ThemePalette? = nil
     let onAnswer: (QuestionPromptResponse) -> Void
 
     @State private var selections: [String: Set<String>] = [:]
@@ -1946,7 +1958,7 @@ private struct StructuredQuestionPromptView: View {
                 Button(lang.t("question.submit")) {
                     onAnswer(QuestionPromptResponse(answers: answerMap))
                 }
-                .buttonStyle(IslandWideButtonStyle(kind: .primary))
+                .buttonStyle(IslandWideButtonStyle(kind: .primary, palette: palette))
                 .disabled(!hasCompleteSelection)
             }
         }
@@ -2263,6 +2275,12 @@ private struct IslandWideButtonStyle: ButtonStyle {
     }
 
     let kind: Kind
+    /// Optional palette injection — when present the button picks its
+    /// background from `palette.blue/peach/red` so the Yes/No/Always
+    /// Allow row reflects the active theme. When `nil` the button falls
+    /// back to the original hard-coded values (kept for callers that
+    /// don't yet route the palette through).
+    var palette: ThemePalette? = nil
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -2284,6 +2302,18 @@ private struct IslandWideButtonStyle: ButtonStyle {
 
     private func backgroundColor(_ isPressed: Bool) -> Color {
         let pressedFactor: Double = isPressed ? 0.78 : 1.0
+        if let palette {
+            switch kind {
+            case .primary:
+                return palette.blue.swiftUIColor.opacity(pressedFactor)
+            case .secondary:
+                return palette.surface1.swiftUIColor.opacity(isPressed ? 0.7 : 0.9)
+            case .warning:
+                return palette.peach.swiftUIColor.opacity(pressedFactor)
+            case .danger:
+                return palette.red.swiftUIColor.opacity(pressedFactor)
+            }
+        }
         switch kind {
         case .primary:
             return Color(red: 0.26, green: 0.45, blue: 0.86).opacity(pressedFactor)

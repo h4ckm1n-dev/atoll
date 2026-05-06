@@ -1511,6 +1511,7 @@ private struct IslandSessionRow: View {
                     PlanChecklistView(
                         state: state,
                         interactive: true,
+                        paletteOverride: themePalette,
                         onToggle: { onTogglePlanStep?($0) }
                     )
                     .padding(.vertical, 4)
@@ -1630,7 +1631,7 @@ private struct IslandSessionRow: View {
             }
 
             AutoHeightScrollView(maxHeight: 240) {
-                PlanChecklistView(state: state, interactive: false)
+                PlanChecklistView(state: state, interactive: false, paletteOverride: themePalette)
                     .padding(.vertical, 4)
             }
         }

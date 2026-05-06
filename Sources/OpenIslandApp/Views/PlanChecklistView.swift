@@ -10,13 +10,23 @@ struct PlanChecklistView: View {
     let interactive: Bool
     let onToggle: ((String) -> Void)?
 
-    @Environment(\.themePalette) private var palette
+    /// Palette is taken via an explicit parameter (with env fallback) so a
+    /// caller that already has a known-good palette via stored prop
+    /// (`IslandSessionRow.themePalette`) can pass it directly. Earlier
+    /// versions relied solely on `@Environment(\.themePalette)` which
+    /// rendered the plan content invisible in some hosting contexts —
+    /// passing the explicit palette is the reliable path.
+    var paletteOverride: ThemePalette?
+    @Environment(\.themePalette) private var envPalette
+
+    private var palette: ThemePalette { paletteOverride ?? envPalette }
 
     private static let baseIndent: CGFloat = 12
 
-    init(state: PlanState, interactive: Bool, onToggle: ((String) -> Void)? = nil) {
+    init(state: PlanState, interactive: Bool, paletteOverride: ThemePalette? = nil, onToggle: ((String) -> Void)? = nil) {
         self.state = state
         self.interactive = interactive
+        self.paletteOverride = paletteOverride
         self.onToggle = onToggle
     }
 

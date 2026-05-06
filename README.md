@@ -13,14 +13,14 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/h4ckm1n/atoll/releases/latest"><img src="https://img.shields.io/github/v/release/h4ckm1n/atoll?style=flat-square&label=release&color=blue" alt="Latest Release"></a>
-  <a href="https://github.com/h4ckm1n/atoll/stargazers"><img src="https://img.shields.io/github/stars/h4ckm1n/atoll?style=flat-square&color=yellow" alt="Stars"></a>
+  <a href="https://github.com/h4ckm1n-dev/atoll/releases/latest"><img src="https://img.shields.io/github/v/release/h4ckm1n-dev/atoll?style=flat-square&label=release&color=blue" alt="Latest Release"></a>
+  <a href="https://github.com/h4ckm1n-dev/atoll/stargazers"><img src="https://img.shields.io/github/stars/h4ckm1n-dev/atoll?style=flat-square&color=yellow" alt="Stars"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL%20v3-green?style=flat-square" alt="License: GPL v3"></a>
   <a href="#fork-of-open-island"><img src="https://img.shields.io/badge/fork-of%20Open%20Island-orange?style=flat-square" alt="Fork of Open Island"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/h4ckm1n/atoll/releases">Download</a> ·
+  <a href="https://github.com/h4ckm1n-dev/atoll/releases">Download</a> ·
   <a href="#quick-start">Quick Start</a> ·
   <a href="#whats-new-in-atoll">What's New</a> ·
   <a href="docs/plans/2026-05-06-theme-personalization-design.md">Roadmap</a>
@@ -158,12 +158,12 @@ Panel surface uses `palette.mantle` (second-deepest tone) while session cards us
 
 ### Option 1: Download
 
-Grab the latest DMG from [GitHub Releases](https://github.com/h4ckm1n/atoll/releases) — signed and notarized, ready to run.
+Grab the latest DMG from [GitHub Releases](https://github.com/h4ckm1n-dev/atoll/releases) — signed and notarized, ready to run.
 
 ### Option 2: Build from source
 
 ```bash
-git clone https://github.com/h4ckm1n/atoll.git
+git clone https://github.com/h4ckm1n-dev/atoll.git
 cd atoll
 open Package.swift   # Opens in Xcode — hit Run
 ```
@@ -255,7 +255,7 @@ Copy this prompt into your agent (Claude Code, Codex, etc.) to auto-generate a w
 <summary>Click to expand</summary>
 
 ```
-I'm having an issue with Atoll (https://github.com/h4ckm1n/atoll).
+I'm having an issue with Atoll (https://github.com/h4ckm1n-dev/atoll).
 
 Please help me file a GitHub issue. Do the following:
 
@@ -277,7 +277,7 @@ Please help me file a GitHub issue. Do the following:
    - Body with sections: **Environment** (incl. theme), **Description**, **Steps to Reproduce**, **Expected vs Actual Behavior**
    - Add label "bug" if applicable
 
-Repository: h4ckm1n/atoll
+Repository: h4ckm1n-dev/atoll
 ```
 
 </details>

@@ -66,10 +66,86 @@ struct ThemeTests {
         }
     }
 
+    @Test
+    func paletteRoleMapsToExpectedAccentForEveryFlavor() {
+        for theme in AppTheme.allCases {
+            let p = theme.palette
+            // Each role must resolve to a specific palette field. The
+            // mapping is locked — adding a role or moving a role must
+            // require updating this test, which is a feature not a bug.
+            #expect(p.role(.warning)    == p.peach)
+            #expect(p.role(.attention)  == p.peach)
+            #expect(p.role(.danger)     == p.red)
+            #expect(p.role(.success)    == p.green)
+            #expect(p.role(.completion) == p.green)
+            #expect(p.role(.working)    == p.blue)
+            #expect(p.role(.question)   == p.yellow)
+        }
+    }
+
+    @Test
+    func paletteRoleEnumIsExhaustive() {
+        // PaletteRole.allCases must stay in sync with the role(_:) switch.
+        // If a new role is added without a switch case, this fails on the
+        // first call (the switch becomes non-exhaustive at compile time).
+        let p = ThemePalette.mocha
+        for role in PaletteRole.allCases {
+            let resolved = p.role(role)
+            // Every role must map to one of the 14 accents.
+            let accents: [ProjectColor] = [
+                p.rosewater, p.flamingo, p.pink, p.mauve, p.red, p.maroon,
+                p.peach, p.yellow, p.green, p.teal, p.sky, p.sapphire,
+                p.blue, p.lavender,
+            ]
+            #expect(accents.contains(resolved))
+        }
+    }
+
+    @Test
+    func lattePaletteHasReadableContrast() {
+        let p = ThemePalette.latte
+        // Latte must be a real light theme — dark text on light base.
+        // Catches regressions where someone shifts Latte numbers without
+        // realizing they broke the readability contract.
+        let textLuma = relativeLuminance(p.text)
+        let baseLuma = relativeLuminance(p.base)
+        #expect(textLuma < 0.5,
+                "Latte.text luma (\(textLuma)) must be < 0.5 — dark text on light base")
+        #expect(baseLuma > 0.85,
+                "Latte.base luma (\(baseLuma)) must be > 0.85 — near-white base")
+
+        // Crust on Latte should be slightly darker than base (depth).
+        let crustLuma = relativeLuminance(p.crust)
+        #expect(crustLuma < baseLuma,
+                "Latte.crust must be darker than base for layered depth")
+    }
+
+    @Test
+    func darkFlavorsHaveDarkBase() {
+        // Inverse contract for the dark flavors — base must be dark.
+        for theme in [AppTheme.catppuccinFrappe,
+                      .catppuccinMacchiato,
+                      .catppuccinMocha] {
+            let p = theme.palette
+            let baseLuma = relativeLuminance(p.base)
+            #expect(baseLuma < 0.20,
+                    "\(theme).base luma (\(baseLuma)) must be < 0.20 — dark base")
+        }
+    }
+
     private func approximatelyEqual(_ color: ProjectColor, hex: String) -> Bool {
         let target = ProjectColor.fromHex(hex)
         return abs(color.red - target.red) < 0.01
             && abs(color.green - target.green) < 0.01
             && abs(color.blue - target.blue) < 0.01
     }
+}
+
+/// Rec. 709 relative luminance (test-helper, not part of the public API).
+/// Good enough for contract-locking; we don't ship a contrast checker.
+private func relativeLuminance(_ c: ProjectColor) -> Double {
+    func channel(_ v: Double) -> Double {
+        v <= 0.03928 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4)
+    }
+    return 0.2126 * channel(c.red) + 0.7152 * channel(c.green) + 0.0722 * channel(c.blue)
 }

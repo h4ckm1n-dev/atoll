@@ -138,8 +138,9 @@ final class OverlayPanelController {
         panel.ignoresMouseEvents = true
 
         let hostingView = NotchHostingView(
-            rootView: IslandPanelView(model: model)
-                .environment(\.themePalette, model.themeManager.palette)
+            rootView: ThemedHostingRoot(themeManager: model.themeManager) {
+                IslandPanelView(model: model)
+            }
         )
         hostingView.notchController = self
         panel.contentView = hostingView

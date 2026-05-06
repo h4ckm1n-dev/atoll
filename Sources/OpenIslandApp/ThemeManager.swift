@@ -65,3 +65,26 @@ extension EnvironmentValues {
         set { self[ThemePaletteEnvironmentKey.self] = newValue }
     }
 }
+
+/// Wraps a SwiftUI subtree and re-injects `\.themePalette` from the
+/// supplied `ThemeManager` on every body invalidation. Used by AppKit
+/// hosting roots (`NSHostingView` / `NSHostingController`) — passing
+/// `themeManager.palette` directly into `.environment` at host-init
+/// time captures a stale value that doesn't update when the user
+/// switches theme. Wrapping in this view forces SwiftUI's Observation
+/// machinery to re-read `themeManager.palette` whenever the theme
+/// changes, so the env value tracks the live palette.
+public struct ThemedHostingRoot<Content: View>: View {
+    let themeManager: ThemeManager
+    let content: Content
+
+    public init(themeManager: ThemeManager, @ViewBuilder content: () -> Content) {
+        self.themeManager = themeManager
+        self.content = content()
+    }
+
+    public var body: some View {
+        content
+            .environment(\.themePalette, themeManager.palette)
+    }
+}

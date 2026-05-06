@@ -7,6 +7,9 @@ struct AppearanceSettingsPane: View {
 
     @Environment(\.themePalette) private var palette
 
+    @AppStorage("appearance.panelMaterial")
+    private var panelMaterialRaw: String = AppPanelMaterial.solid.rawValue
+
     private var lang: LanguageManager { model.lang }
     private var isCustom: Bool { model.islandAppearanceMode == .custom }
 
@@ -25,6 +28,14 @@ struct AppearanceSettingsPane: View {
                 Text(lang.t("settings.theme.help"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                Picker(lang.t("settings.panelMaterial.title"), selection: $panelMaterialRaw) {
+                    ForEach(AppPanelMaterial.allCases, id: \.rawValue) { mat in
+                        Text(lang.t(mat.localizationKey)).tag(mat.rawValue)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .help(lang.t("settings.panelMaterial.help"))
             }
 
             Section(lang.t("settings.appearance.mode")) {

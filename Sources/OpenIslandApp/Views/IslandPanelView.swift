@@ -306,14 +306,15 @@ struct IslandPanelView: View {
         let idleEdgeWidth = closedNotchWidth + (isPopping ? 18 : 0)
 
         // When the panel is opened, fill the surface from the active
-        // palette's `crust` (the deepest layered tone) so picking
-        // catppuccin actually tints the panel — pure black hid the
-        // theme entirely. When collapsed onto a notched display we
-        // still blend with the physical notch by going pure black,
-        // because palette.crust is not OLED-perfect black on most
-        // flavors (Mocha crust = #0a1220, blue-tinted).
+        // palette's `mantle` (the second-deepest layered tone). Session
+        // cards below use `crust` (the deepest), so cards read as
+        // recessed-darker against the surrounding panel — classic
+        // Catppuccin layered depth instead of card-and-panel blending
+        // into one flat surface (which is what happened when both used
+        // `crust`). When collapsed onto a notched display we still
+        // blend with the physical notch by going pure black.
         let openedSurfaceFill: Color = usesOpenedVisualState
-            ? model.themeManager.palette.crust.swiftUIColor
+            ? model.themeManager.palette.mantle.swiftUIColor
             : .black
         VStack(spacing: 0) {
             ZStack(alignment: .top) {

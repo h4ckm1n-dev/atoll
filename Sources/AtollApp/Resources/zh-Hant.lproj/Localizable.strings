@@ -237,3 +237,27 @@
 "settings.celebrations.title" = "Celebrations";
 "settings.celebrations.toggle" = "Celebrate when sessions complete";
 "settings.celebrations.help" = "Spawns a brief burst of project-colored confetti when a session finishes a task.";
+
+/* Custom theme registry — Phase 2B */
+"settings.theme.picker" = "主題";
+"settings.theme.builtin" = "內建";
+"settings.theme.custom" = "我的主題";
+"settings.theme.customSection" = "自訂主題";
+"settings.theme.customEmpty" = "尚無自訂主題。從預設建立一個，或從 JSON 檔案匯入。";
+"settings.theme.createFromPreset" = "+ 從預設建立…";
+"settings.theme.importFromFile" = "從檔案匯入…";
+"settings.theme.import.button" = "匯入";
+"settings.theme.import.failed" = "無法匯入主題";
+"settings.theme.preset.choose" = "從哪個預設開始？";
+"settings.theme.row.rename" = "重新命名…";
+"settings.theme.row.duplicate" = "複製";
+"settings.theme.row.export" = "匯出…";
+"settings.theme.row.delete" = "刪除…";
+"settings.theme.customRow.subtitle" = "衍生自 %@";
+"settings.theme.delete.confirm" = "刪除此主題？";
+"settings.theme.delete.message" = "「%@」將從你的 Atoll 主題庫中移除。原始預設不受影響。";
+"settings.theme.rename.title" = "重新命名主題";
+"settings.theme.rename.placeholder" = "主題名稱";
+"settings.cancel" = "取消";
+"settings.save" = "儲存";
+"settings.ok" = "好";

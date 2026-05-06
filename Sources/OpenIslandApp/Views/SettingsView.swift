@@ -316,8 +316,9 @@ struct SoundSettingsPane: View {
 struct AboutSettingsPane: View {
     var model: AppModel
 
+    @Environment(\.themePalette) private var palette
     private var lang: LanguageManager { model.lang }
-    private let primaryInk = Color.white.opacity(0.94)
+    private var primaryInk: Color { palette.text.swiftUIColor.opacity(0.94) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -362,7 +363,7 @@ struct AboutSettingsPane: View {
                     aboutActionRow(
                         title: lang.t("settings.about.quitApp"),
                         systemImage: "rectangle.portrait.and.arrow.right",
-                        tint: Color(red: 1.0, green: 0.29, blue: 0.29),
+                        tint: palette.role(.danger).swiftUIColor,
                         action: {
                             model.quitApplication()
                         }
@@ -408,6 +409,7 @@ struct AboutSettingsPane: View {
 struct SetupSettingsPane: View {
     var model: AppModel
 
+    @Environment(\.themePalette) private var palette
     @State private var confirmingUninstallClaude = false
     @State private var confirmingUninstallCodex = false
     @State private var confirmingUninstallOpenCode = false
@@ -892,8 +894,8 @@ struct SetupSettingsPane: View {
 
     private func issueColor(for issue: HookHealthReport.Issue) -> Color {
         switch issue.severity {
-        case .info: .blue
-        case .error: issue.isAutoRepairable ? .orange : .red
+        case .info: palette.role(.working).swiftUIColor
+        case .error: issue.isAutoRepairable ? palette.role(.attention).swiftUIColor : palette.role(.danger).swiftUIColor
         }
     }
 
@@ -1066,6 +1068,7 @@ struct PlaceholderSettingsPane: View {
 struct RemoteConnectionSection: View {
     var model: AppModel
 
+    @Environment(\.themePalette) private var palette
     @State private var copiedCommand: String?
 
     private var remoteSessionCount: Int {
@@ -1147,7 +1150,7 @@ struct RemoteConnectionSection: View {
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: "info.circle")
                         .font(.system(size: 10))
-                        .foregroundStyle(.blue.opacity(0.8))
+                        .foregroundStyle(palette.role(.working).swiftUIColor.opacity(0.8))
                         .padding(.top, 1)
                     Text("The remote sshd needs `StreamLocalBindUnlink yes` in /etc/ssh/sshd_config for reliable reconnects.")
                         .font(.system(size: 10.5))
@@ -1177,7 +1180,7 @@ struct RemoteConnectionSection: View {
                     .font(.system(size: 9, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .frame(width: 16, height: 16)
-                    .background(Circle().fill(.blue.opacity(0.7)))
+                    .background(Circle().fill(palette.role(.working).swiftUIColor.opacity(0.7)))
                 Text(title)
                     .font(.system(size: 12, weight: .medium))
             }
@@ -1228,6 +1231,8 @@ struct UpdateBanner: View {
     let lang: LanguageManager
     var onUpdate: () -> Void
 
+    @Environment(\.themePalette) private var palette
+
     var body: some View {
         Button(action: onUpdate) {
             HStack(spacing: 6) {
@@ -1243,10 +1248,10 @@ struct UpdateBanner: View {
             .padding(.vertical, 6)
             .background(
                 Capsule()
-                    .fill(Color.blue)
+                    .fill(palette.role(.working).swiftUIColor)
             )
         }
         .buttonStyle(.plain)
-        .shadow(color: .blue.opacity(0.3), radius: 4, y: 2)
+        .shadow(color: palette.role(.working).swiftUIColor.opacity(0.3), radius: 4, y: 2)
     }
 }

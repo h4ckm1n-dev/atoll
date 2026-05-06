@@ -5,6 +5,8 @@ struct AppearanceSettingsPane: View {
     var model: AppModel
     @State private var previewPhase: SessionPhase = .running
 
+    @Environment(\.themePalette) private var palette
+
     private var lang: LanguageManager { model.lang }
     private var isCustom: Bool { model.islandAppearanceMode == .custom }
 
@@ -178,7 +180,7 @@ struct AppearanceSettingsPane: View {
     private var notchPreviewCard: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(white: 0.12))
+                .fill(palette.surface0.swiftUIColor)
 
             VStack(spacing: 14) {
                 previewIslandBar
@@ -319,7 +321,7 @@ struct AppearanceSettingsPane: View {
         } label: {
             VStack(spacing: 8) {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.white.opacity(0.05))
+                    .fill(palette.surface0.swiftUIColor)
                     .frame(height: 48)
                     .overlay {
                         if style == .custom {
@@ -354,12 +356,12 @@ struct AppearanceSettingsPane: View {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(Color.white.opacity(selected ? 0.06 : 0.02))
+                    .fill(selected ? palette.surface0.swiftUIColor : Color.clear)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(
-                        selected ? Color.accentColor : Color.white.opacity(0.08),
+                        selected ? Color.accentColor : palette.text.swiftUIColor.opacity(0.08),
                         lineWidth: selected ? 2 : 1
                     )
             )
@@ -410,7 +412,7 @@ struct AppearanceSettingsPane: View {
             .frame(width: 18, height: 14)
             .overlay(
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.06))
+                    .strokeBorder(palette.text.swiftUIColor.opacity(0.06))
             )
     }
 

@@ -23,6 +23,9 @@ struct AmbientThemeOverlay: View {
         if let tint = tintColor, opacity > 0 {
             LinearGradient(
                 colors: [
+                    // Project-tint, intentionally not theme-driven —
+                    // the spotlight color is per-project (set in AppearanceSettingsPane
+                    // via ProjectColorRegistry), independent of the active ThemePalette.
                     Color(red: tint.red, green: tint.green, blue: tint.blue).opacity(opacity),
                     Color.clear
                 ],

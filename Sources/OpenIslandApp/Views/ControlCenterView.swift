@@ -8,6 +8,8 @@ struct ControlCenterView: View {
     @State private var previewModel = AppModel()
     @State private var previewSnapshot = IslandDebugScenario.approvalCard.snapshot()
 
+    @Environment(\.themePalette) private var palette
+
     private var lang: LanguageManager { model.lang }
 
     var body: some View {
@@ -33,18 +35,18 @@ struct ControlCenterView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(lang.t("debug.title"))
                         .font(.system(size: 30, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(palette.text.swiftUIColor)
 
                     Text(lang.t("debug.description"))
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.68))
+                        .foregroundStyle(palette.text.swiftUIColor.opacity(0.68))
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 VStack(alignment: .leading, spacing: 10) {
                     Text(lang.t("debug.scenarios"))
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.58))
+                        .foregroundStyle(palette.text.swiftUIColor.opacity(0.58))
 
                     ForEach(IslandDebugScenario.allCases) { scenario in
                         scenarioButton(for: scenario)
@@ -74,7 +76,7 @@ struct ControlCenterView: View {
                                         .foregroundStyle(controlCenterIssueColor(issue))
                                     Text(issue.description)
                                         .font(.system(size: 10, weight: .medium))
-                                        .foregroundStyle(.white.opacity(issue.severity == .info ? 0.4 : 0.6))
+                                        .foregroundStyle(palette.text.swiftUIColor.opacity(issue.severity == .info ? 0.4 : 0.6))
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                             }
@@ -209,18 +211,18 @@ struct ControlCenterView: View {
             } label: {
                 HStack(alignment: .top, spacing: 12) {
                     Circle()
-                        .fill(selectedScenario == scenario ? .white.opacity(0.88) : .white.opacity(0.22))
+                        .fill(selectedScenario == scenario ? palette.text.swiftUIColor.opacity(0.88) : palette.text.swiftUIColor.opacity(0.22))
                         .frame(width: 8, height: 8)
                         .padding(.top, 6)
 
                     VStack(alignment: .leading, spacing: 5) {
                         Text(scenario.title)
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(palette.text.swiftUIColor)
 
                         Text(scenario.summary)
                             .font(.system(size: 11.5, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(palette.text.swiftUIColor.opacity(0.5))
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
@@ -235,9 +237,9 @@ struct ControlCenterView: View {
             } label: {
                 Image(systemName: "play.fill")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.6))
                     .frame(width: 28, height: 28)
-                    .background(Circle().fill(.white.opacity(0.08)))
+                    .background(Circle().fill(palette.surface0.swiftUIColor))
             }
             .buttonStyle(.plain)
             .padding(.top, 2)
@@ -247,11 +249,12 @@ struct ControlCenterView: View {
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(selectedScenario == scenario ? Color.white.opacity(0.08) : Color.white.opacity(0.03))
+                // .white.opacity(0.03) kept as exception (below threshold)
+                .fill(selectedScenario == scenario ? palette.surface0.swiftUIColor : Color.white.opacity(0.03))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(selectedScenario == scenario ? .white.opacity(0.18) : .white.opacity(0.05))
+                .strokeBorder(selectedScenario == scenario ? palette.text.swiftUIColor.opacity(0.18) : palette.text.swiftUIColor.opacity(0.05))
         )
     }
 
@@ -317,11 +320,11 @@ struct ControlCenterView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(lang.t("debug.actions"))
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.58))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.58))
 
             Text(lang.t("debug.actionsDescription"))
                 .font(.system(size: 11.5, weight: .medium))
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.5))
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 10) {
@@ -345,15 +348,15 @@ struct ControlCenterView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(lang.t("debug.currentMock"))
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.58))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.58))
 
             Text(previewSnapshot.title)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(palette.text.swiftUIColor)
 
             Text(previewSnapshot.summary)
                 .font(.system(size: 11.5, weight: .medium))
-                .foregroundStyle(.white.opacity(0.52))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.52))
                 .fixedSize(horizontal: false, vertical: true)
 
             if let session = activePreviewSession {
@@ -371,7 +374,7 @@ struct ControlCenterView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(lang.t("debug.liveOverlay"))
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.58))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.58))
 
             debugMetricRow(label: lang.t("debug.visible"), value: model.isOverlayVisible ? lang.t("debug.yes") : lang.t("debug.no"))
             debugMetricRow(label: lang.t("debug.surface"), value: liveSurfaceTitle)
@@ -389,10 +392,10 @@ struct ControlCenterView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(lang.t("debug.inlinePreview"))
                         .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(palette.text.swiftUIColor)
                     Text(lang.t("debug.previewDescription"))
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.48))
+                        .foregroundStyle(palette.text.swiftUIColor.opacity(0.48))
                 }
 
                 Spacer(minLength: 0)
@@ -412,7 +415,7 @@ struct ControlCenterView: View {
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 28, style: .continuous)
-                            .strokeBorder(.white.opacity(0.06))
+                            .strokeBorder(palette.text.swiftUIColor.opacity(0.06))
                     )
 
                 VStack(spacing: 0) {
@@ -434,10 +437,11 @@ struct ControlCenterView: View {
 
     private var debugCardBackground: some View {
         RoundedRectangle(cornerRadius: 22, style: .continuous)
+            // .white.opacity(0.04) kept as exception (at threshold)
             .fill(Color.white.opacity(0.04))
             .overlay(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .strokeBorder(.white.opacity(0.06))
+                    .strokeBorder(palette.text.swiftUIColor.opacity(0.06))
             )
     }
 
@@ -530,15 +534,15 @@ struct ControlCenterView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title)
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.58))
+                        .foregroundStyle(palette.text.swiftUIColor.opacity(0.58))
 
                     Text(statusTitle)
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(palette.text.swiftUIColor)
 
                     Text(statusSummary)
                         .font(.system(size: 11.5, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(palette.text.swiftUIColor.opacity(0.5))
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -562,10 +566,10 @@ struct ControlCenterView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.4))
             Text(value)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(0.72))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.72))
                 .lineLimit(2)
         }
     }
@@ -574,10 +578,10 @@ struct ControlCenterView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.38))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.38))
             Text(value)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(0.75))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.75))
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -586,11 +590,11 @@ struct ControlCenterView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.38))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.38))
 
             Text(value)
                 .font(.system(size: 11.5, weight: .medium))
-                .foregroundStyle(.white.opacity(0.72))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.72))
                 .textSelection(.enabled)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -605,8 +609,8 @@ struct ControlCenterView: View {
 
     private func controlCenterIssueColor(_ issue: HookHealthReport.Issue) -> Color {
         switch issue.severity {
-        case .info: .blue
-        case .error: issue.isAutoRepairable ? .orange : .red
+        case .info: palette.role(.working).swiftUIColor
+        case .error: issue.isAutoRepairable ? palette.role(.attention).swiftUIColor : palette.role(.danger).swiftUIColor
         }
     }
 }

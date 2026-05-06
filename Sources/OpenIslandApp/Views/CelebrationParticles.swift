@@ -6,6 +6,8 @@ struct CelebrationParticles: View {
     let startedAt: Date
     let count: Int
 
+    @Environment(\.themePalette) private var palette
+
     static let duration: TimeInterval = 2.0
     static let gravity: CGFloat = 350
 
@@ -15,14 +17,21 @@ struct CelebrationParticles: View {
             if elapsed < Self.duration {
                 Canvas { ctx, size in
                     let alpha = Self.opacity(elapsed: elapsed)
-                    let color = tint.map { Color(red: $0.red, green: $0.green, blue: $0.blue) }
-                        ?? Color.gray.opacity(0.6)
+                    // Festive triad: project tint when set, otherwise rotate through
+                    // palette.green / palette.peach / palette.lavender per design.
+                    let triad: [Color] = tint.map { [Color(red: $0.red, green: $0.green, blue: $0.blue)] }
+                        ?? [
+                            palette.green.swiftUIColor,
+                            palette.peach.swiftUIColor,
+                            palette.lavender.swiftUIColor
+                        ]
                     let anchor = CGPoint(x: size.width * 0.15, y: size.height * 0.5)
 
                     for seed in 0..<count {
                         let pos = Self.position(seed: seed, elapsed: elapsed, anchor: anchor)
                         let rotation = Self.rotation(seed: seed, elapsed: elapsed)
                         let rect = CGRect(x: pos.x - 2, y: pos.y - 2, width: 4, height: 4)
+                        let color = triad[seed % triad.count]
 
                         ctx.translateBy(x: pos.x, y: pos.y)
                         ctx.rotate(by: .radians(rotation))

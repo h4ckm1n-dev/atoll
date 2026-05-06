@@ -109,6 +109,7 @@ struct IslandPanelView: View {
 
     var model: AppModel
 
+    @Environment(\.themePalette) private var palette
     @Namespace private var notchNamespace
     @State private var isHovering = false
     @State private var showingQuitConfirmation = false
@@ -165,12 +166,12 @@ struct IslandPanelView: View {
         }
         let sessions = model.surfacedSessions
         if sessions.contains(where: { $0.phase == .running }) {
-            return Color(red: 0.43, green: 0.62, blue: 1.0) // #6E9FFF working blue
+            return palette.blue.swiftUIColor // working
         }
         if !sessions.isEmpty {
-            return Color(red: 0.26, green: 0.91, blue: 0.42) // #42E86B idle green
+            return palette.green.swiftUIColor // idle/live
         }
-        return Color.white.opacity(0.4) // gray
+        return palette.text.swiftUIColor.opacity(0.4) // gray
     }
 
     private var countBadgeWidth: CGFloat {
@@ -356,7 +357,7 @@ struct IslandPanelView: View {
                 }
                 .overlay {
                     surfaceShape
-                        .stroke(Color.white.opacity(hidesClosedSurfaceChrome ? 0 : (usesOpenedVisualState ? 0.07 : 0.04)), lineWidth: 1)
+                        .stroke(palette.text.swiftUIColor.opacity(hidesClosedSurfaceChrome ? 0 : (usesOpenedVisualState ? 0.07 : 0.04)), lineWidth: 1)
                 }
                 .overlay(alignment: .top) {
                     Capsule()
@@ -364,7 +365,7 @@ struct IslandPanelView: View {
                         .frame(width: idleEdgeWidth, height: Self.closedIdleEdgeHeight)
                         .overlay {
                             Capsule()
-                                .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                                .stroke(palette.text.swiftUIColor.opacity(0.05), lineWidth: 1)
                         }
                         .opacity(showsIdleEdgeWhenCollapsed ? 1 : 0)
                 }
@@ -512,7 +513,7 @@ struct IslandPanelView: View {
                     let attentionBalanceWidth: CGFloat = closedSpotlightSession?.phase.requiresAttention == true ? 18 : 0
                     let slotWidth = max(sideWidth, countBadgeWidth) + attentionBalanceWidth
 
-                    ClosedCountBadge(liveCount: model.liveSessionCount, tint: .white.opacity(0.85))
+                    ClosedCountBadge(liveCount: model.liveSessionCount, tint: palette.text.swiftUIColor.opacity(0.85))
                         .matchedGeometryEffect(id: "right-indicator", in: notchNamespace, isSource: true)
                         .frame(width: slotWidth)
                 }
@@ -565,18 +566,18 @@ struct IslandPanelView: View {
         HStack(spacing: Self.headerControlSpacing) {
             headerIconButton(
                 systemName: model.isSoundMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
-                tint: model.isSoundMuted ? .orange.opacity(0.92) : .white.opacity(0.62)
+                tint: model.isSoundMuted ? palette.role(.attention).swiftUIColor.opacity(0.92) : palette.text.swiftUIColor.opacity(0.62)
             ) {
                 model.toggleSoundMuted()
             }
 
-            headerIconButton(systemName: "gearshape.fill", tint: .white.opacity(0.62)) {
+            headerIconButton(systemName: "gearshape.fill", tint: palette.text.swiftUIColor.opacity(0.62)) {
                 model.showSettings()
             }
 
             headerIconButton(
                 systemName: "power",
-                tint: .white.opacity(0.62),
+                tint: palette.text.swiftUIColor.opacity(0.62),
                 accessibilityLabel: model.lang.t("island.quit.confirmTitle")
             ) {
                 showingQuitConfirmation = true
@@ -595,7 +596,7 @@ struct IslandPanelView: View {
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: Self.headerControlButtonSize, height: Self.headerControlButtonSize)
-                .background(.white.opacity(0.08), in: Circle())
+                .background(palette.surface0.swiftUIColor, in: Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(accessibilityLabel ?? systemName)
@@ -635,13 +636,13 @@ struct IslandPanelView: View {
                     .foregroundStyle(Color.accentColor)
                 Text(model.lang.t("island.hint.installHooks"))
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.85))
+                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.85))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.4))
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
@@ -662,14 +663,14 @@ struct IslandPanelView: View {
             Spacer()
             ProgressView()
                 .progressViewStyle(.circular)
-                .tint(.white.opacity(0.7))
+                .tint(palette.text.swiftUIColor.opacity(0.7))
                 .scaleEffect(0.8)
             Text(model.lang.t("island.checkingTerminals"))
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.white.opacity(0.58))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.58))
             Text(model.lang.t("island.terminalOwnership"))
                 .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(0.28))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.28))
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -680,12 +681,12 @@ struct IslandPanelView: View {
             Spacer()
             Text(model.lang.t("island.noTerminals"))
                 .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.4))
             Text(model.recentSessions.isEmpty
                 ? model.lang.t("island.startAgent")
                 : model.lang.t("island.recentSessions"))
                 .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(0.25))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.25))
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -766,7 +767,7 @@ struct IslandPanelView: View {
                     } label: {
                         Text(model.lang.t("island.showAll", model.allSessions.count))
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.45))
+                            .foregroundStyle(palette.text.swiftUIColor.opacity(0.45))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
                     }
@@ -810,10 +811,10 @@ struct IslandPanelView: View {
             return model.statusColor(for: phase)
         }
         return switch phase {
-        case .running: .mint
-        case .waitingForApproval: .orange
-        case .waitingForAnswer: .yellow
-        case .completed: .blue
+        case .running:            palette.role(.working).swiftUIColor
+        case .waitingForApproval: palette.role(.attention).swiftUIColor
+        case .waitingForAnswer:   palette.role(.question).swiftUIColor
+        case .completed:          palette.role(.completion).swiftUIColor
         }
     }
 
@@ -832,11 +833,11 @@ struct IslandPanelView: View {
             HStack(spacing: 8) {
                 Text(model.lang.t("app.name"))
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.9))
 
                 Text(model.lang.t("island.usageWaiting"))
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.4))
             }
             .lineLimit(1)
         }
@@ -1008,7 +1009,7 @@ struct IslandPanelView: View {
         HStack(spacing: 8) {
             Text(layout.usesShortProviderTitle ? provider.shortTitle : provider.title)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.9))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.9))
 
             ForEach(Array(provider.windows.enumerated()), id: \.element.id) { index, window in
                 if index > 0 {
@@ -1037,7 +1038,7 @@ struct IslandPanelView: View {
             if layout.showsWindowLabel {
                 Text(window.label)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.55))
+                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.55))
             }
 
             Text("\(window.roundedUsedPercentage)%")
@@ -1049,7 +1050,7 @@ struct IslandPanelView: View {
                let remaining = remainingDurationString(until: resetsAt) {
                 Text(remaining)
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.35))
             }
         }
     }
@@ -1057,7 +1058,7 @@ struct IslandPanelView: View {
     private func usageSeparator(_ title: String, opacity: Double) -> some View {
         Text(title)
             .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(.white.opacity(opacity))
+            .foregroundStyle(palette.text.swiftUIColor.opacity(opacity))
     }
 
     private func headerPill(_ title: String, tint: Color) -> some View {
@@ -1066,17 +1067,17 @@ struct IslandPanelView: View {
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(.white.opacity(0.08), in: Capsule())
+            .background(palette.surface0.swiftUIColor, in: Capsule())
     }
 
     private func usageColor(for percentage: Double) -> Color {
         switch percentage {
         case 90...:
-            .red.opacity(0.95)
+            palette.role(.danger).swiftUIColor.opacity(0.95)
         case 70..<90:
-            .orange.opacity(0.95)
+            palette.role(.warning).swiftUIColor.opacity(0.95)
         default:
-            .green.opacity(0.95)
+            palette.role(.success).swiftUIColor.opacity(0.95)
         }
     }
 
@@ -1276,7 +1277,7 @@ private struct IslandSessionRow: View {
                        let promptLine = session.spotlightPromptLineText ?? expandedPromptLineText {
                         Text(promptLine)
                             .font(.system(size: 11.5, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.62))
+                            .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.62))
                             .lineLimit(1)
                     }
 
@@ -1302,35 +1303,35 @@ private struct IslandSessionRow: View {
                                 Text(lang.t("subagents.title", subagents.count))
                                     .font(.system(size: 10.5, weight: .medium))
                             }
-                            .foregroundStyle(.cyan.opacity(0.8))
+                            .foregroundStyle(themePalette.sky.swiftUIColor.opacity(0.8))
 
                             ForEach(subagents, id: \.agentID) { sub in
                                 HStack(spacing: 6) {
                                     Circle()
                                         .fill(sub.summary != nil
-                                            ? Color(red: 0.29, green: 0.86, blue: 0.46)
-                                            : Color(red: 0.34, green: 0.61, blue: 0.99))
+                                            ? themePalette.green.swiftUIColor
+                                            : themePalette.blue.swiftUIColor)
                                         .frame(width: 6, height: 6)
                                     Text(sub.agentType ?? sub.agentID)
                                         .font(.system(size: 11, weight: .medium))
-                                        .foregroundStyle(.white.opacity(0.8))
+                                        .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.8))
                                         .lineLimit(1)
                                     if let desc = sub.taskDescription {
                                         Text("(\(desc))")
                                             .font(.system(size: 10.5))
-                                            .foregroundStyle(.white.opacity(0.5))
+                                            .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.5))
                                             .lineLimit(1)
                                     }
                                     Spacer(minLength: 0)
                                     if sub.summary != nil {
                                         Text(lang.t("subagents.completed"))
                                             .font(.system(size: 10, weight: .medium))
-                                            .foregroundStyle(.white.opacity(0.4))
+                                            .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.4))
                                     } else if let started = sub.startedAt {
                                         TimelineView(.periodic(from: .now, by: 1)) { timeline in
                                             Text(subagentElapsed(since: started, at: timeline.date))
                                                 .font(.system(size: 10, weight: .medium))
-                                                .foregroundStyle(.white.opacity(0.4))
+                                                .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.4))
                                         }
                                     }
                                 }
@@ -1344,15 +1345,15 @@ private struct IslandSessionRow: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(taskSummary(tasks))
                                 .font(.system(size: 10.5, weight: .medium))
-                                .foregroundStyle(.white.opacity(0.45))
+                                .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.45))
                             ForEach(tasks) { task in
                                 HStack(spacing: 5) {
                                     taskStatusIcon(task.status)
                                     Text(task.title)
                                         .font(.system(size: 10.5, weight: .medium))
                                         .foregroundStyle(task.status == .completed
-                                            ? .white.opacity(0.4)
-                                            : .white.opacity(0.7))
+                                            ? themePalette.text.swiftUIColor.opacity(0.4)
+                                            : themePalette.text.swiftUIColor.opacity(0.7))
                                         .strikethrough(task.status == .completed)
                                         .lineLimit(1)
                                 }
@@ -1372,7 +1373,7 @@ private struct IslandSessionRow: View {
         }
         .background(
             RoundedRectangle(cornerRadius: isActionable ? 24 : 22, style: .continuous)
-                .fill(isHighlighted ? Color.white.opacity(isActionable ? 0.06 : 0.05) : Color.black)
+                .fill(isHighlighted ? themePalette.text.swiftUIColor.opacity(isActionable ? 0.06 : 0.05) : themePalette.crust.swiftUIColor)
         )
         .overlay(
             RoundedRectangle(cornerRadius: isActionable ? 24 : 22, style: .continuous)
@@ -1409,19 +1410,19 @@ private struct IslandSessionRow: View {
         if isActionable {
             return actionableStatusTint.opacity(isHighlighted ? 0.45 : 0.28)
         }
-        return isHighlighted ? .white.opacity(0.24) : .white.opacity(0.04)
+        return isHighlighted ? themePalette.text.swiftUIColor.opacity(0.24) : themePalette.text.swiftUIColor.opacity(0.04)
     }
 
     private var actionableStatusTint: Color {
         switch session.phase {
         case .waitingForApproval:
-            .orange
+            themePalette.role(.attention).swiftUIColor
         case .waitingForAnswer:
-            .yellow
+            themePalette.role(.question).swiftUIColor
         case .running:
-            Color(red: 0.34, green: 0.61, blue: 0.99)
+            themePalette.blue.swiftUIColor
         case .completed:
-            Color(red: 0.29, green: 0.86, blue: 0.46)
+            themePalette.green.swiftUIColor
         }
     }
 
@@ -1496,11 +1497,11 @@ private struct IslandSessionRow: View {
                         .font(.system(size: 11, weight: .semibold, design: .monospaced))
                 }
                 .foregroundStyle(checked == total && total > 0
-                    ? Color(red: 0.45, green: 0.85, blue: 0.55).opacity(0.92)
-                    : .white.opacity(0.72))
+                    ? themePalette.role(.completion).swiftUIColor.opacity(0.92)
+                    : themePalette.text.swiftUIColor.opacity(0.72))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(.white.opacity(0.06), in: Capsule())
+                .background(themePalette.surface0.swiftUIColor, in: Capsule())
             }
             .buttonStyle(.plain)
 
@@ -1518,11 +1519,11 @@ private struct IslandSessionRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.black.opacity(0.32))
+                        .fill(themePalette.crust.swiftUIColor.opacity(0.45))
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .strokeBorder(.white.opacity(0.06))
+                        .strokeBorder(themePalette.text.swiftUIColor.opacity(0.06))
                 )
             }
         }
@@ -1549,10 +1550,10 @@ private struct IslandSessionRow: View {
             HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(themePalette.role(.attention).swiftUIColor)
                 Text(commandLabel)
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(themePalette.role(.attention).swiftUIColor)
             }
 
             if let planState = approvalPlanState {
@@ -1563,14 +1564,14 @@ private struct IslandSessionRow: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(commandPreviewText)
                         .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.9))
+                        .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.9))
                         .fixedSize(horizontal: false, vertical: true)
 
                     if let path = session.permissionRequest?.affectedPath.trimmedForNotificationCard,
                        !path.isEmpty {
                         Text(path)
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.42))
+                            .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.42))
                             .lineLimit(1)
                     }
                 }
@@ -1579,11 +1580,11 @@ private struct IslandSessionRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color(red: 0.11, green: 0.08, blue: 0.03))
+                        .fill(themePalette.surface0.swiftUIColor)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .strokeBorder(.orange.opacity(0.18))
+                        .strokeBorder(themePalette.role(.attention).swiftUIColor.opacity(0.18))
                 )
             }
 
@@ -1621,10 +1622,10 @@ private struct IslandSessionRow: View {
             HStack(spacing: 6) {
                 Image(systemName: "list.bullet.rectangle")
                     .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.65))
+                    .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.65))
                 Text("Plan (\(state.steps.count) steps)")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.75))
+                    .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.75))
             }
 
             AutoHeightScrollView(maxHeight: 240) {
@@ -1637,11 +1638,11 @@ private struct IslandSessionRow: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(Color.black.opacity(0.32))
+                .fill(themePalette.crust.swiftUIColor.opacity(0.45))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(.white.opacity(0.06))
+                .strokeBorder(themePalette.text.swiftUIColor.opacity(0.06))
         )
     }
 
@@ -1681,7 +1682,7 @@ private struct IslandSessionRow: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(.white.opacity(0.06))
+                .strokeBorder(themePalette.text.swiftUIColor.opacity(0.06))
         )
     }
 
@@ -1692,14 +1693,14 @@ private struct IslandSessionRow: View {
             HStack(alignment: .top, spacing: 12) {
                 Text(completionPromptLabel)
                     .font(.system(size: 12.5, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.8))
                     .lineLimit(2)
 
                 Spacer(minLength: 8)
 
                 Text(lang.t("completion.done"))
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Color(red: 0.29, green: 0.86, blue: 0.46).opacity(0.96))
+                    .foregroundStyle(themePalette.role(.completion).swiftUIColor.opacity(0.96))
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
@@ -1710,7 +1711,7 @@ private struct IslandSessionRow: View {
 
             AutoHeightScrollView(maxHeight: 260) {
                 Markdown(completionMessageText)
-                    .markdownTheme(.completionCard)
+                    .markdownTheme(.completionCard(themePalette))
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
@@ -1726,11 +1727,11 @@ private struct IslandSessionRow: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(0.045))
+                .fill(themePalette.surface0.swiftUIColor)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(.white.opacity(0.08))
+                .strokeBorder(themePalette.text.swiftUIColor.opacity(0.08))
         )
     }
 
@@ -1750,7 +1751,7 @@ private struct IslandSessionRow: View {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 24))
                     .foregroundColor(replyText.trimmingCharacters(in: .whitespaces).isEmpty
-                        ? .white.opacity(0.2) : .white.opacity(0.9))
+                        ? themePalette.text.swiftUIColor.opacity(0.2) : themePalette.text.swiftUIColor.opacity(0.9))
             }
             .buttonStyle(.plain)
             .disabled(replyText.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -1824,14 +1825,14 @@ private struct IslandSessionRow: View {
         case .completed:
             Image(systemName: "checkmark.square.fill")
                 .font(.system(size: 9))
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.35))
         case .inProgress:
             Circle()
-                .fill(Color(red: 0.34, green: 0.61, blue: 0.99))
+                .fill(themePalette.blue.swiftUIColor)
                 .frame(width: 6, height: 6)
         case .pending:
             Circle()
-                .strokeBorder(.white.opacity(0.3), lineWidth: 1)
+                .strokeBorder(themePalette.text.swiftUIColor.opacity(0.3), lineWidth: 1)
                 .frame(width: 6, height: 6)
         }
     }
@@ -1888,46 +1889,46 @@ private struct IslandSessionRow: View {
         .foregroundStyle(tint ?? badgeTextColor(for: presence))
         .padding(.horizontal, 7)
         .padding(.vertical, 3.5)
-        .background(Color(red: 0.14, green: 0.14, blue: 0.15), in: Capsule())
+        .background(themePalette.surface0.swiftUIColor, in: Capsule())
     }
 
     private func headlineColor(for presence: IslandSessionPresence) -> Color {
-        presence == .inactive ? .white.opacity(0.78) : .white
+        presence == .inactive ? themePalette.text.swiftUIColor.opacity(0.78) : themePalette.text.swiftUIColor
     }
 
     private func badgeTextColor(for presence: IslandSessionPresence) -> Color {
-        presence == .inactive ? .white.opacity(0.42) : .white.opacity(0.56)
+        presence == .inactive ? themePalette.text.swiftUIColor.opacity(0.42) : themePalette.text.swiftUIColor.opacity(0.56)
     }
 
     private func statusTint(for presence: IslandSessionPresence) -> Color {
         if session.phase == .waitingForApproval {
-            return .orange.opacity(0.94)
+            return themePalette.role(.attention).swiftUIColor.opacity(0.94)
         }
 
         if session.phase == .waitingForAnswer {
-            return .yellow.opacity(0.96)
+            return themePalette.role(.question).swiftUIColor.opacity(0.96)
         }
 
         switch presence {
         case .running:
-            return Color(red: 0.34, green: 0.61, blue: 0.99)
+            return themePalette.blue.swiftUIColor
         case .active:
-            return Color(red: 0.29, green: 0.86, blue: 0.46)
+            return themePalette.green.swiftUIColor
         case .inactive:
-            return .white.opacity(0.38)
+            return themePalette.text.swiftUIColor.opacity(0.38)
         }
     }
 
     private func activityColor(for presence: IslandSessionPresence) -> Color {
         switch session.spotlightActivityTone {
         case .attention:
-            .orange.opacity(0.94)
+            themePalette.role(.attention).swiftUIColor.opacity(0.94)
         case .live:
             statusTint(for: presence)
         case .idle:
-            .white.opacity(0.46)
+            themePalette.text.swiftUIColor.opacity(0.46)
         case .ready:
-            presence == .inactive ? .white.opacity(0.46) : statusTint(for: presence)
+            presence == .inactive ? themePalette.text.swiftUIColor.opacity(0.46) : statusTint(for: presence)
         }
     }
 }
@@ -1946,7 +1947,7 @@ private struct StructuredQuestionPromptView: View {
             if showsPromptTitle {
                 Text(promptTitle)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.yellow.opacity(0.96))
+                    .foregroundStyle((palette ?? .mocha).role(.question).swiftUIColor.opacity(0.96))
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -1971,7 +1972,7 @@ private struct StructuredQuestionPromptView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(.white.opacity(0.06))
+                .strokeBorder((palette ?? .mocha).text.swiftUIColor.opacity(0.06))
         )
     }
 
@@ -1984,12 +1985,12 @@ private struct StructuredQuestionPromptView: View {
             if structuredQuestions.count > 1 {
                 Text(question.header)
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle((palette ?? .mocha).text.swiftUIColor.opacity(0.5))
             }
 
             Text(question.question)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white.opacity(0.88))
+                .foregroundStyle((palette ?? .mocha).text.swiftUIColor.opacity(0.88))
                 .fixedSize(horizontal: false, vertical: true)
 
             // Vertical option list
@@ -2014,17 +2015,17 @@ private struct StructuredQuestionPromptView: View {
                 HStack(spacing: 8) {
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(isSelected ? .yellow : .white.opacity(0.35))
+                        .foregroundStyle(isSelected ? (palette ?? .mocha).role(.question).swiftUIColor : (palette ?? .mocha).text.swiftUIColor.opacity(0.35))
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text(option.label)
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.white.opacity(isSelected ? 1 : 0.78))
+                            .foregroundStyle((palette ?? .mocha).text.swiftUIColor.opacity(isSelected ? 1 : 0.78))
 
                         if !option.description.isEmpty {
                             Text(option.description)
                                 .font(.system(size: 10.5))
-                                .foregroundStyle(.white.opacity(0.4))
+                                .foregroundStyle((palette ?? .mocha).text.swiftUIColor.opacity(0.4))
                                 .lineLimit(1)
                         }
                     }
@@ -2039,17 +2040,17 @@ private struct StructuredQuestionPromptView: View {
 
             if showsFreeform {
                 Divider()
-                    .overlay(Color.white.opacity(0.08))
+                    .overlay((palette ?? .mocha).text.swiftUIColor.opacity(0.08))
                 freeformField(for: option, question: question)
             }
         }
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(isSelected ? Color.yellow.opacity(0.10) : Color.white.opacity(0.04))
+                .fill(isSelected ? (palette ?? .mocha).role(.question).swiftUIColor.opacity(0.10) : Color.white.opacity(0.04))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .strokeBorder(isSelected ? .yellow.opacity(0.25) : .clear)
+                .strokeBorder(isSelected ? (palette ?? .mocha).role(.question).swiftUIColor.opacity(0.25) : .clear)
         )
     }
 
@@ -2363,13 +2364,15 @@ struct ClosedCountBadge: View {
     let liveCount: Int
     let tint: Color
 
+    @Environment(\.themePalette) private var palette
+
     var body: some View {
         Text("\(liveCount)")
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(tint)
             .padding(.horizontal, 8)
             .padding(.vertical, 2)
-            .background(Color(red: 0.14, green: 0.14, blue: 0.15), in: Capsule())
+            .background(palette.surface0.swiftUIColor, in: Capsule())
     }
 }
 
@@ -2388,6 +2391,7 @@ private struct CentralActivityLabel: View {
     let isVisible: Bool
 
     @State private var displayed: DisplayedActivity?
+    @Environment(\.themePalette) private var palette
 
     private static let fadeDelay: Duration = .seconds(2)
 
@@ -2407,7 +2411,7 @@ private struct CentralActivityLabel: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
                 }
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.85))
                 .padding(.horizontal, 8)
                 .transition(.opacity.combined(with: .scale(scale: 0.96)))
             }
@@ -2592,111 +2596,118 @@ struct MenuBarContentView: View {
 // MARK: - MarkdownUI Theme
 
 extension MarkdownUI.Theme {
-    @MainActor static let completionCard = Theme()
-        .text {
-            ForegroundColor(.white.opacity(0.88))
-            FontSize(13.5)
-            FontWeight(.medium)
-        }
-        .link {
-            ForegroundColor(.blue)
-        }
-        .strong {
-            FontWeight(.bold)
-        }
-        .code {
-            FontFamilyVariant(.monospaced)
-            FontSize(12.5)
-            ForegroundColor(.white.opacity(0.88))
-            BackgroundColor(.white.opacity(0.08))
-        }
-        .codeBlock { configuration in
-            configuration.label
-                .markdownTextStyle {
-                    FontFamilyVariant(.monospaced)
-                    FontSize(12.5)
-                    ForegroundColor(.white.opacity(0.88))
-                }
-                .padding(10)
-                .background(Color.white.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-        }
-        .heading1 { configuration in
-            configuration.label
-                .markdownTextStyle {
-                    FontSize(16)
-                    FontWeight(.bold)
-                    ForegroundColor(.white.opacity(0.88))
-                }
-                .markdownMargin(top: 8, bottom: 4)
-        }
-        .heading2 { configuration in
-            configuration.label
-                .markdownTextStyle {
-                    FontSize(15)
-                    FontWeight(.bold)
-                    ForegroundColor(.white.opacity(0.88))
-                }
-                .markdownMargin(top: 8, bottom: 4)
-        }
-        .heading3 { configuration in
-            configuration.label
-                .markdownTextStyle {
-                    FontSize(14)
-                    FontWeight(.semibold)
-                    ForegroundColor(.white.opacity(0.88))
-                }
-                .markdownMargin(top: 6, bottom: 2)
-        }
-        .blockquote { configuration in
-            configuration.label
-                .markdownTextStyle {
-                    ForegroundColor(.white.opacity(0.6))
-                    FontSize(13.5)
-                }
-                .padding(.leading, 12)
-                .overlay(alignment: .leading) {
-                    Rectangle()
-                        .fill(Color.white.opacity(0.2))
-                        .frame(width: 3)
-                }
-        }
-        .listItem { configuration in
-            configuration.label
-                .markdownMargin(top: 2, bottom: 2)
-        }
-        .table { configuration in
-            configuration.label
-                .fixedSize(horizontal: false, vertical: true)
-                .markdownTableBorderStyle(.init(.allBorders, color: .white.opacity(0.15), strokeStyle: .init(lineWidth: 1)))
-                .markdownTableBackgroundStyle(
-                    .alternatingRows(Color.white.opacity(0.04), Color.white.opacity(0.08))
-                )
-                .markdownMargin(top: 4, bottom: 8)
-        }
-        .tableCell { configuration in
-            configuration.label
-                .markdownTextStyle {
-                    if configuration.row == 0 {
-                        FontWeight(.semibold)
+    @MainActor static func completionCard(_ palette: ThemePalette) -> Theme {
+        let text = palette.text.swiftUIColor
+        let surface = palette.surface0.swiftUIColor
+        let link = palette.role(.working).swiftUIColor
+        return Theme()
+            .text {
+                ForegroundColor(text.opacity(0.88))
+                FontSize(13.5)
+                FontWeight(.medium)
+            }
+            .link {
+                ForegroundColor(link)
+            }
+            .strong {
+                FontWeight(.bold)
+            }
+            .code {
+                FontFamilyVariant(.monospaced)
+                FontSize(12.5)
+                ForegroundColor(text.opacity(0.88))
+                BackgroundColor(surface.opacity(0.8))
+            }
+            .codeBlock { configuration in
+                configuration.label
+                    .markdownTextStyle {
+                        FontFamilyVariant(.monospaced)
+                        FontSize(12.5)
+                        ForegroundColor(text.opacity(0.88))
                     }
-                }
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 6)
-                .padding(.horizontal, 12)
-                .relativeLineSpacing(.em(0.25))
-        }
+                    .padding(10)
+                    .background(surface.opacity(0.8))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+            .heading1 { configuration in
+                configuration.label
+                    .markdownTextStyle {
+                        FontSize(16)
+                        FontWeight(.bold)
+                        ForegroundColor(text.opacity(0.88))
+                    }
+                    .markdownMargin(top: 8, bottom: 4)
+            }
+            .heading2 { configuration in
+                configuration.label
+                    .markdownTextStyle {
+                        FontSize(15)
+                        FontWeight(.bold)
+                        ForegroundColor(text.opacity(0.88))
+                    }
+                    .markdownMargin(top: 8, bottom: 4)
+            }
+            .heading3 { configuration in
+                configuration.label
+                    .markdownTextStyle {
+                        FontSize(14)
+                        FontWeight(.semibold)
+                        ForegroundColor(text.opacity(0.88))
+                    }
+                    .markdownMargin(top: 6, bottom: 2)
+            }
+            .blockquote { configuration in
+                configuration.label
+                    .markdownTextStyle {
+                        ForegroundColor(text.opacity(0.6))
+                        FontSize(13.5)
+                    }
+                    .padding(.leading, 12)
+                    .overlay(alignment: .leading) {
+                        Rectangle()
+                            .fill(text.opacity(0.2))
+                            .frame(width: 3)
+                    }
+            }
+            .listItem { configuration in
+                configuration.label
+                    .markdownMargin(top: 2, bottom: 2)
+            }
+            .table { configuration in
+                configuration.label
+                    .fixedSize(horizontal: false, vertical: true)
+                    .markdownTableBorderStyle(.init(.allBorders, color: text.opacity(0.15), strokeStyle: .init(lineWidth: 1)))
+                    .markdownTableBackgroundStyle(
+                        // .white.opacity(0.04) kept as exception (at/below threshold)
+                        .alternatingRows(Color.white.opacity(0.04), surface.opacity(0.6))
+                    )
+                    .markdownMargin(top: 4, bottom: 8)
+            }
+            .tableCell { configuration in
+                configuration.label
+                    .markdownTextStyle {
+                        if configuration.row == 0 {
+                            FontWeight(.semibold)
+                        }
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 12)
+                    .relativeLineSpacing(.em(0.25))
+            }
+    }
 }
 
 private struct DismissButton: View {
     let action: () -> Void
     @State private var isHovered = false
+    @Environment(\.themePalette) private var palette
 
     var body: some View {
         Button(action: action) {
             Image(systemName: "xmark.circle.fill")
                 .font(.system(size: 12))
-                .foregroundStyle(.white.opacity(isHovered ? 0.8 : 0.4))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(isHovered ? 0.8 : 0.4))
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }

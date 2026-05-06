@@ -10,6 +10,8 @@ struct PlanChecklistView: View {
     let interactive: Bool
     let onToggle: ((String) -> Void)?
 
+    @Environment(\.themePalette) private var palette
+
     private static let baseIndent: CGFloat = 12
 
     init(state: PlanState, interactive: Bool, onToggle: ((String) -> Void)? = nil) {
@@ -33,8 +35,8 @@ struct PlanChecklistView: View {
             checkbox(checked: checked)
             Text(step.title)
                 .font(.system(size: 12, weight: checked ? .regular : .medium))
-                .foregroundStyle(checked ? .white.opacity(0.5) : .white.opacity(0.92))
-                .strikethrough(checked, color: .white.opacity(0.4))
+                .foregroundStyle(checked ? palette.text.swiftUIColor.opacity(0.5) : palette.text.swiftUIColor.opacity(0.92))
+                .strikethrough(checked, color: palette.text.swiftUIColor.opacity(0.4))
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -50,12 +52,12 @@ struct PlanChecklistView: View {
     private func checkbox(checked: Bool) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 3, style: .continuous)
-                .stroke(checked ? .green.opacity(0.85) : .white.opacity(0.35), lineWidth: 1.5)
+                .stroke(checked ? palette.role(.success).swiftUIColor.opacity(0.85) : palette.text.swiftUIColor.opacity(0.35), lineWidth: 1.5)
                 .frame(width: 12, height: 12)
             if checked {
                 Image(systemName: "checkmark")
                     .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(.green.opacity(0.95))
+                    .foregroundStyle(palette.role(.success).swiftUIColor.opacity(0.95))
             }
         }
         .padding(.top, 2)

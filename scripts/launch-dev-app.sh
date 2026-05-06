@@ -13,20 +13,20 @@ done
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 brand_script="$repo_root/scripts/generate_brand_icons.py"
 brand_icon="$repo_root/Assets/Brand/OpenIsland.icns"
-bundle_dir="$HOME/Applications/Open Island Dev.app"
+bundle_dir="$HOME/Applications/Atoll Dev.app"
 plist_path="$bundle_dir/Contents/Info.plist"
-bundle_binary="$bundle_dir/Contents/MacOS/OpenIslandApp"
+bundle_binary="$bundle_dir/Contents/MacOS/AtollApp"
 
 cd "$repo_root"
 
-swift build -c debug --product OpenIslandApp
-swift build -c debug --product OpenIslandHooks
-swift build -c debug --product OpenIslandSetup
+swift build -c debug --product AtollApp
+swift build -c debug --product AtollHooks
+swift build -c debug --product AtollSetup
 
 build_root="$(swift build -c debug --show-bin-path)"
-app_binary="$build_root/OpenIslandApp"
-hooks_binary="$build_root/OpenIslandHooks"
-setup_binary="$build_root/OpenIslandSetup"
+app_binary="$build_root/AtollApp"
+hooks_binary="$build_root/AtollHooks"
+setup_binary="$build_root/AtollSetup"
 
 python3 "$brand_script"
 if [ "$skip_setup" = false ]; then
@@ -36,24 +36,26 @@ fi
 mkdir -p "$bundle_dir/Contents/MacOS" "$bundle_dir/Contents/Helpers" "$bundle_dir/Contents/Resources" "$bundle_dir/Contents/Frameworks"
 
 # Kill any running instance before copying so the binary isn't locked.
+osascript -e 'tell application "Atoll Dev" to quit' 2>/dev/null || true
 osascript -e 'tell application "Open Island Dev" to quit' 2>/dev/null || true
+pkill -9 -f "Atoll Dev" 2>/dev/null || true
 pkill -9 -f "Open Island Dev" 2>/dev/null || true
 sleep 2
 
 command cp "$app_binary" "$bundle_binary"
-command cp "$hooks_binary" "$bundle_dir/Contents/Helpers/OpenIslandHooks"
-command cp "$setup_binary" "$bundle_dir/Contents/Helpers/OpenIslandSetup"
+command cp "$hooks_binary" "$bundle_dir/Contents/Helpers/AtollHooks"
+command cp "$setup_binary" "$bundle_dir/Contents/Helpers/AtollSetup"
 command cp "$brand_icon" "$bundle_dir/Contents/Resources/OpenIsland.icns"
-chmod +x "$bundle_binary" "$bundle_dir/Contents/Helpers/OpenIslandHooks" "$bundle_dir/Contents/Helpers/OpenIslandSetup"
+chmod +x "$bundle_binary" "$bundle_dir/Contents/Helpers/AtollHooks" "$bundle_dir/Contents/Helpers/AtollSetup"
 
 # Add rpath so the binary can find Sparkle.framework in Contents/Frameworks/.
 install_name_tool -add_rpath @loader_path/../Frameworks "$bundle_binary" 2>/dev/null || true
 
 # Copy SPM resource bundle to .app root — SPM's generated Bundle.module accessor
 # searches Bundle.main.bundleURL (the .app root), NOT Contents/Resources/.
-resource_bundle="$build_root/OpenIsland_OpenIslandApp.bundle"
+resource_bundle="$build_root/Atoll_AtollApp.bundle"
 if [ -d "$resource_bundle" ]; then
-    rm -rf "$bundle_dir/OpenIsland_OpenIslandApp.bundle"
+    rm -rf "$bundle_dir/Atoll_AtollApp.bundle"
     command cp -R "$resource_bundle" "$bundle_dir/"
 fi
 
@@ -72,31 +74,31 @@ cat > "$plist_path" <<EOF
     <key>CFBundleDevelopmentRegion</key>
     <string>en</string>
     <key>CFBundleExecutable</key>
-    <string>OpenIslandApp</string>
+    <string>AtollApp</string>
     <key>CFBundleIdentifier</key>
-    <string>app.openisland.dev</string>
+    <string>app.atoll.dev</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleIconFile</key>
     <string>OpenIsland</string>
     <key>CFBundleName</key>
-    <string>Open Island Dev</string>
+    <string>Atoll Dev</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.1</string>
+    <string>1.0</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSMinimumSystemVersion</key>
     <string>14.0</string>
     <key>NSAppleEventsUsageDescription</key>
-    <string>Open Island needs automation access to focus Terminal and iTerm sessions for jump-back.</string>
+    <string>Atoll needs automation access to focus Terminal and iTerm sessions for jump-back.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>SUFeedURL</key>
-    <string>https://raw.githubusercontent.com/Octane0411/open-vibe-island/main/appcast.xml</string>
+    <string>https://raw.githubusercontent.com/h4ckm1n-dev/atoll/main/appcast.xml</string>
     <key>SUPublicEDKey</key>
     <string>3IF8txq9RRNanzE2FNhyGRcwhslTucCcJHpTkpxcgBQ=</string>
 </dict>
@@ -109,7 +111,7 @@ EOF
 # Bundle.module falls back to the hardcoded .build/ path, so
 # localization still works. (Release builds use package-app.sh which
 # has its own resource bundle handling.)
-resource_bundle_name="OpenIsland_OpenIslandApp.bundle"
+resource_bundle_name="Atoll_AtollApp.bundle"
 root_bundle="$bundle_dir/$resource_bundle_name"
 resources_bundle="$bundle_dir/Contents/Resources/$resource_bundle_name"
 if [ -d "$root_bundle" ] && [ ! -L "$root_bundle" ]; then

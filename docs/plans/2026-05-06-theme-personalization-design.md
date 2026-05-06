@@ -272,15 +272,33 @@ Replace 39 color sites. Refactor `.white.opacity` / `.black.opacity` chrome over
 
 Editor sheet (3 disclosure groups), live preview via `themeManager.previewPalette`, hex + ColorPicker per row, isLight toggle, fork-from-preset bootstrap.
 
-**Files (new):** `Sources/OpenIslandApp/Views/ThemeEditorSheet.swift`, `Sources/OpenIslandApp/Views/ColorRoleRow.swift`. **(modified):** `ThemeManager.swift` (preview), `AppearanceSettingsPane.swift`, localized strings.
+**Files (new):** `Sources/AtollApp/Views/ThemeEditorSheet.swift`, `Sources/AtollApp/Views/ColorRoleRow.swift`. **(modified):** `ThemeManager.swift` (preview), `AppearanceSettingsPane.swift`, localized strings.
 
 **Swarm:** `apple-dev:apple-ui-designer` (HIG sheet layout) ↔ `apple-dev:swift-developer` (impl + preview wiring) → `tester` (preview + hex validation) → `reviewer` (Settings UX). Mesh, 4 agents — designer + developer iterate together.
 
 **Gate:** preview tests green; manual: drag picker → island retints live; Cancel reverts; Save persists.
 
+### Phase 4 — Frosted panel option (`feat/panel-material`)
+
+A three-way `AppPanelMaterial` enum (`.solid` / `.frostedThin` / `.frostedUltraThin`) that controls the opened-panel surface fill. Solid keeps the v1.0 ocean-night look (`palette.mantle`); frosted variants swap to `.thinMaterial` / `.ultraThinMaterial` with a `palette.crust.opacity(0.55)` overlay so the theme tint still bleeds through. Notch / collapsed state stays pure black regardless — frosting in idle state would break the physical-notch blend on notched MacBooks.
+
+**Type:** new file `Sources/AtollCore/PanelMaterial.swift` with `public enum AppPanelMaterial: String, Codable, CaseIterable, Sendable { case solid, frostedThin, frostedUltraThin }`.
+
+**Persistence:** `@AppStorage("appearance.panelMaterial")` (raw String) on the App scene. Default `.solid` so existing users don't see a forced change.
+
+**Render site:** `Sources/AtollApp/Views/IslandPanelView.swift` ~line 315 — the existing `openedSurfaceFill` `let` becomes a `@ViewBuilder` `surfaceFill()` that returns either a single `Rectangle().fill(palette.mantle.swiftUIColor)` (solid) or a stacked `Rectangle().fill(.<material>)` + `Rectangle().fill(palette.crust.swiftUIColor.opacity(0.55))` (frosted). Existing collapsed-state `Color.black` path is untouched.
+
+**Settings UI:** `AppearanceSettingsPane.swift` — add a `Picker` row under the existing Theme picker, labeled "Panel material" with three options. 3 localized labels × 3 lproj = 9 new string keys.
+
+**Tests:** one new test in `ThemeTests.swift`: `appPanelMaterialRoundtripsThroughCodable`. Visual smoke covered by Phase D-style manual switch through the three options.
+
+**Swarm:** `apple-dev:swift-developer` (single-implementer — small enough to skip parallel architect/coder split) → `tester` (codable test) → `reviewer` (HIG check + visual smoke).
+
+**Gate:** picker switches material live; codable test green; collapsed-state notch blend still pure black.
+
 ## Stop conditions
 
-We can ship after any phase. If after Phase 1 the visual impact already feels right and Phase 2 isn't priority, this design stands and 2/3 become future work.
+We can ship after any phase. Phases 2/3 are the originally-designed bundle; Phase 4 is independent and can ship before, between, or after them. If priorities shift, this design stands and remaining phases become future work.
 
 ## Open questions
 

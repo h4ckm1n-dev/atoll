@@ -15,7 +15,10 @@ final class ControlCenterWindowController: NSWindowController, NSWindowDelegate 
         window.center()
         window.minSize = NSSize(width: 940, height: 580)
         window.setContentSize(NSSize(width: 980, height: 640))
-        window.contentViewController = NSHostingController(rootView: ControlCenterView(model: model))
+        window.contentViewController = NSHostingController(
+            rootView: ControlCenterView(model: model)
+                .environment(\.themePalette, model.themeManager.palette)
+        )
         window.isReleasedWhenClosed = false
 
         super.init(window: window)

@@ -47,3 +47,21 @@ extension ProjectColor {
         Color(red: red, green: green, blue: blue)
     }
 }
+
+private struct ThemePaletteEnvironmentKey: EnvironmentKey {
+    /// Default falls back to Mocha (the same default ThemeManager
+    /// uses on first launch). Views that read this without an
+    /// injecting ancestor still render — useful in previews.
+    static let defaultValue: ThemePalette = .mocha
+}
+
+extension EnvironmentValues {
+    /// Active palette, mirroring `themeManager.palette`. Views read
+    /// this via `@Environment(\.themePalette)`. Injection happens at
+    /// the App root in `OpenIslandApp.body` so the value tracks the
+    /// `ThemeManager.theme` and `previewPalette` automatically.
+    public var themePalette: ThemePalette {
+        get { self[ThemePaletteEnvironmentKey.self] }
+        set { self[ThemePaletteEnvironmentKey.self] = newValue }
+    }
+}

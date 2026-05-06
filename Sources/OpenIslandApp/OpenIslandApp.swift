@@ -105,6 +105,7 @@ struct OpenIslandApp: App {
     var body: some Scene {
         Window("Open Island Settings", id: "settings") {
             SettingsWindowContent(model: appDelegate.model)
+                .environment(\.themePalette, appDelegate.model.themeManager.palette)
         }
         .windowResizability(.contentMinSize)
         .commands {
@@ -120,12 +121,17 @@ struct OpenIslandApp: App {
         #if DEBUG
         WindowGroup("Open Island Debug") {
             ControlCenterView(model: appDelegate.model)
+                .environment(\.themePalette, appDelegate.model.themeManager.palette)
         }
         #endif
 
         MenuBarExtra {
             MenuBarContentView(model: appDelegate.model)
+                .environment(\.themePalette, appDelegate.model.themeManager.palette)
         } label: {
+            // Label intentionally NOT wrapped — earlier theme work showed
+            // extra env traffic in the menu bar render path triggers
+            // SwiftUI invalidation churn (regression: b80e6e0).
             IslandCoconutGlyph(size: 18)
                 .accessibilityLabel("Open Island")
                 .background(SettingsOpenerRegistrar(model: appDelegate.model))

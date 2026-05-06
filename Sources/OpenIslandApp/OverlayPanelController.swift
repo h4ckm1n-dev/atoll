@@ -137,7 +137,10 @@ final class OverlayPanelController {
         panel.titlebarAppearsTransparent = true
         panel.ignoresMouseEvents = true
 
-        let hostingView = NotchHostingView(rootView: IslandPanelView(model: model))
+        let hostingView = NotchHostingView(
+            rootView: IslandPanelView(model: model)
+                .environment(\.themePalette, model.themeManager.palette)
+        )
         hostingView.notchController = self
         panel.contentView = hostingView
 

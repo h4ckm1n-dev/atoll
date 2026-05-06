@@ -149,6 +149,36 @@ extension AppTheme {
     }
 }
 
+/// Semantic accent roles. Views should prefer `palette.role(.warning)`
+/// over `palette.peach` when the call site is naming an *intent*
+/// (warning, danger, success) rather than a *color*. The mapping is
+/// the same across every flavor — only the underlying hex changes.
+public enum PaletteRole: Sendable, Hashable, CaseIterable {
+    case warning      // amber / caution — non-destructive nudge
+    case danger       // destructive / always-allow
+    case success      // task completed, idle-but-ok
+    case working      // active / in-progress
+    case attention    // demands the user's eyes (permission, mute)
+    case question     // structured-question prompt, plan-mode card
+    case completion   // celebratory completion banner
+}
+
+extension ThemePalette {
+    /// Resolves a semantic accent role to the matching palette field.
+    /// Used by views that want to express intent rather than color.
+    /// See `docs/plans/2026-05-06-theme-personalization-design.md`
+    /// section "Color mapping (Phase 1 sweep)" for the rationale.
+    public func role(_ role: PaletteRole) -> ProjectColor {
+        switch role {
+        case .warning, .attention: return peach
+        case .danger:              return red
+        case .success, .completion: return green
+        case .working:             return blue
+        case .question:            return yellow
+        }
+    }
+}
+
 extension ProjectColor {
     /// Parse a `#RRGGBB` or `RRGGBB` hex string. Falls back to (0,0,0) on
     /// malformed input so a typo doesn't crash the renderer mid-frame.

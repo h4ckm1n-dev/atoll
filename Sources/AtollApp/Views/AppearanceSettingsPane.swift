@@ -14,11 +14,14 @@ struct AppearanceSettingsPane: View {
         Form {
             Section(lang.t("settings.theme.title")) {
                 Picker(lang.t("settings.theme.title"), selection: Binding(
-                    get: { model.themeManager.theme },
-                    set: { model.themeManager.setTheme($0) }
+                    get: { model.themeManager.theme.stableID },
+                    set: { newID in
+                        guard let newTheme = AppTheme(stableID: newID) else { return }
+                        model.themeManager.setTheme(newTheme)
+                    }
                 )) {
-                    ForEach(AppTheme.allCases, id: \.self) { theme in
-                        Text(theme.displayName).tag(theme)
+                    ForEach(AppTheme.builtIn, id: \.stableID) { theme in
+                        Text(theme.displayName).tag(theme.stableID)
                     }
                 }
                 themePreviewRow(palette: model.themeManager.palette)

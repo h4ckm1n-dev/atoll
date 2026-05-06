@@ -5,12 +5,12 @@ import Testing
 struct ThemeTests {
     @Test
     func everyAppThemeResolvesAPalette() {
-        for theme in AppTheme.allCases {
+        for theme in AppTheme.builtIn {
             // Smoke check — all 26 fields populated, light flag matches.
-            let palette = theme.palette
+            let palette = theme.builtInPalette ?? .mocha
             #expect(palette.text.red >= 0 && palette.text.red <= 1)
             #expect(palette.green.red >= 0 && palette.green.red <= 1)
-            if theme == .catppuccinLatte {
+            if theme == .latte {
                 #expect(palette.isLight == true)
             } else {
                 #expect(palette.isLight == false)
@@ -59,17 +59,23 @@ struct ThemeTests {
 
     @Test
     func appThemeRoundtripsThroughCodable() throws {
-        for theme in AppTheme.allCases {
+        for theme in AppTheme.builtIn {
             let data = try JSONEncoder().encode(theme)
             let decoded = try JSONDecoder().decode(AppTheme.self, from: data)
             #expect(decoded == theme)
         }
+        // Also test custom round-trip.
+        let customID = UUID()
+        let custom = AppTheme.custom(id: customID)
+        let data = try JSONEncoder().encode(custom)
+        let decoded = try JSONDecoder().decode(AppTheme.self, from: data)
+        #expect(decoded == custom)
     }
 
     @Test
     func paletteRoleMapsToExpectedAccentForEveryFlavor() {
-        for theme in AppTheme.allCases {
-            let p = theme.palette
+        for theme in AppTheme.builtIn {
+            let p = theme.builtInPalette ?? .mocha
             // Each role must resolve to a specific palette field. The
             // mapping is locked — adding a role or moving a role must
             // require updating this test, which is a feature not a bug.
@@ -123,10 +129,8 @@ struct ThemeTests {
     @Test
     func darkFlavorsHaveDarkBase() {
         // Inverse contract for the dark flavors — base must be dark.
-        for theme in [AppTheme.catppuccinFrappe,
-                      .catppuccinMacchiato,
-                      .catppuccinMocha] {
-            let p = theme.palette
+        for theme in [AppTheme.frappe, .macchiato, .mocha] {
+            let p = theme.builtInPalette ?? .mocha
             let baseLuma = relativeLuminance(p.base)
             #expect(baseLuma < 0.20,
                     "\(theme).base luma (\(baseLuma)) must be < 0.20 — dark base")

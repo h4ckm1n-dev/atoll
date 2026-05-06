@@ -177,6 +177,10 @@ struct AppearanceSettingsPane: View {
 
     // MARK: - Preview card
 
+    // Preview is a fixed visual mock of the physical notch on a dark
+    // wallpaper. Chrome here is intentionally NOT palette-driven —
+    // changing it would make the preview lie about the actual notch
+    // appearance.
     private var notchPreviewCard: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 16, style: .continuous)

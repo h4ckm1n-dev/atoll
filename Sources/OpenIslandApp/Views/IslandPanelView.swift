@@ -1672,12 +1672,15 @@ private struct IslandSessionRow: View {
     private var replyFallbackInput: some View {
         VStack(alignment: .leading, spacing: 0) {
             Rectangle()
+                // 1px stroke — palette.text.opacity(0.04) is invisible.
                 .fill(.white.opacity(0.04))
                 .frame(height: 1)
             completionReplyInput
         }
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
+                // Below the perceptible-tint threshold (≤0.04) — palette.text would
+                // vanish here on dark themes; kept as Color.white literal.
                 .fill(Color.white.opacity(0.03))
         )
         .overlay(
@@ -1706,6 +1709,7 @@ private struct IslandSessionRow: View {
             .padding(.vertical, 12)
 
             Rectangle()
+                // 1px stroke — palette.text.opacity(0.04) is invisible.
                 .fill(.white.opacity(0.04))
                 .frame(height: 1)
 
@@ -1719,6 +1723,7 @@ private struct IslandSessionRow: View {
 
             if onReply != nil {
                 Rectangle()
+                    // 1px stroke — palette.text.opacity(0.04) is invisible.
                     .fill(.white.opacity(0.04))
                     .frame(height: 1)
 
@@ -1968,6 +1973,8 @@ private struct StructuredQuestionPromptView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
+                // Below the perceptible-tint threshold (≤0.04) — palette.text would
+                // vanish here on dark themes; kept as Color.white literal.
                 .fill(Color.white.opacity(0.04))
         )
         .overlay(
@@ -2253,6 +2260,10 @@ private extension String {
 private struct IslandCompactButtonStyle: ButtonStyle {
     var tint: Color
 
+    // ButtonStyle structs cannot read @Environment from caller —
+    // SwiftUI passes only the Configuration. Palette must flow in via
+    // a stored prop (see IslandWideButtonStyle.palette) or remain a
+    // literal as here. See docs/plans/2026-05-06-theme-personalization-design.md.
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 10, weight: .semibold))
@@ -2268,6 +2279,10 @@ private struct IslandCompactButtonStyle: ButtonStyle {
 }
 
 private struct IslandWideButtonStyle: ButtonStyle {
+    // ButtonStyle structs cannot read @Environment from caller —
+    // SwiftUI passes only the Configuration. Palette must flow in via
+    // a stored prop (see IslandWideButtonStyle.palette) or remain a
+    // literal as here. See docs/plans/2026-05-06-theme-personalization-design.md.
     enum Kind {
         case primary
         case secondary

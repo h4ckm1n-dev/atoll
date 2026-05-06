@@ -616,6 +616,10 @@ struct ControlCenterView: View {
 }
 
 private struct DebugActionButtonStyle: ButtonStyle {
+    // ButtonStyle structs cannot read @Environment from caller —
+    // SwiftUI passes only the Configuration. Palette must flow in via
+    // a stored prop (see IslandWideButtonStyle.palette) or remain a
+    // literal as here. See docs/plans/2026-05-06-theme-personalization-design.md.
     enum Kind {
         case primary
         case secondary

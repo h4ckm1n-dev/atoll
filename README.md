@@ -200,9 +200,9 @@ Four targets in one Swift package:
 | **OpenIslandHooks** | Lightweight CLI invoked by agent hooks, forwards payloads via Unix socket |
 | **OpenIslandSetup** | Installer CLI for managing `~/.codex/config.toml` and hook entries |
 
-> *Module names retain the upstream `OpenIsland*` prefix for now — renaming the Swift package is a separate cleanup pass we'll bundle with v1.0.*
+> *The Swift package + bundle ID were renamed to **Atoll** in v1.0; some source file names still carry the legacy `OpenIsland*` prefix (e.g. `OpenIslandApp.swift`) — file/type renames are a deferred cosmetic pass.*
 
-See [docs/architecture.md](docs/architecture.md) for the full system design and the design docs under `docs/plans/` for in-flight work.
+See [docs/index.md](docs/index.md) for the full doc map (architecture, hooks, theme personalization plans, etc.) and run [`scripts/harness.sh`](scripts/harness.sh) for the local CI pipeline (`lint` / `docs` / `test` / `build` / `smoke`).
 
 </details>
 

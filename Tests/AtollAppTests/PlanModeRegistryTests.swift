@@ -99,4 +99,93 @@ struct PlanModeRegistryTests {
         #expect(r2.plan(for: "s")?.steps == [stepA, stepB])
         #expect(r2.plan(for: "s")?.checkedIDs == ["b"])
     }
+
+    // MARK: - rawMarkdown
+
+    @Test
+    func recordPlanStoresRawMarkdown() {
+        let registry = PlanModeRegistry(defaults: makeDefaults(), storageKey: "k")
+        let md = "# Plan\n\nDo a thing.\n- step"
+        registry.recordPlan(sessionID: "s", steps: [stepA], rawMarkdown: md)
+        #expect(registry.plan(for: "s")?.rawMarkdown == md)
+    }
+
+    @Test
+    func recordPlanDefaultRawMarkdownIsEmpty() {
+        let registry = PlanModeRegistry(defaults: makeDefaults(), storageKey: "k")
+        registry.recordPlan(sessionID: "s", steps: [stepA])
+        #expect(registry.plan(for: "s")?.rawMarkdown == "")
+    }
+
+    @Test
+    func recordingIdenticalStepsRefreshesMarkdownButPreservesChecks() {
+        // The step skeleton is unchanged but the prose body got tweaked —
+        // checkboxes survive, the rendered markdown updates.
+        let registry = PlanModeRegistry(defaults: makeDefaults(), storageKey: "k")
+        registry.recordPlan(sessionID: "s", steps: [stepA, stepB], rawMarkdown: "v1")
+        registry.toggleCheck(sessionID: "s", stepID: "a")
+        registry.recordPlan(sessionID: "s", steps: [stepA, stepB], rawMarkdown: "v2")
+        #expect(registry.plan(for: "s")?.rawMarkdown == "v2")
+        #expect(registry.plan(for: "s")?.checkedIDs == ["a"])
+    }
+
+    @Test
+    func planStateCodableRoundTripsRawMarkdown() throws {
+        let original = PlanState(
+            steps: [stepA, stepB],
+            checkedIDs: ["a"],
+            capturedAt: Date(timeIntervalSince1970: 1_700_000_000),
+            rawMarkdown: "# Plan\n- a\n- b"
+        )
+        let data = try JSONEncoder().encode(original)
+        let decoded = try JSONDecoder().decode(PlanState.self, from: data)
+        #expect(decoded == original)
+        #expect(decoded.rawMarkdown == "# Plan\n- a\n- b")
+    }
+
+    @Test
+    func planStateDecodesLegacyPayloadWithoutRawMarkdown() throws {
+        // Simulate a record persisted before rawMarkdown existed: encode
+        // only the legacy fields and confirm the new field defaults to "".
+        struct LegacyPlanState: Codable {
+            let steps: [PlanStep]
+            let checkedIDs: Set<String>
+            let capturedAt: Date
+        }
+        let legacy = LegacyPlanState(
+            steps: [stepA],
+            checkedIDs: ["a"],
+            capturedAt: Date(timeIntervalSince1970: 1_700_000_000)
+        )
+        let data = try JSONEncoder().encode(legacy)
+        let decoded = try JSONDecoder().decode(PlanState.self, from: data)
+        #expect(decoded.steps == [stepA])
+        #expect(decoded.checkedIDs == ["a"])
+        #expect(decoded.rawMarkdown == "")
+    }
+
+    @Test
+    func legacyPersistedRecordsLoadOnRegistryInit() throws {
+        // Persist a legacy-shaped JSON payload directly into UserDefaults
+        // and confirm the registry surfaces it with rawMarkdown == "".
+        let defaults = makeDefaults()
+        let key = "feature.planMode.state.legacy"
+        struct LegacyPlanState: Codable {
+            let steps: [PlanStep]
+            let checkedIDs: Set<String>
+            let capturedAt: Date
+        }
+        let legacyMap: [String: LegacyPlanState] = [
+            "old": LegacyPlanState(
+                steps: [stepA],
+                checkedIDs: [],
+                capturedAt: Date(timeIntervalSince1970: 1_700_000_000)
+            )
+        ]
+        defaults.set(try JSONEncoder().encode(legacyMap), forKey: key)
+
+        let registry = PlanModeRegistry(defaults: defaults, storageKey: key)
+        #expect(registry.plan(for: "old")?.steps == [stepA])
+        #expect(registry.plan(for: "old")?.rawMarkdown == "")
+    }
 }

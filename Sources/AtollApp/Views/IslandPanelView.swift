@@ -1510,7 +1510,7 @@ private struct IslandSessionRow: View {
         guard let planMarkdown else { return nil }
         let steps = PlanModeParser.parse(planMarkdown)
         guard !steps.isEmpty else { return nil }
-        return PlanState(steps: steps)
+        return PlanState(steps: steps, rawMarkdown: planMarkdown)
     }
 
     private func stringValue(in fields: [String: CodexHookJSONValue], key: String) -> String? {
@@ -1551,15 +1551,11 @@ private struct IslandSessionRow: View {
             .buttonStyle(.plain)
 
             if planExpanded {
-                AutoHeightScrollView(maxHeight: 240) {
-                    PlanChecklistView(
-                        state: state,
-                        interactive: true,
-                        paletteOverride: themePalette,
-                        onToggle: { onTogglePlanStep?($0) }
-                    )
-                    .padding(.vertical, 4)
-                }
+                PlanMarkdownView(
+                    rawMarkdown: state.rawMarkdown,
+                    palette: themePalette,
+                    emptyMessage: lang.t("island.plan.empty")
+                )
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)

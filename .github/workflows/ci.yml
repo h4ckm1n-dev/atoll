@@ -11,6 +11,8 @@ on:
       - 'refactor/**'
       - 'chore/**'
       - 'investigate/**'
+    tags:
+      - 'v*'
 
 jobs:
   harness:
@@ -25,19 +27,83 @@ jobs:
       - name: Run CI checks
         run: zsh scripts/harness.sh ci
 
-  package-verify:
+  package:
+    name: Package (DMG + ZIP)
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history so package-app.sh's `git rev-list --count HEAD`
+          # build number is stable across CI runs.
+          fetch-depth: 0
 
       - name: Install dependencies
         run: |
           brew install create-dmg
           pip3 install --break-system-packages Pillow
 
-      - name: Build and package
+      - name: Build and package (universal, ad-hoc signed)
+        env:
+          ATOLL_UNIVERSAL: "true"
+        # No ATOLL_SIGN_IDENTITY — the script falls through to ad-hoc
+        # signing automatically when the var is empty. CI artifacts
+        # are unsigned-as-far-as-Gatekeeper-cares; users right-click
+        # → Open on first launch (instructions surfaced on the
+        # GitHub Release page below).
         run: zsh scripts/package-app.sh
 
-      # Bundle structure is verified inside package-app.sh itself.
-      # No separate verify step needed — the script exits non-zero on
-      # missing files.
+      - name: Show packaged artifacts
+        run: ls -lh output/package/
+
+      - name: Upload Atoll.dmg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Atoll-${{ github.sha }}-dmg
+          path: output/package/Atoll.dmg
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload Atoll.zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Atoll-${{ github.sha }}-zip
+          path: output/package/Atoll.zip
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Attach to GitHub Release (tag pushes only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITHUB_REF_NAME and GITHUB_REPOSITORY are set automatically
+          # by the runner — used directly as env vars to avoid any
+          # ${{ }} interpolation into shell strings.
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          repo="${GITHUB_REPOSITORY}"
+          # If a release for this tag already exists (we created v1.0
+          # and v1.1 manually), attach the DMG to it. Otherwise create
+          # a draft release that the maintainer can publish.
+          if gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
+            echo "Release $tag exists — uploading assets"
+            gh release upload "$tag" \
+              "output/package/Atoll.dmg#Atoll.dmg (macOS, Universal, ad-hoc signed)" \
+              "output/package/Atoll.zip#Atoll.zip (macOS, Universal, ad-hoc signed)" \
+              --clobber \
+              --repo "$repo"
+          else
+            echo "Creating draft release $tag"
+            gh release create "$tag" \
+              --title "Atoll $tag" \
+              --generate-notes \
+              --draft \
+              --repo "$repo" \
+              "output/package/Atoll.dmg#Atoll.dmg (macOS, Universal, ad-hoc signed)" \
+              "output/package/Atoll.zip#Atoll.zip (macOS, Universal, ad-hoc signed)"
+          fi
+          echo ""
+          echo "Installation note: these builds are ad-hoc signed (the Atoll"
+          echo "fork has no Apple Developer Program credentials). On first"
+          echo "launch, macOS Gatekeeper will refuse to open the app."
+          echo "Workaround: right-click -> Open -> confirm, or run:"
+          echo "    xattr -d com.apple.quarantine /Applications/Atoll.app"

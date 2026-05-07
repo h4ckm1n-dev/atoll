@@ -235,6 +235,7 @@
 "settings.celebrations.toggle" = "Celebrate when sessions complete";
 "settings.celebrations.help" = "Spawns a brief burst of project-colored confetti when a session finishes a task.";
 
+
 /* Custom theme registry — Phase 2B */
 "settings.theme.picker" = "Theme";
 "settings.theme.builtin" = "Built-in";
@@ -258,3 +259,11 @@
 "settings.cancel" = "Cancel";
 "settings.save" = "Save";
 "settings.ok" = "OK";
+
+/* Panel material — added by feat/panel-material */
+"settings.panelMaterial.title" = "Panel material";
+"settings.panelMaterial.help" = "Frosted lets the wallpaper show through the panel. Solid keeps the deep ocean-night look from v1.0.";
+"settings.panelMaterial.solid" = "Solid";
+"settings.panelMaterial.frostedThin" = "Frosted (thin)";
+"settings.panelMaterial.frostedUltraThin" = "Frosted (ultra-thin)";
+

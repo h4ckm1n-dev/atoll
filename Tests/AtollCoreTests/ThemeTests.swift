@@ -137,6 +137,24 @@ struct ThemeTests {
         }
     }
 
+    @Test
+    func appPanelMaterialRoundtripsThroughCodable() throws {
+        for mat in AppPanelMaterial.allCases {
+            let data = try JSONEncoder().encode(mat)
+            let decoded = try JSONDecoder().decode(AppPanelMaterial.self, from: data)
+            #expect(decoded == mat)
+        }
+    }
+
+    @Test
+    func appPanelMaterialRawStringIsStable() {
+        // The raw strings are persisted in UserDefaults — bumping them
+        // is a migration. This test pins the contract.
+        #expect(AppPanelMaterial.solid.rawValue == "solid")
+        #expect(AppPanelMaterial.frostedThin.rawValue == "frosted-thin")
+        #expect(AppPanelMaterial.frostedUltraThin.rawValue == "frosted-ultra-thin")
+    }
+
     private func approximatelyEqual(_ color: ProjectColor, hex: String) -> Bool {
         let target = ProjectColor.fromHex(hex)
         return abs(color.red - target.red) < 0.01

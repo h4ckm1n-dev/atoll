@@ -239,6 +239,7 @@
 "settings.celebrations.toggle" = "Celebrate when sessions complete";
 "settings.celebrations.help" = "Spawns a brief burst of project-colored confetti when a session finishes a task.";
 
+
 /* Custom theme registry — Phase 2B */
 "settings.theme.picker" = "主题";
 "settings.theme.builtin" = "内置";
@@ -262,3 +263,11 @@
 "settings.cancel" = "取消";
 "settings.save" = "保存";
 "settings.ok" = "好";
+
+/* Panel material — added by feat/panel-material */
+"settings.panelMaterial.title" = "面板材质";
+"settings.panelMaterial.help" = "毛玻璃模式会让壁纸透过面板显示。「实心」保留 v1.0 的深海夜空配色。";
+"settings.panelMaterial.solid" = "实心";
+"settings.panelMaterial.frostedThin" = "毛玻璃(薄)";
+"settings.panelMaterial.frostedUltraThin" = "毛玻璃(超薄)";
+

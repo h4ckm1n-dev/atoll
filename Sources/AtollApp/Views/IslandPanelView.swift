@@ -116,12 +116,50 @@ struct IslandPanelView: View {
     @State private var lastCompletionTimestamp: Date?
     @State private var lastCelebrationTimestamp: Date?
 
+    @AppStorage("appearance.panelMaterial")
+    private var panelMaterialRaw: String = AppPanelMaterial.solid.rawValue
+
+    private var panelMaterial: AppPanelMaterial {
+        AppPanelMaterial(rawValue: panelMaterialRaw) ?? .solid
+    }
+
     private var isOpened: Bool {
         model.notchStatus == .opened
     }
 
     private var usesOpenedVisualState: Bool {
         isOpened
+    }
+
+    /// Returns the fill for the opened-panel surface.
+    /// Collapsed/idle state is always pure black to preserve the
+    /// physical-notch blend on notched MacBooks.
+    @ViewBuilder
+    private func surfaceFill(
+        palette: ThemePalette,
+        hidesChrome: Bool
+    ) -> some View {
+        if hidesChrome {
+            Color.clear
+        } else if !usesOpenedVisualState {
+            Color.black
+        } else {
+            switch panelMaterial {
+            case .solid:
+                Rectangle()
+                    .fill(palette.mantle.swiftUIColor)
+            case .frostedThin:
+                ZStack {
+                    Rectangle().fill(.thinMaterial)
+                    Rectangle().fill(palette.crust.swiftUIColor.opacity(0.55))
+                }
+            case .frostedUltraThin:
+                ZStack {
+                    Rectangle().fill(.ultraThinMaterial)
+                    Rectangle().fill(palette.crust.swiftUIColor.opacity(0.55))
+                }
+            }
+        }
     }
 
     private var isPopping: Bool {
@@ -305,21 +343,20 @@ struct IslandPanelView: View {
         let hidesClosedSurfaceChrome = showsIdleEdgeWhenCollapsed && !usesOpenedVisualState
         let idleEdgeWidth = closedNotchWidth + (isPopping ? 18 : 0)
 
-        // When the panel is opened, fill the surface from the active
-        // palette's `mantle` (the second-deepest layered tone). Session
-        // cards below use `crust` (the deepest), so cards read as
-        // recessed-darker against the surrounding panel — classic
-        // Catppuccin layered depth instead of card-and-panel blending
-        // into one flat surface (which is what happened when both used
-        // `crust`). When collapsed onto a notched display we still
-        // blend with the physical notch by going pure black.
-        let openedSurfaceFill: Color = usesOpenedVisualState
-            ? model.themeManager.palette.mantle.swiftUIColor
-            : .black
         VStack(spacing: 0) {
             ZStack(alignment: .top) {
+                // Build the surface fill based on panel material + collapsed-vs-open state.
+                // Collapsed (notch-blend) is always pure black regardless of material —
+                // frosting in idle would break the physical-notch illusion.
                 surfaceShape
-                    .fill(openedSurfaceFill.opacity(hidesClosedSurfaceChrome ? 0 : 1))
+                    .fill(Color.clear)
+                    .background(
+                        surfaceFill(
+                            palette: model.themeManager.palette,
+                            hidesChrome: hidesClosedSurfaceChrome
+                        )
+                        .clipShape(surfaceShape)
+                    )
                     .frame(width: surfaceWidth, height: surfaceHeight)
 
                 AmbientThemeOverlay(

@@ -1,5 +1,6 @@
 import AppKit
 import ApplicationServices
+import AtollCore
 import Foundation
 
 struct HarnessArtifactReport: Codable {
@@ -107,7 +108,15 @@ enum HarnessArtifactRecorder {
             return
         }
 
-        try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        try UserPrivateFileWrite.ensurePrivateDirectory(
+            at: directoryURL,
+            fileManager: fileManager
+        )
+        // Harness artifacts are dev-only screenshots / reports — they
+        // are 100% regenerable and can leak UI state if backed up by
+        // Time Machine or iCloud. Mark the directory and we'll mark
+        // each emitted file individually below.
+        UserPrivateFileWrite.excludeFromBackup(directoryURL)
 
         var windows: [HarnessArtifactReport.WindowArtifact] = []
         for window in orderedVisibleWindows() {
@@ -117,7 +126,8 @@ enum HarnessArtifactRecorder {
 
             let imageName = imageFileName(for: window, ordinal: windows.count + 1)
             let imageURL = directoryURL.appendingPathComponent(imageName)
-            try imageData.write(to: imageURL)
+            try writeUserPrivate(imageData, to: imageURL)
+            UserPrivateFileWrite.excludeFromBackup(imageURL)
 
             let accessibilityFileName = accessibilityFileName(for: window, ordinal: windows.count + 1)
             let viewAccessibilitySnapshot = snapshotViewAccessibilityTree(for: window)
@@ -126,7 +136,8 @@ enum HarnessArtifactRecorder {
                 let accessibilityURL = directoryURL.appendingPathComponent(accessibilityFileName)
                 let encoder = JSONEncoder()
                 encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-                try encoder.encode(accessibilitySnapshot).write(to: accessibilityURL)
+                try writeUserPrivate(encoder.encode(accessibilitySnapshot), to: accessibilityURL)
+                UserPrivateFileWrite.excludeFromBackup(accessibilityURL)
             }
 
             windows.append(
@@ -184,7 +195,8 @@ enum HarnessArtifactRecorder {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         let reportURL = directoryURL.appendingPathComponent("report.json")
-        try encoder.encode(report).write(to: reportURL)
+        try writeUserPrivate(encoder.encode(report), to: reportURL)
+        UserPrivateFileWrite.excludeFromBackup(reportURL)
     }
 
     private static func orderedVisibleWindows() -> [NSWindow] {

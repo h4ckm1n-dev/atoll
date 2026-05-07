@@ -1,4 +1,5 @@
 import AppKit
+import AtollCore
 import Foundation
 import UniformTypeIdentifiers
 
@@ -57,9 +58,9 @@ enum AvatarImageStore {
 
         let normalizedImage = normalizedAvatarImage(from: sourceImage)
         let targetURL = avatarURL(fileManager: fileManager)
-        try fileManager.createDirectory(
+        try UserPrivateFileWrite.ensurePrivateDirectory(
             at: targetURL.deletingLastPathComponent(),
-            withIntermediateDirectories: true
+            fileManager: fileManager
         )
         guard
             let tiffData = normalizedImage.tiffRepresentation,
@@ -68,7 +69,7 @@ enum AvatarImageStore {
         else {
             throw ImportError.encodeFailed
         }
-        try pngData.write(to: targetURL, options: .atomic)
+        try writeUserPrivate(pngData, to: targetURL)
         return normalizedImage
     }
 

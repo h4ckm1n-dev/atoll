@@ -10,7 +10,10 @@ struct HarnessLaunchConfiguration {
     let autoExitAfter: TimeInterval?
     let artifactDirectoryURL: URL?
 
-    init(environment: [String: String] = ProcessInfo.processInfo.environment) {
+    init(
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        arguments: [String] = ProcessInfo.processInfo.arguments
+    ) {
         scenario = Self.scenarioValue(from: environment["OPEN_ISLAND_HARNESS_SCENARIO"])
         presentOverlay = Self.boolValue(
             environment["OPEN_ISLAND_HARNESS_PRESENT_OVERLAY"],
@@ -34,8 +37,9 @@ struct HarnessLaunchConfiguration {
         autoExitAfter = Self.timeIntervalValue(
             from: environment["OPEN_ISLAND_HARNESS_AUTO_EXIT_SECONDS"]
         )
-        artifactDirectoryURL = Self.directoryURLValue(
-            from: environment["OPEN_ISLAND_HARNESS_ARTIFACT_DIR"]
+        artifactDirectoryURL = Self.safeArtifactDirectoryURL(
+            from: environment["OPEN_ISLAND_HARNESS_ARTIFACT_DIR"],
+            arguments: arguments
         )
     }
 
@@ -90,16 +94,92 @@ struct HarnessLaunchConfiguration {
         return seconds
     }
 
-    private static func directoryURLValue(from rawValue: String?) -> URL? {
-        guard let rawValue else {
-            return nil
-        }
+    /// Default app-owned harness artifact directory under
+    /// `~/Library/Application Support/Atoll/harness/`. Used as the
+    /// fallback whenever the env-var path is missing or unsafe.
+    static var defaultArtifactDirectoryURL: URL {
+        let support = (try? FileManager.default.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: false
+        )) ?? FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support", isDirectory: true)
+        return support
+            .appendingPathComponent("Atoll", isDirectory: true)
+            .appendingPathComponent("harness", isDirectory: true)
+    }
 
+    /// Resolves and validates the env-var artifact directory.
+    ///
+    /// `OPEN_ISLAND_HARNESS_ARTIFACT_DIR` is a developer affordance —
+    /// the harness runner sets it to a temp dir so screenshots and
+    /// JSON reports land somewhere it can scoop them. An attacker who
+    /// can poison the user's environment (e.g. via a launchd plist
+    /// drop) could otherwise abuse it to plant readable images under
+    /// `~/Public/`, `/tmp/$lockfile/`, or any other writable location.
+    ///
+    /// We refuse the supplied path unless one of:
+    /// 1. It resolves under `NSTemporaryDirectory()`
+    ///    (`/var/folders/...`).
+    /// 2. It resolves under
+    ///    `~/Library/Application Support/Atoll/harness/`.
+    /// 3. The process was launched with the `--harness` argv flag,
+    ///    in which case any writable path is allowed (the harness
+    ///    runner is trusted code we ship).
+    ///
+    /// When refused, we log a warning to stderr and silently fall
+    /// back to `defaultArtifactDirectoryURL`. The harness itself
+    /// continues — better to capture artifacts in the wrong (but
+    /// app-owned) place than to abort the dev run.
+    static func safeArtifactDirectoryURL(
+        from rawValue: String?,
+        arguments: [String]
+    ) -> URL? {
+        guard let rawValue else { return nil }
         let normalized = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !normalized.isEmpty else {
-            return nil
+        guard !normalized.isEmpty else { return nil }
+
+        let candidate = URL(fileURLWithPath: normalized, isDirectory: true)
+        let trustedByFlag = arguments.contains("--harness")
+
+        if isPathSafeForHarnessArtifacts(candidate) || trustedByFlag {
+            return candidate
         }
 
-        return URL(fileURLWithPath: normalized, isDirectory: true)
+        FileHandle.standardError.write(Data(
+            "Atoll: refusing OPEN_ISLAND_HARNESS_ARTIFACT_DIR='\(normalized)' — outside allowed roots; falling back to app-owned path.\n".utf8
+        ))
+        return defaultArtifactDirectoryURL
+    }
+
+    /// True if `candidate` lies under an allowed root. Compared on
+    /// resolved (symlinks-collapsed) paths so a `/tmp` symlink to
+    /// `/var/folders/...` still resolves correctly. Both sides are
+    /// canonicalized with `standardizedFileURL.resolvingSymlinksInPath()`.
+    static func isPathSafeForHarnessArtifacts(_ candidate: URL) -> Bool {
+        let resolvedCandidate = candidate
+            .standardizedFileURL
+            .resolvingSymlinksInPath()
+            .path
+        let allowedRoots: [String] = [
+            URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+                .standardizedFileURL.resolvingSymlinksInPath().path,
+            defaultArtifactDirectoryURL
+                .standardizedFileURL.resolvingSymlinksInPath().path,
+        ]
+        // Append a trailing slash to the root before doing a prefix
+        // match so `/var/folders/abc` does not match `/var/folders/a`.
+        let normalizedCandidate = resolvedCandidate.hasSuffix("/")
+            ? resolvedCandidate
+            : resolvedCandidate + "/"
+        for root in allowedRoots {
+            let normalizedRoot = root.hasSuffix("/") ? root : root + "/"
+            if normalizedCandidate == normalizedRoot
+                || normalizedCandidate.hasPrefix(normalizedRoot) {
+                return true
+            }
+        }
+        return false
     }
 }

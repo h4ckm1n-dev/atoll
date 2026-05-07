@@ -3,6 +3,10 @@ import os
 
 /// Monitors AppModel state changes and relays relevant events to the WatchHTTPEndpoint as SSE pushes.
 /// Also handles resolution callbacks from the Watch/iPhone back to the bridge.
+///
+/// All routine push-event log lines are emitted at `debug` level (so they're not
+/// persisted by the unified logging system) and every interpolated value is
+/// marked `privacy: .private` to avoid leaking session/request identifiers.
 public final class WatchNotificationRelay: @unchecked Sendable {
     private static let logger = Logger(subsystem: "app.atoll", category: "WatchNotificationRelay")
 
@@ -50,10 +54,11 @@ public final class WatchNotificationRelay: @unchecked Sendable {
                 workingDirectory: session.jumpTarget?.workingDirectory,
                 primaryAction: payload.request.primaryActionTitle,
                 secondaryAction: payload.request.secondaryActionTitle,
-                requestID: requestID
+                requestID: requestID,
+                challenge: WatchHTTPEndpoint.generateChallenge()
             ))
             endpoint.pushEvent(sseEvent)
-            Self.logger.info("Pushed permissionRequested for session \(payload.sessionID)")
+            Self.logger.debug("Pushed permissionRequested for session \(payload.sessionID, privacy: .private)")
 
         case let .questionAsked(payload):
             guard let session else { return }
@@ -65,10 +70,11 @@ public final class WatchNotificationRelay: @unchecked Sendable {
                 agentTool: session.tool.displayName,
                 title: payload.prompt.title,
                 options: payload.prompt.options,
-                requestID: requestID
+                requestID: requestID,
+                challenge: WatchHTTPEndpoint.generateChallenge()
             ))
             endpoint.pushEvent(sseEvent)
-            Self.logger.info("Pushed questionAsked for session \(payload.sessionID)")
+            Self.logger.debug("Pushed questionAsked for session \(payload.sessionID, privacy: .private)")
 
         case let .sessionCompleted(payload):
             guard let session else { return }
@@ -78,7 +84,7 @@ public final class WatchNotificationRelay: @unchecked Sendable {
                 summary: payload.summary
             ))
             endpoint.pushEvent(sseEvent)
-            Self.logger.info("Pushed sessionCompleted for session \(payload.sessionID)")
+            Self.logger.debug("Pushed sessionCompleted for session \(payload.sessionID, privacy: .private)")
 
         case let .actionableStateResolved(payload):
             // Find and remove any pending request for this session, then notify iPhone
@@ -89,9 +95,9 @@ public final class WatchNotificationRelay: @unchecked Sendable {
                     sessionID: payload.sessionID
                 ))
                 endpoint.pushEvent(resolvedEvent)
-                Self.logger.info("Pushed actionableStateResolved for request \(requestID)")
+                Self.logger.debug("Pushed actionableStateResolved for request \(requestID, privacy: .private)")
             } else {
-                Self.logger.debug("No pending request found for resolved session \(payload.sessionID)")
+                Self.logger.debug("No pending request found for resolved session \(payload.sessionID, privacy: .private)")
             }
 
         default:
@@ -140,18 +146,18 @@ public final class WatchNotificationRelay: @unchecked Sendable {
 
             guard let pending = self.lookupPendingRequest(requestID: resolution.requestID)
                     ?? self.sessionLookup?(resolution.requestID) else {
-                Self.logger.warning("Resolution for unknown requestID: \(resolution.requestID)")
+                Self.logger.debug("Resolution for unknown requestID: \(resolution.requestID, privacy: .private)")
                 return
             }
 
             switch pending.kind {
             case .permission:
                 let approved = resolution.action.lowercased() == "allow"
-                Self.logger.info("Resolving permission for session \(pending.sessionID): \(resolution.action)")
+                Self.logger.debug("Resolving permission for session \(pending.sessionID, privacy: .private): \(resolution.action, privacy: .private)")
                 self.onResolvePermission?(pending.sessionID, approved)
 
             case .question:
-                Self.logger.info("Answering question for session \(pending.sessionID): \(resolution.action)")
+                Self.logger.debug("Answering question for session \(pending.sessionID, privacy: .private): \(resolution.action, privacy: .private)")
                 self.onAnswerQuestion?(pending.sessionID, resolution.action)
             }
         }

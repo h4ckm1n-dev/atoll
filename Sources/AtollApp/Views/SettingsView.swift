@@ -969,6 +969,14 @@ struct WatchSettingsPane: View {
     var model: AppModel
 
     @State private var pairingCode: String = "----"
+    @State private var burned: Bool = false
+    @State private var devices: [WatchDeviceInfo] = []
+
+    private static let lastSeenFormatter: RelativeDateTimeFormatter = {
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .short
+        return f
+    }()
 
     var body: some View {
         Form {
@@ -979,7 +987,7 @@ struct WatchSettingsPane: View {
                 ))
 
                 if model.watchNotificationEnabled {
-                    Text("When enabled, the macOS app broadcasts a Bonjour service that your iPhone can discover on the same WiFi network.")
+                    Text("When enabled, Atoll listens locally so a paired iPhone can deliver permission decisions and answer questions.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -988,57 +996,99 @@ struct WatchSettingsPane: View {
             }
 
             if model.watchNotificationEnabled {
+                Section("Network") {
+                    Toggle("Advertise on local network", isOn: Binding(
+                        get: { model.watchLANAdvertiseEnabled },
+                        set: { model.watchLANAdvertiseEnabled = $0 }
+                    ))
+
+                    Text("Off (default): Atoll binds only to 127.0.0.1; pairing requires the iPhone to reach this Mac via a port-forward. On: Atoll binds all interfaces and broadcasts on Bonjour to your local network.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    if model.watchLANAdvertiseEnabled {
+                        Toggle("Show machine name in Bonjour ad", isOn: Binding(
+                            get: { model.watchBonjourShowMachineName },
+                            set: { model.watchBonjourShowMachineName = $0 }
+                        ))
+                        Text("Off (default): the service is advertised as \"Atoll\" only. On: appends your Mac's name so multiple Atoll machines on the same network can be told apart.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 Section("Pairing") {
                     HStack {
                         Text("Pairing Code")
                         Spacer()
                         Text(pairingCode)
                             .font(.system(size: 24, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(burned ? .red : .blue)
                     }
 
-                    Text("Enter this code on your iPhone app to pair. Code expires after 2 minutes.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if burned {
+                        Label("Code burned — regenerate from Settings", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .font(.caption)
+                    } else {
+                        Text("Enter this code on your iPhone app to pair. Code expires after 2 minutes; after 5 wrong attempts it is burned and you must regenerate.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
 
                     Button("Refresh Code") {
                         model.watchRelay?.endpoint.regeneratePairingCode()
-                        pairingCode = model.watchPairingCode
+                        refresh()
                     }
                 }
 
                 Section("Paired Devices") {
-                    if model.watchConnectedDevices > 0 {
-                        HStack {
-                            Label("iPhone", systemImage: "iphone")
-                            Spacer()
-                            HStack(spacing: 4) {
-                                Circle()
-                                    .fill(.green)
-                                    .frame(width: 7, height: 7)
-                                Text("Connected")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    } else {
+                    if devices.isEmpty {
                         HStack {
                             Label("No devices paired", systemImage: "iphone.slash")
                                 .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        ForEach(devices, id: \.token) { device in
+                            HStack {
+                                Label(device.label, systemImage: "iphone")
+                                Spacer()
+                                Text("last seen " + Self.lastSeenFormatter.localizedString(for: device.lastSeen, relativeTo: Date()))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Button(role: .destructive) {
+                                    model.watchRelay?.endpoint.revoke(token: device.token)
+                                    refresh()
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                }
+                                .buttonStyle(.borderless)
+                            }
                         }
                     }
 
                     Button("Revoke All Pairings", role: .destructive) {
                         model.watchRelay?.endpoint.revokeAllTokens()
+                        refresh()
                     }
+                }
+
+                Section("About") {
+                    Text("Tokens persist in-memory only — restarting Atoll forgets every paired device, and idle devices are dropped after 30 days.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
         .formStyle(.grouped)
         .navigationTitle("Watch")
-        .onAppear {
-            pairingCode = model.watchPairingCode
-        }
+        .onAppear { refresh() }
+    }
+
+    private func refresh() {
+        pairingCode = model.watchPairingCode
+        burned = model.watchPairingCodeBurned
+        devices = model.watchPairedDevices.sorted { $0.issuedAt > $1.issuedAt }
     }
 }
 

@@ -671,7 +671,7 @@ struct IslandPanelView: View {
             HStack(spacing: 8) {
                 Image(systemName: "sparkles")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(palette.role(.working).swiftUIColor)
                 Text(model.lang.t("island.hint.installHooks"))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(palette.text.swiftUIColor.opacity(0.85))
@@ -686,10 +686,10 @@ struct IslandPanelView: View {
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.accentColor.opacity(0.14))
+                    .fill(palette.role(.working).swiftUIColor.opacity(0.14))
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(Color.accentColor.opacity(0.35), lineWidth: 0.5)
+                            .stroke(palette.role(.working).swiftUIColor.opacity(0.35), lineWidth: 0.5)
                     )
             )
         }

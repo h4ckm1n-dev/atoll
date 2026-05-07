@@ -1,3 +1,4 @@
+import CSQLiteShim
 import Foundation
 import SQLite3
 
@@ -102,8 +103,7 @@ public struct WarpSQLiteReader: Sendable {
         }
 
         guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
-        guard let cString = sqlite3_column_text(stmt, 0) else { return nil }
-        return String(cString: cString)
+        return Self.boundedColumnText(stmt: stmt, index: 0)
     }
 
     private func lookupViaCommandsHistory(db: OpaquePointer, cwd: String) -> String? {
@@ -211,8 +211,7 @@ public struct WarpSQLiteReader: Sendable {
         }
 
         guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
-        guard let cString = sqlite3_column_text(stmt, 0) else { return nil }
-        return String(cString: cString)
+        return Self.boundedColumnText(stmt: stmt, index: 0)
     }
 
     /// Generates the set of equivalent cwd strings to query Warp's SQLite
@@ -449,8 +448,7 @@ public struct WarpSQLiteReader: Sendable {
         sqlite3_bind_int64(stmt, 1, activeTabID)
 
         guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
-        guard let cString = sqlite3_column_text(stmt, 0) else { return nil }
-        return String(cString: cString)
+        return Self.boundedColumnText(stmt: stmt, index: 0)
     }
 
     /// Reads `windows.active_tab_index` for the given window, or nil
@@ -517,6 +515,21 @@ public struct WarpSQLiteReader: Sendable {
 
     // MARK: - Internal
 
+    /// Maximum byte length of any string read from Warp's SQLite columns.
+    /// Pane UUIDs are 32 hex chars; even after generous padding 4 KiB is far
+    /// beyond what any real value would be. Anything larger is treated as
+    /// hostile/corrupt and returned as nil.
+    static let maxColumnTextBytes = 4 * 1024
+
+    /// Reads `column_text` at the given index, refusing to materialize values
+    /// larger than `maxColumnTextBytes`.
+    static func boundedColumnText(stmt: OpaquePointer?, index: Int32) -> String? {
+        guard let cString = sqlite3_column_text(stmt, index) else { return nil }
+        let byteLength = Int(sqlite3_column_bytes(stmt, index))
+        guard byteLength >= 0, byteLength <= maxColumnTextBytes else { return nil }
+        return String(cString: cString)
+    }
+
     private func openReadOnly() -> OpaquePointer? {
         var db: OpaquePointer?
         let flags: Int32 = SQLITE_OPEN_READONLY | SQLITE_OPEN_NOMUTEX
@@ -524,6 +537,24 @@ public struct WarpSQLiteReader: Sendable {
             if db != nil { sqlite3_close(db) }
             return nil
         }
+        // Hardening: defensive flags reduce the blast radius if Warp's SQLite
+        // file is ever swapped for an attacker-controlled one (it lives in a
+        // user-writable Group Container).
+        // - DEFENSIVE: rejects malformed schemas that would otherwise crash.
+        // - TRUSTED_SCHEMA=0: refuses CREATE TRIGGER / VIEW with side effects.
+        // - ENABLE_LOAD_EXTENSION=0: prevents .load_extension() RCE.
+        // - DQS_DDL=0 / DQS_DML=0: disables MySQL-compat double-quoted strings,
+        //   closing a class of injection-via-quoting bugs.
+        _ = atoll_sqlite3_db_config_int(db, SQLITE_DBCONFIG_DEFENSIVE, 1)
+        _ = atoll_sqlite3_db_config_int(db, SQLITE_DBCONFIG_TRUSTED_SCHEMA, 0)
+        _ = atoll_sqlite3_db_config_int(db, SQLITE_DBCONFIG_DQS_DDL, 0)
+        _ = atoll_sqlite3_db_config_int(db, SQLITE_DBCONFIG_DQS_DML, 0)
+        // ENABLE_LOAD_EXTENSION is left at its compile-time default. The
+        // system sqlite shipped on macOS is built with
+        // SQLITE_OMIT_LOAD_EXTENSION (or with it disabled and the API not
+        // bridged), so .load_extension() is already unavailable. The
+        // ENABLE_LOAD_EXTENSION op id returns SQLITE_MISUSE on this build,
+        // hence we skip it rather than fail noisily.
         // Set a short busy timeout so we don't hang if Warp is mid-transaction.
         sqlite3_busy_timeout(db, 60) // ms
         return db

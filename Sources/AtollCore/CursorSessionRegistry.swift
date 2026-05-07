@@ -96,9 +96,9 @@ public final class CursorSessionRegistry: @unchecked Sendable {
     }
 
     public func load() throws -> [CursorTrackedSessionRecord] {
-        guard fileManager.fileExists(atPath: fileURL.path) else { return [] }
-
-        let data = try Data(contentsOf: fileURL)
+        guard let data = try readBoundedConfigFile(at: fileURL, fileManager: fileManager) else {
+            return []
+        }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode([CursorTrackedSessionRecord].self, from: data)

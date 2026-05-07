@@ -86,14 +86,14 @@ public final class CursorHookInstallationManager: @unchecked Sendable {
         }
 
         if let contents = mutation.contents {
-            try contents.write(to: hooksURL, options: .atomic)
+            try safeAtomicWrite(contents, to: hooksURL)
         }
 
         let manifest = CursorHookInstallerManifest(hookCommand: command)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
+        try safeAtomicWrite(encoder.encode(manifest), to: manifestURL)
 
         return try status(hooksBinaryURL: installedBinaryURL)
     }
@@ -114,7 +114,7 @@ public final class CursorHookInstallationManager: @unchecked Sendable {
         }
 
         if let contents = mutation.contents {
-            try contents.write(to: hooksURL, options: .atomic)
+            try safeAtomicWrite(contents, to: hooksURL)
         } else if fileManager.fileExists(atPath: hooksURL.path) {
             try fileManager.removeItem(at: hooksURL)
         }
@@ -157,6 +157,6 @@ public final class CursorHookInstallationManager: @unchecked Sendable {
         if fileManager.fileExists(atPath: backupURL.path) {
             try fileManager.removeItem(at: backupURL)
         }
-        try fileManager.copyItem(at: url, to: backupURL)
+        try safeCopyFile(from: url, to: backupURL)
     }
 }

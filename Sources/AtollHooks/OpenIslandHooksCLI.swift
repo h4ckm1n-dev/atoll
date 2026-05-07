@@ -35,7 +35,14 @@ struct OpenIslandHooksCLI {
             }
 
             let arguments = Array(CommandLine.arguments.dropFirst())
-            let source = hookSource(arguments: arguments)
+            let source: HookSource
+            do {
+                source = try hookSource(arguments: arguments)
+            } catch let error as InvalidHookSourceError {
+                logStderr("invalid --source value: \(error.value); refusing to coerce")
+                // Hooks must fail open — exit cleanly without writing a directive.
+                return
+            }
             let sourceString = rawSourceString(arguments: arguments)
             let decoder = JSONDecoder()
             let client = BridgeCommandClient(socketURL: BridgeSocketLocation.currentURL())
@@ -107,11 +114,22 @@ struct OpenIslandHooksCLI {
         FileHandle.standardError.write(data)
     }
 
-    private static func hookSource(arguments: [String]) -> HookSource {
+    /// Thrown when the user passes `--source <unknown>` — we refuse to coerce
+    /// silently to `.codex` because the choice changes the wire decoder and a
+    /// malformed value would mis-route a hostile payload.
+    struct InvalidHookSourceError: Error {
+        let value: String
+    }
+
+    private static func hookSource(arguments: [String]) throws -> HookSource {
         var index = 0
         while index < arguments.count {
             if arguments[index] == "--source", index + 1 < arguments.count {
-                return HookSource(rawValue: arguments[index + 1]) ?? .codex
+                let raw = arguments[index + 1]
+                guard let source = HookSource(rawValue: raw) else {
+                    throw InvalidHookSourceError(value: raw)
+                }
+                return source
             }
 
             index += 1

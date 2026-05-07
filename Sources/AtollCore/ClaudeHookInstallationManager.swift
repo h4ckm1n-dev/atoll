@@ -95,14 +95,14 @@ public final class ClaudeHookInstallationManager: @unchecked Sendable {
         }
 
         if let contents = mutation.contents {
-            try contents.write(to: settingsURL, options: .atomic)
+            try safeAtomicWrite(contents, to: settingsURL)
         }
 
         let manifest = ClaudeHookInstallerManifest(hookCommand: command)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
+        try safeAtomicWrite(encoder.encode(manifest), to: manifestURL)
         if fileManager.fileExists(atPath: legacyManifestURL.path) {
             try fileManager.removeItem(at: legacyManifestURL)
         }
@@ -128,7 +128,7 @@ public final class ClaudeHookInstallationManager: @unchecked Sendable {
         }
 
         if let contents = mutation.contents {
-            try contents.write(to: settingsURL, options: .atomic)
+            try safeAtomicWrite(contents, to: settingsURL)
         } else if fileManager.fileExists(atPath: settingsURL.path) {
             try fileManager.removeItem(at: settingsURL)
         }
@@ -185,6 +185,6 @@ public final class ClaudeHookInstallationManager: @unchecked Sendable {
         if fileManager.fileExists(atPath: backupURL.path) {
             try fileManager.removeItem(at: backupURL)
         }
-        try fileManager.copyItem(at: url, to: backupURL)
+        try safeCopyFile(from: url, to: backupURL)
     }
 }

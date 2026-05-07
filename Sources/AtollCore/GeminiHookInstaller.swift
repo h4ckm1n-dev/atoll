@@ -53,7 +53,7 @@ public enum GeminiHookInstaller {
         hookCommand: String
     ) throws -> GeminiHookFileMutation {
         var rootObject = try loadRootObject(from: existingData)
-        var hooksObject = rootObject["hooks"] as? [String: Any] ?? [:]
+        var hooksObject = try validateHooksShape(rootObject["hooks"])
 
         for spec in eventSpecs {
             var groups = hooksObject[spec.name] as? [[String: Any]] ?? []
@@ -80,7 +80,7 @@ public enum GeminiHookInstaller {
         }
 
         var rootObject = try loadRootObject(from: existingData)
-        var hooksObject = rootObject["hooks"] as? [String: Any] ?? [:]
+        var hooksObject = try validateHooksShape(rootObject["hooks"])
         var mutated = false
 
         for spec in eventSpecs {
@@ -114,12 +114,28 @@ public enum GeminiHookInstaller {
     private static func loadRootObject(from data: Data?) throws -> [String: Any] {
         guard let data else { return [:] }
 
+        if data.count > BoundedFileReader.maxConfigFileBytes {
+            throw GeminiHookInstallerError.invalidSettingsJSON
+        }
+
         let object = try JSONSerialization.jsonObject(with: data)
         guard let rootObject = object as? [String: Any] else {
             throw GeminiHookInstallerError.invalidSettingsJSON
         }
 
         return rootObject
+    }
+
+    /// Strictly validates that `hooksValue` is `nil` or `[String: Any]`.
+    /// Throws `invalidSettingsJSON` for any other shape rather than silently
+    /// dropping the user's data.
+    private static func validateHooksShape(_ hooksValue: Any?) throws -> [String: Any] {
+        guard let hooksValue else { return [:] }
+        if hooksValue is NSNull { return [:] }
+        guard let hooks = hooksValue as? [String: Any] else {
+            throw GeminiHookInstallerError.invalidSettingsJSON
+        }
+        return hooks
     }
 
     private static func serialize(_ object: [String: Any]) throws -> Data {

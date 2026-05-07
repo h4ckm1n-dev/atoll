@@ -56,7 +56,7 @@ public enum CursorHookInstaller {
         var rootObject = try loadRootObject(from: existingData)
         rootObject["version"] = 1
 
-        var hooksObject = rootObject["hooks"] as? [String: Any] ?? [:]
+        var hooksObject = try validateHooksShape(rootObject["hooks"])
 
         for event in hookEvents {
             var entries = hooksObject[event] as? [[String: Any]] ?? []
@@ -84,7 +84,7 @@ public enum CursorHookInstaller {
         }
 
         var rootObject = try loadRootObject(from: existingData)
-        var hooksObject = rootObject["hooks"] as? [String: Any] ?? [:]
+        var hooksObject = try validateHooksShape(rootObject["hooks"])
         var mutated = false
 
         for event in hookEvents {
@@ -124,12 +124,28 @@ public enum CursorHookInstaller {
     private static func loadRootObject(from data: Data?) throws -> [String: Any] {
         guard let data else { return [:] }
 
+        if data.count > BoundedFileReader.maxConfigFileBytes {
+            throw CursorHookInstallerError.invalidHooksJSON
+        }
+
         let object = try JSONSerialization.jsonObject(with: data)
         guard let rootObject = object as? [String: Any] else {
             throw CursorHookInstallerError.invalidHooksJSON
         }
 
         return rootObject
+    }
+
+    /// Strictly validates that `hooksValue` is `nil` or `[String: Any]`.
+    /// Throws `invalidHooksJSON` for any other shape rather than silently
+    /// dropping the user's data.
+    private static func validateHooksShape(_ hooksValue: Any?) throws -> [String: Any] {
+        guard let hooksValue else { return [:] }
+        if hooksValue is NSNull { return [:] }
+        guard let hooks = hooksValue as? [String: Any] else {
+            throw CursorHookInstallerError.invalidHooksJSON
+        }
+        return hooks
     }
 
     private static func serialize(_ object: [String: Any]) throws -> Data {

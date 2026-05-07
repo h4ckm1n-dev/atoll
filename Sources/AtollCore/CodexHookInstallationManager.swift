@@ -101,9 +101,9 @@ public final class CodexHookInstallationManager: @unchecked Sendable {
             try backupFile(at: hooksURL)
         }
 
-        try featureMutation.contents.write(to: configURL, atomically: true, encoding: .utf8)
+        try safeAtomicWrite(featureMutation.contents, to: configURL)
         if let hooksData = hooksMutation.contents {
-            try hooksData.write(to: hooksURL, options: .atomic)
+            try safeAtomicWrite(hooksData, to: hooksURL)
         }
 
         let manifest = CodexHookInstallerManifest(
@@ -113,7 +113,7 @@ public final class CodexHookInstallationManager: @unchecked Sendable {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
+        try safeAtomicWrite(encoder.encode(manifest), to: manifestURL)
         if fileManager.fileExists(atPath: legacyManifestURL.path) {
             try fileManager.removeItem(at: legacyManifestURL)
         }
@@ -141,7 +141,7 @@ public final class CodexHookInstallationManager: @unchecked Sendable {
         }
 
         if let hooksData = hooksMutation.contents {
-            try hooksData.write(to: hooksURL, options: .atomic)
+            try safeAtomicWrite(hooksData, to: hooksURL)
         } else if fileManager.fileExists(atPath: hooksURL.path) {
             try fileManager.removeItem(at: hooksURL)
         }
@@ -154,7 +154,7 @@ public final class CodexHookInstallationManager: @unchecked Sendable {
                 if fileManager.fileExists(atPath: configURL.path) {
                     try backupFile(at: configURL)
                 }
-                try featureMutation.contents.write(to: configURL, atomically: true, encoding: .utf8)
+                try safeAtomicWrite(featureMutation.contents, to: configURL)
             }
         }
 
@@ -210,6 +210,6 @@ public final class CodexHookInstallationManager: @unchecked Sendable {
         if fileManager.fileExists(atPath: backupURL.path) {
             try fileManager.removeItem(at: backupURL)
         }
-        try fileManager.copyItem(at: url, to: backupURL)
+        try safeCopyFile(from: url, to: backupURL)
     }
 }

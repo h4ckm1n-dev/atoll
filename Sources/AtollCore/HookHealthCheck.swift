@@ -125,7 +125,7 @@ public enum HookHealthCheck {
         // 2. Check config file
         let settingsPath = settingsURL.path
         if fileManager.fileExists(atPath: settingsPath) {
-            if let data = try? Data(contentsOf: settingsURL) {
+            if let data = ((try? readBoundedConfigFile(at: settingsURL, fileManager: fileManager)) ?? nil) {
                 // Check JSON validity
                 if (try? JSONSerialization.jsonObject(with: data)) == nil {
                     issues.append(.configMalformedJSON(path: settingsPath))
@@ -197,7 +197,7 @@ public enum HookHealthCheck {
         // 2. Check config file
         let hooksPath = hooksURL.path
         if fileManager.fileExists(atPath: hooksPath) {
-            if let data = try? Data(contentsOf: hooksURL) {
+            if let data = ((try? readBoundedConfigFile(at: hooksURL, fileManager: fileManager)) ?? nil) {
                 if (try? JSONSerialization.jsonObject(with: data)) == nil {
                     issues.append(.configMalformedJSON(path: hooksPath))
                 } else {
@@ -388,7 +388,7 @@ public enum HookHealthCheck {
 
     /// Checks whether any Open Island managed hooks exist in a config file.
     private static func hasOpenIslandHooks(in url: URL, fileManager: FileManager) -> Bool {
-        guard let data = try? Data(contentsOf: url),
+        guard let data = (try? readBoundedConfigFile(at: url, fileManager: fileManager)),
               let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let hooks = root["hooks"] as? [String: Any] else {
             return false

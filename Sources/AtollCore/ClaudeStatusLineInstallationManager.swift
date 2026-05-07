@@ -152,9 +152,8 @@ public final class ClaudeStatusLineInstallationManager: @unchecked Sendable {
         }
 
         let scriptContents = Self.managedScript(cacheURL: currentStatus.cacheURL)
-        try settingsData.write(to: settingsURL, options: .atomic)
-        try scriptContents.write(to: scriptURL, atomically: true, encoding: .utf8)
-        try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
+        try safeAtomicWrite(settingsData, to: settingsURL)
+        try safeAtomicWrite(scriptContents, to: scriptURL, posixPermissions: 0o755)
         let legacyScriptURL = legacyScriptDirectoryURL.appendingPathComponent(Self.legacyManagedScriptName)
         if fileManager.fileExists(atPath: legacyScriptURL.path) {
             try fileManager.removeItem(at: legacyScriptURL)
@@ -201,11 +200,9 @@ public final class ClaudeStatusLineInstallationManager: @unchecked Sendable {
         )
         let delegateContents = Self.wrappedDelegateScript(originalCommand: originalCommand)
 
-        try settingsData.write(to: settingsURL, options: .atomic)
-        try wrapperContents.write(to: scriptURL, atomically: true, encoding: .utf8)
-        try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
-        try delegateContents.write(to: delegateScriptURL, atomically: true, encoding: .utf8)
-        try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: delegateScriptURL.path)
+        try safeAtomicWrite(settingsData, to: settingsURL)
+        try safeAtomicWrite(wrapperContents, to: scriptURL, posixPermissions: 0o755)
+        try safeAtomicWrite(delegateContents, to: delegateScriptURL, posixPermissions: 0o755)
 
         return try status()
     }
@@ -230,7 +227,7 @@ public final class ClaudeStatusLineInstallationManager: @unchecked Sendable {
                 try backupFile(at: settingsURL)
             }
             let settingsData = try serializeSettings(settings)
-            try settingsData.write(to: settingsURL, options: .atomic)
+            try safeAtomicWrite(settingsData, to: settingsURL)
         }
 
         if fileManager.fileExists(atPath: scriptURL.path) {
@@ -248,11 +245,9 @@ public final class ClaudeStatusLineInstallationManager: @unchecked Sendable {
     }
 
     private func loadSettings(at url: URL) throws -> [String: Any] {
-        guard fileManager.fileExists(atPath: url.path) else {
+        guard let data = try readBoundedConfigFile(at: url, fileManager: fileManager) else {
             return [:]
         }
-
-        let data = try Data(contentsOf: url)
         let object = try JSONSerialization.jsonObject(with: data)
         guard let settings = object as? [String: Any] else {
             throw ClaudeStatusLineInstallationError.invalidSettingsRoot
@@ -284,7 +279,7 @@ public final class ClaudeStatusLineInstallationManager: @unchecked Sendable {
         if fileManager.fileExists(atPath: backupURL.path) {
             try fileManager.removeItem(at: backupURL)
         }
-        try fileManager.copyItem(at: url, to: backupURL)
+        try safeCopyFile(from: url, to: backupURL)
     }
 
     /// The wrapper script executed as Claude Code's `statusLine.command` in wrap mode.

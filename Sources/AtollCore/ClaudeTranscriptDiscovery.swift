@@ -28,11 +28,17 @@ public final class ClaudeTranscriptDiscovery: @unchecked Sendable {
         self.maxFiles = maxFiles
     }
 
+    /// Maximum directory recursion depth relative to `rootURL`.
+    /// Claude's layout is `~/.claude/projects/<project-slug>/<session>.jsonl`
+    /// (depth 2). Cap at 4 to allow modest variation while preventing
+    /// runaway descent through symlink loops or unrelated trees.
+    private static let maxRecursionDepth = 4
+
     public func discoverRecentSessions(now: Date = .now) -> [AgentSession] {
         guard fileManager.fileExists(atPath: rootURL.path),
               let enumerator = fileManager.enumerator(
                 at: rootURL,
-                includingPropertiesForKeys: [.contentModificationDateKey, .isRegularFileKey],
+                includingPropertiesForKeys: [.contentModificationDateKey, .isRegularFileKey, .isSymbolicLinkKey],
                 options: [.skipsHiddenFiles]
               ) else {
             return []
@@ -40,8 +46,23 @@ public final class ClaudeTranscriptDiscovery: @unchecked Sendable {
 
         let cutoff = now.addingTimeInterval(-maxAge)
         var candidates: [Candidate] = []
+        let rootComponents = rootURL.standardizedFileURL.pathComponents.count
 
         for case let fileURL as URL in enumerator {
+            // Bound recursion depth so we never descend deeper than expected
+            // (defeats symlink-loop and pathological-tree DoS).
+            let depth = fileURL.standardizedFileURL.pathComponents.count - rootComponents
+            if depth > Self.maxRecursionDepth {
+                enumerator.skipDescendants()
+                continue
+            }
+
+            // Skip symlinks outright — they could redirect us outside ~/.claude.
+            let symlinkValues = try? fileURL.resourceValues(forKeys: [.isSymbolicLinkKey])
+            if symlinkValues?.isSymbolicLink == true {
+                continue
+            }
+
             guard fileURL.pathExtension == "jsonl",
                   !fileURL.path.contains("/subagents/") else {
                 continue
@@ -67,7 +88,13 @@ public final class ClaudeTranscriptDiscovery: @unchecked Sendable {
     }
 
     private func parseSession(at fileURL: URL, fallbackUpdatedAt: Date) -> AgentSession? {
-        guard let contents = try? String(contentsOf: fileURL, encoding: .utf8) else {
+        // Stream the file line by line with hard caps so a multi-GB or
+        // hostile transcript can't OOM the app. Per-line cap 1 MiB,
+        // per-file cap 64 MiB. Lines beyond either cap are skipped.
+        let lines: [String]
+        do {
+            lines = try streamJSONLines(at: fileURL)
+        } catch {
             return nil
         }
 
@@ -82,7 +109,7 @@ public final class ClaudeTranscriptDiscovery: @unchecked Sendable {
         var currentToolInputPreview: String?
         var pendingToolUses: [String: (name: String, preview: String?)] = [:]
 
-        for line in contents.split(separator: "\n") {
+        for line in lines {
             guard let data = line.data(using: .utf8),
                   let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                 continue

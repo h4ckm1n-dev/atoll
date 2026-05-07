@@ -134,11 +134,9 @@ public final class ClaudeSessionRegistry: @unchecked Sendable {
     }
 
     public func load() throws -> [ClaudeTrackedSessionRecord] {
-        guard fileManager.fileExists(atPath: fileURL.path) else {
+        guard let data = try readBoundedConfigFile(at: fileURL, fileManager: fileManager) else {
             return []
         }
-
-        let data = try Data(contentsOf: fileURL)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode([ClaudeTrackedSessionRecord].self, from: data)

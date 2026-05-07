@@ -128,11 +128,9 @@ public final class OpenCodeSessionRegistry: @unchecked Sendable {
     }
 
     public func load() throws -> [OpenCodeTrackedSessionRecord] {
-        guard fileManager.fileExists(atPath: fileURL.path) else {
+        guard let data = try readBoundedConfigFile(at: fileURL, fileManager: fileManager) else {
             return []
         }
-
-        let data = try Data(contentsOf: fileURL)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode([OpenCodeTrackedSessionRecord].self, from: data)

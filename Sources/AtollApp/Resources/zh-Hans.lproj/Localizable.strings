@@ -258,7 +258,7 @@
 "settings.theme.row.delete" = "删除…";
 "settings.theme.customRow.subtitle" = "派生自 %@";
 "settings.theme.delete.confirm" = "删除此主题？";
-"settings.theme.delete.message" = ""%@"将从你的 Atoll 主题库中移除。原始预设不受影响。";
+"settings.theme.delete.message" = "「%@」将从你的 Atoll 主题库中移除。原始预设不受影响。";
 "settings.theme.rename.title" = "重命名主题";
 "settings.theme.rename.placeholder" = "主题名称";
 "settings.cancel" = "取消";

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Assets/Brand/app-icon-cat.png" alt="Atoll" width="128" height="128">
+  <img src="Assets/Brand/atoll-app-icon.png" alt="Atoll" width="128" height="128">
 </p>
 
 <h1 align="center">Atoll</h1>

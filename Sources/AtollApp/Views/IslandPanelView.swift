@@ -132,8 +132,11 @@ struct IslandPanelView: View {
     }
 
     /// Returns the fill for the opened-panel surface.
-    /// Collapsed/idle state is always pure black to preserve the
-    /// physical-notch blend on notched MacBooks.
+    /// Collapsed/idle state is pure black on notched MacBooks to preserve
+    /// the physical-notch blend illusion. On external / non-notched
+    /// displays there is no hardware notch to blend with, so honor the
+    /// active theme — otherwise a light theme (e.g. Cappuccino) shows a
+    /// black bubble against a cream chrome.
     @ViewBuilder
     private func surfaceFill(
         palette: ThemePalette,
@@ -142,7 +145,11 @@ struct IslandPanelView: View {
         if hidesChrome {
             Color.clear
         } else if !usesOpenedVisualState {
-            Color.black
+            if isExternalDisplayPlacement {
+                Rectangle().fill(palette.mantle.swiftUIColor)
+            } else {
+                Color.black
+            }
         } else {
             switch panelMaterial {
             case .solid:

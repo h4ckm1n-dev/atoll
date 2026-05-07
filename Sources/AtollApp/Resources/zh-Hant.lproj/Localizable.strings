@@ -250,6 +250,7 @@
 "settings.theme.import.button" = "匯入";
 "settings.theme.import.failed" = "無法匯入主題";
 "settings.theme.preset.choose" = "從哪個預設開始？";
+"settings.theme.row.edit" = "編輯…";
 "settings.theme.row.rename" = "重新命名…";
 "settings.theme.row.duplicate" = "複製";
 "settings.theme.row.export" = "匯出…";
@@ -269,4 +270,14 @@
 "settings.panelMaterial.solid" = "實心";
 "settings.panelMaterial.frostedThin" = "毛玻璃(薄)";
 "settings.panelMaterial.frostedUltraThin" = "毛玻璃(超薄)";
+
+/* Theme editor — added by Phase 3B */
+"theme.editor.title" = "編輯主題";
+"theme.editor.name" = "主題名稱";
+"theme.editor.lightToggle" = "淺色文字";
+"theme.editor.lightToggle.help" = "在淺色表面使用深色文字——淺色主題請勾選此項。";
+"theme.editor.surfaces" = "背景色";
+"theme.editor.foregrounds" = "前景色";
+"theme.editor.accents" = "強調色";
+"theme.editor.resetToBase" = "還原基礎色";
 

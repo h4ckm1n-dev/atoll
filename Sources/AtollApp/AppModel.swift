@@ -427,7 +427,11 @@ final class AppModel {
         guard let planMarkdown else { return }
         let steps = PlanModeParser.parse(planMarkdown)
         guard !steps.isEmpty else { return }
-        planModeRegistry.recordPlan(sessionID: payload.sessionID, steps: steps)
+        planModeRegistry.recordPlan(
+            sessionID: payload.sessionID,
+            steps: steps,
+            rawMarkdown: planMarkdown
+        )
     }
 
     private func string(in fields: [String: CodexHookJSONValue], key: String) -> String? {

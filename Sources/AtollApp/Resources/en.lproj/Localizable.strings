@@ -165,6 +165,9 @@
 "subagents.completed" = "Completed";
 "tasks.summary" = "Tasks (%lld completed, %lld in progress, %lld pending)";
 
+/* Island Panel - Plan disclosure */
+"island.plan.empty" = "No plan recorded yet.";
+
 /* Island Panel - Question */
 "question.submit" = "Submit Answers";
 "question.answerNeeded" = "Answer needed";

@@ -120,8 +120,20 @@
 "setup.diagnostics.allHealthy" = "All hooks are healthy.";
 
 /* Settings - Placeholder */
-"settings.shortcuts.comingSoon" = "Keyboard shortcuts coming soon.";
 "settings.lab.comingSoon" = "Experimental features coming soon.";
+
+/* Settings - Shortcuts */
+"settings.shortcuts.section.actions" = "Actions";
+"settings.shortcuts.toggleOverlay" = "Toggle Island";
+"settings.shortcuts.toggleOverlay.help" = "Show or hide the Island overlay.";
+"settings.shortcuts.jumpToFocusedSession" = "Jump to Focused Session";
+"settings.shortcuts.jumpToFocusedSession.help" = "Bring the selected agent's terminal to the front.";
+"settings.shortcuts.approveFocusedPermission" = "Approve Permission";
+"settings.shortcuts.approveFocusedPermission.help" = "Approve the focused session's pending request.";
+"settings.shortcuts.denyFocusedPermission" = "Deny Permission";
+"settings.shortcuts.denyFocusedPermission.help" = "Deny the focused session's pending request.";
+"settings.shortcuts.cycleToNextAttentionSession" = "Next Attention Session";
+"settings.shortcuts.cycleToNextAttentionSession.help" = "Select the next session waiting on input.";
 
 /* Settings - About */
 "settings.about.version" = "Version %@";

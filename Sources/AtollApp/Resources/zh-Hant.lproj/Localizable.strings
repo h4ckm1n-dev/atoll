@@ -120,8 +120,20 @@
 "setup.diagnostics.allHealthy" = "所有 Hooks 運作正常。";
 
 /* Settings - Placeholder */
-"settings.shortcuts.comingSoon" = "快捷鍵設定即將推出。";
 "settings.lab.comingSoon" = "實驗性功能即將推出。";
+
+/* Settings - Shortcuts */
+"settings.shortcuts.section.actions" = "操作";
+"settings.shortcuts.toggleOverlay" = "切換 Atoll 顯示";
+"settings.shortcuts.toggleOverlay.help" = "顯示或隱藏 Atoll 浮層。";
+"settings.shortcuts.jumpToFocusedSession" = "跳至選取的會話";
+"settings.shortcuts.jumpToFocusedSession.help" = "將選取代理程式的終端機視窗帶至前景。";
+"settings.shortcuts.approveFocusedPermission" = "核准權限";
+"settings.shortcuts.approveFocusedPermission.help" = "核准選取會話的待處理請求。";
+"settings.shortcuts.denyFocusedPermission" = "拒絕權限";
+"settings.shortcuts.denyFocusedPermission.help" = "拒絕選取會話的待處理請求。";
+"settings.shortcuts.cycleToNextAttentionSession" = "下一個待處理會話";
+"settings.shortcuts.cycleToNextAttentionSession.help" = "選取下一個等待輸入的會話。";
 
 /* Settings - About */
 "settings.about.version" = "版本 %@";

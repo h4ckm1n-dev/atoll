@@ -120,8 +120,20 @@
 "setup.diagnostics.allHealthy" = "所有 Hooks 运行正常。";
 
 /* Settings - Placeholder */
-"settings.shortcuts.comingSoon" = "快捷键设置即将推出。";
 "settings.lab.comingSoon" = "实验性功能即将推出。";
+
+/* Settings - Shortcuts */
+"settings.shortcuts.section.actions" = "操作";
+"settings.shortcuts.toggleOverlay" = "切换 Atoll 显示";
+"settings.shortcuts.toggleOverlay.help" = "显示或隐藏 Atoll 浮层。";
+"settings.shortcuts.jumpToFocusedSession" = "跳转到选中的会话";
+"settings.shortcuts.jumpToFocusedSession.help" = "将选中代理的终端窗口置于前台。";
+"settings.shortcuts.approveFocusedPermission" = "批准权限";
+"settings.shortcuts.approveFocusedPermission.help" = "批准选中会话的待处理请求。";
+"settings.shortcuts.denyFocusedPermission" = "拒绝权限";
+"settings.shortcuts.denyFocusedPermission.help" = "拒绝选中会话的待处理请求。";
+"settings.shortcuts.cycleToNextAttentionSession" = "下一个待处理会话";
+"settings.shortcuts.cycleToNextAttentionSession.help" = "选中下一个等待输入的会话。";
 
 /* Settings - About */
 "settings.about.version" = "版本 %@";

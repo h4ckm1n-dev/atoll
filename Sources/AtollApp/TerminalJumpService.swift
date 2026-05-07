@@ -1249,6 +1249,11 @@ struct TerminalJumpService {
     }
 
     private static func defaultAppleScriptRunner(script: String) throws -> String {
+        // First-jump-of-launch: make sure the user has at least seen the AX
+        // permission prompt before we let osascript silently no-op. macOS
+        // dedupes the prompt internally, so it's safe to call repeatedly.
+        Self.ensureAccessibilityPromptShownOnce()
+
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
         task.arguments = ["-e", script]
@@ -1267,16 +1272,171 @@ struct TerminalJumpService {
         guard task.terminationStatus == 0 else {
             let stderr = String(data: errorPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+            // Detect Apple-Events `errAEEventNotPermitted` (-1743). osascript
+            // surfaces this in stderr as `(-1743)` along with the standard
+            // "Not authorized to send Apple events to <App>" wording. Try
+            // to extract the target app name so the surfaced error can
+            // tell the user where to grant permission.
+            if stderr.contains("-1743") || stderr.contains("Not authorized to send Apple events") {
+                throw TerminalJumpError.notPermitted(targetApp: extractTargetAppName(fromStderr: stderr, script: script))
+            }
             throw TerminalJumpError.appleScriptFailed(stderr.isEmpty ? script : stderr)
         }
 
         return output
     }
 
+    /// Best-effort extraction of the `tell application "<name>"` target so
+    /// we can tell the user *which* terminal app needs permission. Returns
+    /// `nil` if no clean match is possible.
+    private static func extractTargetAppName(fromStderr stderr: String, script: String) -> String? {
+        // osascript's stderr typically reads: `... Not authorized to send
+        // Apple events to <App>. (-1743)` — try that first.
+        if let range = stderr.range(of: "Apple events to ") {
+            let tail = stderr[range.upperBound...]
+            // App name typically ends at a period or newline.
+            if let stop = tail.firstIndex(where: { $0 == "." || $0 == "\n" }) {
+                let name = tail[..<stop].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !name.isEmpty { return name }
+            }
+        }
+        // Fallback: parse `tell application "<name>"` from the script.
+        if let range = script.range(of: "tell application \"") {
+            let tail = script[range.upperBound...]
+            if let stop = tail.firstIndex(of: "\"") {
+                let name = String(tail[..<stop])
+                if !name.isEmpty { return name }
+            }
+        }
+        return nil
+    }
+
+    /// Tracks whether we've already invoked `AXIsProcessTrustedWithOptions`
+    /// for this process. macOS deduplicates the prompt internally too, but
+    /// gating it here keeps the call out of hot AppleScript paths.
+    private static let accessibilityPromptShown = LockedFlag()
+
+    /// Calls ``AccessibilityPermissionState.ensureOrPrompt()`` at most once
+    /// per process. Safe to call from any thread — the AX C API is
+    /// thread-safe, but we MainActor-bounce when needed.
+    private static func ensureAccessibilityPromptShownOnce() {
+        guard accessibilityPromptShown.setIfFalse() else { return }
+        if Thread.isMainThread {
+            MainActor.assumeIsolated { _ = AccessibilityPermissionState.ensureOrPrompt() }
+        } else {
+            DispatchQueue.main.async {
+                _ = AccessibilityPermissionState.ensureOrPrompt()
+            }
+        }
+    }
+
+    /// Canonical absolute paths for IDE / editor launcher CLIs. Checked
+    /// in-order at invocation time. Prefer these over `/usr/bin/env` so a
+    /// `code`/`cursor`/etc. PATH shim (e.g. dropped into `~/bin` by an
+    /// unprivileged user, or hijacked via PATH manipulation in a parent
+    /// shell) cannot intercept the jump command. Falls back to
+    /// `/usr/bin/env` only if none of these exist, so users who only have
+    /// the launcher in `~/.local/bin/` still work.
+    private static let knownLauncherPaths: [String: [String]] = [
+        // VS Code family
+        "code": [
+            "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
+            "/usr/local/bin/code",
+        ],
+        "code-insiders": [
+            "/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code-insiders",
+            "/usr/local/bin/code-insiders",
+        ],
+        "cursor": [
+            "/Applications/Cursor.app/Contents/Resources/app/bin/cursor",
+            "/usr/local/bin/cursor",
+        ],
+        "windsurf": [
+            "/Applications/Windsurf.app/Contents/Resources/app/bin/windsurf",
+            "/usr/local/bin/windsurf",
+        ],
+        "trae": [
+            "/Applications/Trae.app/Contents/Resources/app/bin/trae",
+            "/usr/local/bin/trae",
+        ],
+
+        // JetBrains family — Toolbox installs a shim into /usr/local/bin
+        // and (on newer versions) into ~/Library/Application Support/JetBrains/Toolbox/scripts
+        // so prefer those over a PATH lookup. The .app launcher binaries
+        // live in Contents/MacOS/<name>; some IDE variants ship under
+        // multiple bundle names (e.g. IntelliJ IDEA Ultimate / Community).
+        "idea": [
+            "/Applications/IntelliJ IDEA.app/Contents/MacOS/idea",
+            "/Applications/IntelliJ IDEA Ultimate.app/Contents/MacOS/idea",
+            "/Applications/IntelliJ IDEA CE.app/Contents/MacOS/idea",
+            "/usr/local/bin/idea",
+        ],
+        "webstorm": [
+            "/Applications/WebStorm.app/Contents/MacOS/webstorm",
+            "/usr/local/bin/webstorm",
+        ],
+        "pycharm": [
+            "/Applications/PyCharm.app/Contents/MacOS/pycharm",
+            "/Applications/PyCharm Professional Edition.app/Contents/MacOS/pycharm",
+            "/Applications/PyCharm CE.app/Contents/MacOS/pycharm",
+            "/usr/local/bin/pycharm",
+        ],
+        "goland": [
+            "/Applications/GoLand.app/Contents/MacOS/goland",
+            "/usr/local/bin/goland",
+        ],
+        "clion": [
+            "/Applications/CLion.app/Contents/MacOS/clion",
+            "/usr/local/bin/clion",
+        ],
+        "rubymine": [
+            "/Applications/RubyMine.app/Contents/MacOS/rubymine",
+            "/usr/local/bin/rubymine",
+        ],
+        "phpstorm": [
+            "/Applications/PhpStorm.app/Contents/MacOS/phpstorm",
+            "/usr/local/bin/phpstorm",
+        ],
+        "rider": [
+            "/Applications/Rider.app/Contents/MacOS/rider",
+            "/usr/local/bin/rider",
+        ],
+        "rustrover": [
+            "/Applications/RustRover.app/Contents/MacOS/rustrover",
+            "/usr/local/bin/rustrover",
+        ],
+    ]
+
+    /// Tracks launcher names for which we have already logged the
+    /// PATH-fallback warning. We log once per process per name so the
+    /// logs stay readable across many jumps.
+    private static let knownLauncherFallbackLogged = LockedNameSet()
+
     private static func defaultProcessRunner(executable: String, arguments: [String]) -> Bool {
+        let resolvedExecutableURL: URL
+        let resolvedArguments: [String]
+
+        if let candidates = knownLauncherPaths[executable],
+           let first = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) {
+            resolvedExecutableURL = URL(fileURLWithPath: first)
+            resolvedArguments = arguments
+        } else {
+            // Fall back to /usr/bin/env so users who keep the launcher in
+            // ~/.local/bin/, /opt/homebrew/bin/, or another location still
+            // work. Log once per launcher name so we have visibility but
+            // don't spam.
+            if knownLauncherPaths[executable] != nil,
+               knownLauncherFallbackLogged.insertIfMissing(executable) {
+                NSLog("[OpenIsland] Launcher %@: no canonical absolute path found, falling back to /usr/bin/env (PATH lookup).", executable)
+            }
+            resolvedExecutableURL = URL(fileURLWithPath: "/usr/bin/env")
+            resolvedArguments = [executable] + arguments
+        }
+
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = [executable] + arguments
+        process.executableURL = resolvedExecutableURL
+        process.arguments = resolvedArguments
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
 
@@ -1289,14 +1449,46 @@ struct TerminalJumpService {
         }
     }
 
-    private func escapeAppleScript(_ value: String?) -> String {
+    /// Escape an optional string for AppleScript double-quoted interpolation.
+    ///
+    /// Delegates to ``escapeAppleScriptStrict(_:maxBytes:)`` for length and
+    /// control-character validation. On rejection (control chars, oversize)
+    /// the field is replaced with an empty string and the failure is logged
+    /// without content (`field` identifier only — never the rejected value)
+    /// via the same NSLog path used by other AppleScript failures. The empty
+    /// result short-circuits the matcher logic in the surrounding scripts
+    /// (every site guards `"\(value)" is not ""` before comparing), so a
+    /// rejected value cleanly disables that match attempt rather than
+    /// breaking the script.
+    private func escapeAppleScript(_ value: String?, field: StaticString = #function) -> String {
         guard let value else {
             return ""
         }
+        do {
+            return try escapeAppleScriptStrict(value)
+        } catch AppleScriptStringError.invalidControlChar {
+            NSLog("[OpenIsland] AppleScript field rejected (control char): %@", String(describing: field))
+            return ""
+        } catch AppleScriptStringError.tooLong {
+            NSLog("[OpenIsland] AppleScript field rejected (too long): %@", String(describing: field))
+            return ""
+        } catch {
+            NSLog("[OpenIsland] AppleScript field rejected (unknown): %@", String(describing: field))
+            return ""
+        }
+    }
+}
 
-        return value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
+/// Thread-safe set of launcher names for which we've already emitted the
+/// PATH-fallback warning. Used to deduplicate `NSLog` output.
+private final class LockedNameSet: @unchecked Sendable {
+    private let lock = NSLock()
+    private var names: Set<String> = []
+
+    func insertIfMissing(_ name: String) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return names.insert(name).inserted
     }
 }
 
@@ -1304,6 +1496,10 @@ enum TerminalJumpError: Error, LocalizedError {
     case unsupportedTerminal(String)
     case openFailed([String])
     case appleScriptFailed(String)
+    /// Apple Event was rejected by the system because the user has not
+    /// granted Atoll Automation permission for the target terminal app.
+    /// Surfaces error code `-1743` (`errAEEventNotPermitted`).
+    case notPermitted(targetApp: String?)
 
     var errorDescription: String? {
         switch self {
@@ -1313,6 +1509,28 @@ enum TerminalJumpError: Error, LocalizedError {
             "Failed to launch terminal with arguments: \(arguments.joined(separator: " "))"
         case let .appleScriptFailed(message):
             "Terminal automation failed: \(message)"
+        case let .notPermitted(targetApp):
+            if let targetApp {
+                "Atoll needs Automation permission for \(targetApp) in System Settings → Privacy & Security → Automation."
+            } else {
+                "Atoll needs Automation permission in System Settings → Privacy & Security → Automation."
+            }
         }
+    }
+}
+
+/// Thread-safe boolean latch — `setIfFalse()` returns `true` exactly once,
+/// then always returns `false`. Used for one-shot side effects (e.g.
+/// "show the AX permission prompt the first time we need it").
+private final class LockedFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = false
+
+    func setIfFalse() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if value { return false }
+        value = true
+        return true
     }
 }

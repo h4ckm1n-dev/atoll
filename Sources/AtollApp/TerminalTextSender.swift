@@ -279,11 +279,28 @@ struct TerminalTextSender {
 
     // MARK: - Helpers
 
-    private static func escapeAppleScript(_ value: String?) -> String {
+    /// Escape an optional string for AppleScript double-quoted interpolation.
+    ///
+    /// Delegates to ``escapeAppleScriptStrict(_:maxBytes:)`` for length and
+    /// control-character validation. On rejection (control chars, oversize)
+    /// the field is replaced with an empty string and the failure is logged
+    /// without content (`field` identifier only — never the rejected value).
+    /// Reply text containing a literal newline is rejected — the caller
+    /// must split on newlines and send Enter as a separate event.
+    private static func escapeAppleScript(_ value: String?, field: StaticString = #function) -> String {
         guard let value else { return "" }
-        return value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
+        do {
+            return try escapeAppleScriptStrict(value)
+        } catch AppleScriptStringError.invalidControlChar {
+            NSLog("[OpenIsland] TerminalTextSender field rejected (control char): %@", String(describing: field))
+            return ""
+        } catch AppleScriptStringError.tooLong {
+            NSLog("[OpenIsland] TerminalTextSender field rejected (too long): %@", String(describing: field))
+            return ""
+        } catch {
+            NSLog("[OpenIsland] TerminalTextSender field rejected (unknown): %@", String(describing: field))
+            return ""
+        }
     }
 
     private static func runAppleScript(_ script: String) -> Bool {

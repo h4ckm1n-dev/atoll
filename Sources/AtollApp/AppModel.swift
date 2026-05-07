@@ -213,6 +213,14 @@ final class AppModel {
             harnessRuntimeMonitor?.recordLog(lastActionMessage)
         }
     }
+
+    /// Banner-style warning shown to the user when an operation that
+    /// requires Accessibility / Automation permission is denied by macOS
+    /// TCC. Set when an Apple Event returns `errAEEventNotPermitted`
+    /// (-1743) or when `AXIsProcessTrusted()` is false at the time of
+    /// invocation. UI surfaces this with a "Open System Settings…" CTA.
+    /// `nil` means no outstanding permission issue.
+    var permissionWarning: String?
     var isResolvingInitialLiveSessions: Bool {
         get { monitoring.isResolvingInitialLiveSessions }
         set { monitoring.isResolvingInitialLiveSessions = newValue }
@@ -1203,8 +1211,21 @@ final class AppModel {
                 }
 
                 self?.lastActionMessage = result
+                self?.permissionWarning = nil
             } catch is CancellationError {
                 return
+            } catch let jumpError as TerminalJumpError {
+                guard !Task.isCancelled else {
+                    return
+                }
+
+                if case .notPermitted = jumpError {
+                    // Surface in both the inline message (for terminals that
+                    // already display it) and the dedicated banner so the
+                    // user can act on it from anywhere in the UI.
+                    self?.permissionWarning = jumpError.localizedDescription
+                }
+                self?.lastActionMessage = "Jump failed: \(jumpError.localizedDescription)"
             } catch {
                 guard !Task.isCancelled else {
                     return

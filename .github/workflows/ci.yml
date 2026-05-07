@@ -30,6 +30,10 @@ jobs:
   package:
     name: Package (DMG + ZIP)
     runs-on: macos-26
+    # contents:write needed by `gh release` calls below.
+    # Restricted to this job; harness keeps the read-only default.
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -85,11 +89,15 @@ jobs:
           # and v1.1 manually), attach the DMG to it. Otherwise create
           # a draft release that the maintainer can publish.
           if gh release view "$tag" --repo "$repo" >/dev/null 2>&1; then
-            echo "Release $tag exists — uploading assets"
+            existing_dmg="$(gh release view "$tag" --repo "$repo" --json assets --jq '.assets[] | select(.name == "Atoll.dmg") | .name' 2>/dev/null || true)"
+            if [[ -n "$existing_dmg" ]]; then
+              echo "Release $tag already has Atoll.dmg (likely signed via scripts/release-to-github.sh) — skipping CI upload to avoid clobbering."
+              exit 0
+            fi
+            echo "Release $tag exists but has no Atoll.dmg — uploading ad-hoc CI build"
             gh release upload "$tag" \
               "output/package/Atoll.dmg#Atoll.dmg (macOS, Universal, ad-hoc signed)" \
               "output/package/Atoll.zip#Atoll.zip (macOS, Universal, ad-hoc signed)" \
-              --clobber \
               --repo "$repo"
           else
             echo "Creating draft release $tag"

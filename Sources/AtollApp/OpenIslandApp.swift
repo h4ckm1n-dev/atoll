@@ -21,6 +21,8 @@ final class OpenIslandAppDelegate: NSObject, NSApplicationDelegate {
             model.harnessRuntimeMonitor = harnessRuntimeMonitor
             harnessRuntimeMonitor.recordLog(model.lastActionMessage)
 
+            Task { await self.model.themeManager.loadCustomThemes() }
+
             model.ignoresPointerExitDuringHarness = harnessLaunchConfiguration.scenario != nil
             model.disablesOverlayEventMonitoringDuringHarness = harnessLaunchConfiguration.scenario != nil
             model.startIfNeeded(

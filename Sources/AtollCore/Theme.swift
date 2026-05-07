@@ -1,23 +1,113 @@
 import Foundation
 
-/// Selectable palette family. The cases are ordered Latte → Frappé →
-/// Macchiato → Mocha (Catppuccin's light → dark progression) plus a
-/// `system` option that preserves Open Island's pre-theme look so users
-/// who don't want the rebrand can opt out via Settings → Appearance.
-public enum AppTheme: String, Codable, CaseIterable, Sendable {
+public enum AppTheme: Sendable, Hashable {
     case system
-    case catppuccinLatte
-    case catppuccinFrappe
-    case catppuccinMacchiato
-    case catppuccinMocha
+    case latte
+    case frappe
+    case macchiato
+    case mocha
+    /// Custom theme stored in `CustomThemeRegistry`. The `id` resolves
+    /// to a `CustomTheme` whose palette is rendered. If the id is
+    /// missing from the registry (file deleted out-of-band), the
+    /// theme manager falls back to `.mocha`.
+    case custom(id: UUID)
+
+    /// Built-in flavors that ship with the app. Custom themes are not
+    /// listed here — they're enumerated separately via the registry.
+    public static let builtIn: [AppTheme] = [.system, .latte, .frappe, .macchiato, .mocha]
 
     public var displayName: String {
         switch self {
-        case .system:              return "System"
-        case .catppuccinLatte:     return "Catppuccin Latte"
-        case .catppuccinFrappe:    return "Catppuccin Frappé"
-        case .catppuccinMacchiato: return "Catppuccin Macchiato"
-        case .catppuccinMocha:     return "Catppuccin Mocha"
+        case .system:    return "System"
+        case .latte:     return "Catppuccin Latte"
+        case .frappe:    return "Catppuccin Frappé"
+        case .macchiato: return "Catppuccin Macchiato"
+        case .mocha:     return "Catppuccin Mocha"
+        case .custom:    return "Custom"  // overridden at the call site with the CustomTheme.displayName
+        }
+    }
+
+    /// Stable identifier used for `Picker.tag(_:)` and persistence.
+    /// Built-ins use a kind keyword; custom themes use their UUID.
+    public var stableID: String {
+        switch self {
+        case .system:    return "system"
+        case .latte:     return "latte"
+        case .frappe:    return "frappe"
+        case .macchiato: return "macchiato"
+        case .mocha:     return "mocha"
+        case .custom(let id): return "custom:\(id.uuidString)"
+        }
+    }
+
+    /// Reverse of `stableID`. Used when reading the persisted theme
+    /// choice back from UserDefaults. Returns nil for unrecognized.
+    public init?(stableID: String) {
+        switch stableID {
+        case "system":    self = .system
+        case "latte":     self = .latte
+        case "frappe":    self = .frappe
+        case "macchiato": self = .macchiato
+        case "mocha":     self = .mocha
+        // Backwards-compat with old persisted strings from before
+        // the Atoll rebrand.
+        case "catppuccinLatte":     self = .latte
+        case "catppuccinFrappe":    self = .frappe
+        case "catppuccinMacchiato": self = .macchiato
+        case "catppuccinMocha":     self = .mocha
+        default:
+            guard stableID.hasPrefix("custom:"),
+                  let id = UUID(uuidString: String(stableID.dropFirst("custom:".count))) else {
+                return nil
+            }
+            self = .custom(id: id)
+        }
+    }
+}
+
+extension AppTheme: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case kind, id
+    }
+
+    public init(from decoder: Decoder) throws {
+        // Permit both the new keyed shape ({"kind":"mocha"} or
+        // {"kind":"custom","id":"..."}) and the legacy unkeyed
+        // single-string shape ("catppuccinMocha", etc.).
+        if let single = try? decoder.singleValueContainer().decode(String.self),
+           let theme = AppTheme(stableID: single) {
+            self = theme
+            return
+        }
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let kind = try c.decode(String.self, forKey: .kind)
+        switch kind {
+        case "system":    self = .system
+        case "latte":     self = .latte
+        case "frappe":    self = .frappe
+        case "macchiato": self = .macchiato
+        case "mocha":     self = .mocha
+        case "custom":
+            self = .custom(id: try c.decode(UUID.self, forKey: .id))
+        default:
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: c.codingPath,
+                debugDescription: "Unknown AppTheme kind '\(kind)'"
+            ))
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .system:    try c.encode("system",    forKey: .kind)
+        case .latte:     try c.encode("latte",     forKey: .kind)
+        case .frappe:    try c.encode("frappe",    forKey: .kind)
+        case .macchiato: try c.encode("macchiato", forKey: .kind)
+        case .mocha:     try c.encode("mocha",     forKey: .kind)
+        case .custom(let id):
+            try c.encode("custom", forKey: .kind)
+            try c.encode(id, forKey: .id)
         }
     }
 }
@@ -136,15 +226,17 @@ public struct ThemePalette: Equatable, Sendable {
 }
 
 extension AppTheme {
-    /// Resolves the palette for the active theme. Pure function — no
-    /// IO; safe to call from any actor.
-    public var palette: ThemePalette {
+    /// Resolves the palette for a *built-in* theme. Returns nil for
+    /// `.custom` — the caller (typically `ThemeManager`) is responsible
+    /// for looking that up in `CustomThemeRegistry`.
+    public var builtInPalette: ThemePalette? {
         switch self {
-        case .system:              return .system
-        case .catppuccinLatte:     return .latte
-        case .catppuccinFrappe:    return .frappe
-        case .catppuccinMacchiato: return .macchiato
-        case .catppuccinMocha:     return .mocha
+        case .system:    return .system
+        case .latte:     return .latte
+        case .frappe:    return .frappe
+        case .macchiato: return .macchiato
+        case .mocha:     return .mocha
+        case .custom:    return nil
         }
     }
 }
@@ -193,5 +285,106 @@ extension ProjectColor {
             green: Double((value >> 8) & 0xff) / 255.0,
             blue: Double(value & 0xff) / 255.0
         )
+    }
+
+    /// Encodes this color as a 6-char lowercase hex string (no '#').
+    public func toHex() -> String {
+        let r = Int((red * 255).rounded()) & 0xff
+        let g = Int((green * 255).rounded()) & 0xff
+        let b = Int((blue * 255).rounded()) & 0xff
+        return String(format: "%02x%02x%02x", r, g, b)
+    }
+}
+
+extension ThemePalette: Codable {
+    /// Schema version of the on-disk JSON. Bump when the field set
+    /// changes incompatibly. Decoder rejects files with a version
+    /// higher than `currentSchemaVersion` (forward-incompatible).
+    public static let currentSchemaVersion: Int = 1
+
+    private enum CodingKeys: String, CodingKey {
+        case schemaVersion
+        case isLight
+        case base, mantle, crust
+        case surface0, surface1, surface2
+        case text, subtext1, subtext0
+        case overlay2, overlay1, overlay0
+        case rosewater, flamingo, pink, mauve
+        case red, maroon, peach, yellow
+        case green, teal, sky, sapphire
+        case blue, lavender
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let version = try c.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
+        guard version <= Self.currentSchemaVersion else {
+            throw DecodingError.dataCorrupted(.init(
+                codingPath: decoder.codingPath,
+                debugDescription: "Theme schemaVersion \(version) is newer than supported (\(Self.currentSchemaVersion)). Update Atoll."
+            ))
+        }
+        func hex(_ key: CodingKeys) throws -> ProjectColor {
+            let raw = try c.decode(String.self, forKey: key)
+            guard ThemePalette.isValidHex(raw) else {
+                throw DecodingError.dataCorrupted(.init(
+                    codingPath: decoder.codingPath + [key],
+                    debugDescription: "Invalid hex value '\(raw)' for color '\(key.stringValue)'. Expected 6 hex chars."
+                ))
+            }
+            return ProjectColor.fromHex(raw)
+        }
+        self.init(
+            base: try hex(.base), mantle: try hex(.mantle), crust: try hex(.crust),
+            surface0: try hex(.surface0), surface1: try hex(.surface1), surface2: try hex(.surface2),
+            text: try hex(.text), subtext1: try hex(.subtext1), subtext0: try hex(.subtext0),
+            overlay2: try hex(.overlay2), overlay1: try hex(.overlay1), overlay0: try hex(.overlay0),
+            rosewater: try hex(.rosewater), flamingo: try hex(.flamingo), pink: try hex(.pink), mauve: try hex(.mauve),
+            red: try hex(.red), maroon: try hex(.maroon), peach: try hex(.peach), yellow: try hex(.yellow),
+            green: try hex(.green), teal: try hex(.teal), sky: try hex(.sky), sapphire: try hex(.sapphire),
+            blue: try hex(.blue), lavender: try hex(.lavender),
+            isLight: try c.decode(Bool.self, forKey: .isLight)
+        )
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(Self.currentSchemaVersion, forKey: .schemaVersion)
+        try c.encode(isLight, forKey: .isLight)
+        try c.encode(base.toHex(), forKey: .base)
+        try c.encode(mantle.toHex(), forKey: .mantle)
+        try c.encode(crust.toHex(), forKey: .crust)
+        try c.encode(surface0.toHex(), forKey: .surface0)
+        try c.encode(surface1.toHex(), forKey: .surface1)
+        try c.encode(surface2.toHex(), forKey: .surface2)
+        try c.encode(text.toHex(), forKey: .text)
+        try c.encode(subtext1.toHex(), forKey: .subtext1)
+        try c.encode(subtext0.toHex(), forKey: .subtext0)
+        try c.encode(overlay2.toHex(), forKey: .overlay2)
+        try c.encode(overlay1.toHex(), forKey: .overlay1)
+        try c.encode(overlay0.toHex(), forKey: .overlay0)
+        try c.encode(rosewater.toHex(), forKey: .rosewater)
+        try c.encode(flamingo.toHex(), forKey: .flamingo)
+        try c.encode(pink.toHex(), forKey: .pink)
+        try c.encode(mauve.toHex(), forKey: .mauve)
+        try c.encode(red.toHex(), forKey: .red)
+        try c.encode(maroon.toHex(), forKey: .maroon)
+        try c.encode(peach.toHex(), forKey: .peach)
+        try c.encode(yellow.toHex(), forKey: .yellow)
+        try c.encode(green.toHex(), forKey: .green)
+        try c.encode(teal.toHex(), forKey: .teal)
+        try c.encode(sky.toHex(), forKey: .sky)
+        try c.encode(sapphire.toHex(), forKey: .sapphire)
+        try c.encode(blue.toHex(), forKey: .blue)
+        try c.encode(lavender.toHex(), forKey: .lavender)
+    }
+
+    /// Validates a 6-char hex string (no `#` prefix). Used by the
+    /// decoder to reject malformed import files cleanly.
+    public static func isValidHex(_ raw: String) -> Bool {
+        var s = raw
+        if s.hasPrefix("#") { s.removeFirst() }
+        guard s.count == 6 else { return false }
+        return s.allSatisfy { $0.isHexDigit }
     }
 }

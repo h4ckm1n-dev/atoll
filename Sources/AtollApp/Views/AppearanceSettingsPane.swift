@@ -1,9 +1,17 @@
+import AppKit
 import SwiftUI
 import AtollCore
 
 struct AppearanceSettingsPane: View {
     var model: AppModel
     @State private var previewPhase: SessionPhase = .running
+
+    // MARK: Custom theme state
+    @State private var isPresentingPresetChooser = false
+    @State private var isPresentingImportError = false
+    @State private var importErrorMessage: String? = nil
+    @State private var renameTarget: CustomTheme? = nil
+    @State private var deleteTarget: CustomTheme? = nil
 
     @Environment(\.themePalette) private var palette
 
@@ -13,15 +21,35 @@ struct AppearanceSettingsPane: View {
     private var lang: LanguageManager { model.lang }
     private var isCustom: Bool { model.islandAppearanceMode == .custom }
 
+    // MARK: - Theme picker binding
+
+    private var themeBinding: Binding<String> {
+        Binding(
+            get: { model.themeManager.theme.stableID },
+            set: { newID in
+                guard let newTheme = AppTheme(stableID: newID) else { return }
+                Task { @MainActor in
+                    model.themeManager.setTheme(newTheme)
+                }
+            }
+        )
+    }
+
     var body: some View {
         Form {
             Section(lang.t("settings.theme.title")) {
-                Picker(lang.t("settings.theme.title"), selection: Binding(
-                    get: { model.themeManager.theme },
-                    set: { model.themeManager.setTheme($0) }
-                )) {
-                    ForEach(AppTheme.allCases, id: \.self) { theme in
-                        Text(theme.displayName).tag(theme)
+                Picker(lang.t("settings.theme.picker"), selection: themeBinding) {
+                    Section(lang.t("settings.theme.builtin")) {
+                        ForEach(AppTheme.builtIn, id: \.stableID) { theme in
+                            Text(theme.displayName).tag(theme.stableID)
+                        }
+                    }
+                    if !model.themeManager.customThemes.isEmpty {
+                        Section(lang.t("settings.theme.custom")) {
+                            ForEach(model.themeManager.customThemes) { custom in
+                                Text(custom.displayName).tag(AppTheme.custom(id: custom.id).stableID)
+                            }
+                        }
                     }
                 }
                 themePreviewRow(palette: model.themeManager.palette)
@@ -36,6 +64,70 @@ struct AppearanceSettingsPane: View {
                 }
                 .pickerStyle(.segmented)
                 .help(lang.t("settings.panelMaterial.help"))
+            }
+
+            // MARK: Custom themes section
+            Section(lang.t("settings.theme.customSection")) {
+                if model.themeManager.customThemes.isEmpty {
+                    Text(lang.t("settings.theme.customEmpty"))
+                        .foregroundStyle(.secondary)
+                        .font(.system(size: 12))
+                } else {
+                    ForEach(model.themeManager.customThemes) { custom in
+                        customThemeRow(custom)
+                    }
+                }
+                HStack(spacing: 12) {
+                    Button(lang.t("settings.theme.createFromPreset")) {
+                        isPresentingPresetChooser = true
+                    }
+                    Button(lang.t("settings.theme.importFromFile")) {
+                        presentImportPanel()
+                    }
+                }
+            }
+            .confirmationDialog(
+                lang.t("settings.theme.preset.choose"),
+                isPresented: $isPresentingPresetChooser,
+                titleVisibility: .visible
+            ) {
+                ForEach(AppTheme.builtIn, id: \.stableID) { preset in
+                    Button(preset.displayName) {
+                        createCustomFromPreset(preset)
+                    }
+                }
+                Button(lang.t("settings.cancel"), role: .cancel) { }
+            }
+            .alert(
+                lang.t("settings.theme.import.failed"),
+                isPresented: $isPresentingImportError,
+                presenting: importErrorMessage
+            ) { _ in
+                Button(lang.t("settings.ok"), role: .cancel) { }
+            } message: { msg in
+                Text(msg)
+            }
+            .alert(
+                lang.t("settings.theme.delete.confirm"),
+                isPresented: deleteAlertBinding,
+                presenting: deleteTarget
+            ) { theme in
+                Button(lang.t("settings.theme.row.delete"), role: .destructive) {
+                    performDelete(theme)
+                }
+                Button(lang.t("settings.cancel"), role: .cancel) { }
+            } message: { theme in
+                Text(lang.t("settings.theme.delete.message", theme.displayName))
+            }
+            .sheet(item: $renameTarget) { theme in
+                RenameThemeSheet(
+                    original: theme,
+                    onSave: { newName in
+                        renameTheme(theme, to: newName)
+                        renameTarget = nil
+                    },
+                    onCancel: { renameTarget = nil }
+                )
             }
 
             Section(lang.t("settings.appearance.mode")) {
@@ -185,6 +277,134 @@ struct AppearanceSettingsPane: View {
         .navigationTitle(lang.t("settings.tab.appearance"))
     }
 
+
+    // MARK: - Custom theme helpers
+
+    @ViewBuilder
+    private func customThemeRow(_ theme: CustomTheme) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(theme.displayName)
+                    .font(.system(size: 13))
+                Text(lang.t("settings.theme.customRow.subtitle", theme.basedOn.displayName))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Menu {
+                Button(lang.t("settings.theme.row.rename")) { renameTarget = theme }
+                Button(lang.t("settings.theme.row.duplicate")) { duplicateTheme(theme) }
+                Button(lang.t("settings.theme.row.export")) { exportTheme(theme) }
+                Divider()
+                Button(lang.t("settings.theme.row.delete"), role: .destructive) {
+                    deleteTarget = theme
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+            .menuStyle(.borderlessButton)
+            .fixedSize()
+        }
+    }
+
+    private var deleteAlertBinding: Binding<Bool> {
+        Binding(
+            get: { deleteTarget != nil },
+            set: { if !$0 { deleteTarget = nil } }
+        )
+    }
+
+    private func createCustomFromPreset(_ preset: AppTheme) {
+        let presetDisplayName = preset.displayName
+        let theme = CustomTheme.fork(from: preset, displayName: "\(presetDisplayName) copy")
+        Task { @MainActor in
+            do {
+                try await model.themeManager.customRegistry.save(theme)
+                await model.themeManager.refreshCustomThemes()
+                model.themeManager.setTheme(.custom(id: theme.id))
+            } catch {
+                importErrorMessage = error.localizedDescription
+                isPresentingImportError = true
+            }
+        }
+    }
+
+    private func duplicateTheme(_ theme: CustomTheme) {
+        Task { @MainActor in
+            do {
+                _ = try await model.themeManager.customRegistry.duplicate(id: theme.id)
+                await model.themeManager.refreshCustomThemes()
+            } catch {
+                importErrorMessage = error.localizedDescription
+                isPresentingImportError = true
+            }
+        }
+    }
+
+    private func presentImportPanel() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        panel.prompt = NSLocalizedString("settings.theme.import.button", comment: "")
+        if panel.runModal() == .OK, let url = panel.url {
+            Task { @MainActor in
+                do {
+                    let theme = try await model.themeManager.customRegistry.importTheme(from: url)
+                    await model.themeManager.refreshCustomThemes()
+                    model.themeManager.setTheme(.custom(id: theme.id))
+                } catch {
+                    importErrorMessage = error.localizedDescription
+                    isPresentingImportError = true
+                }
+            }
+        }
+    }
+
+    private func exportTheme(_ theme: CustomTheme) {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "\(theme.displayName).json"
+        if panel.runModal() == .OK, let url = panel.url {
+            Task { @MainActor in
+                do {
+                    try await model.themeManager.customRegistry.exportTheme(theme, to: url)
+                } catch {
+                    importErrorMessage = error.localizedDescription
+                    isPresentingImportError = true
+                }
+            }
+        }
+    }
+
+    private func performDelete(_ theme: CustomTheme) {
+        Task { @MainActor in
+            do {
+                try await model.themeManager.customRegistry.delete(id: theme.id)
+                await model.themeManager.refreshCustomThemes()
+                // If the deleted theme was active, fall back to mocha.
+                if case .custom(let id) = model.themeManager.theme, id == theme.id {
+                    model.themeManager.setTheme(.mocha)
+                }
+            } catch {
+                importErrorMessage = error.localizedDescription
+                isPresentingImportError = true
+            }
+        }
+    }
+
+    private func renameTheme(_ theme: CustomTheme, to newName: String) {
+        var updated = theme
+        updated.displayName = newName
+        Task { @MainActor in
+            do {
+                try await model.themeManager.customRegistry.save(updated)
+                await model.themeManager.refreshCustomThemes()
+            } catch {
+                importErrorMessage = error.localizedDescription
+                isPresentingImportError = true
+            }
+        }
+    }
 
     // MARK: - Preview card
 
@@ -498,5 +718,44 @@ struct AppearanceSettingsPane: View {
         let g = Int((c.green * 255).rounded())
         let b = Int((c.blue * 255).rounded())
         return String(format: "#%02X%02X%02X", r, g, b)
+    }
+}
+
+// MARK: - RenameThemeSheet
+
+private struct RenameThemeSheet: View {
+    let original: CustomTheme
+    let onSave: (String) -> Void
+    let onCancel: () -> Void
+
+    @State private var draftName: String
+
+    init(original: CustomTheme, onSave: @escaping (String) -> Void, onCancel: @escaping () -> Void) {
+        self.original = original
+        self.onSave = onSave
+        self.onCancel = onCancel
+        self._draftName = State(initialValue: original.displayName)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(NSLocalizedString("settings.theme.rename.title", comment: ""))
+                .font(.headline)
+            TextField(NSLocalizedString("settings.theme.rename.placeholder", comment: ""), text: $draftName)
+                .textFieldStyle(.roundedBorder)
+            HStack {
+                Spacer()
+                Button(NSLocalizedString("settings.cancel", comment: ""), action: onCancel)
+                    .keyboardShortcut(.cancelAction)
+                Button(NSLocalizedString("settings.save", comment: "")) {
+                    let trimmed = draftName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    onSave(trimmed.isEmpty ? original.displayName : trimmed)
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(draftName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(20)
+        .frame(width: 360)
     }
 }

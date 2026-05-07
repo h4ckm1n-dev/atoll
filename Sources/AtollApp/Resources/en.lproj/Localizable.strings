@@ -235,9 +235,35 @@
 "settings.celebrations.toggle" = "Celebrate when sessions complete";
 "settings.celebrations.help" = "Spawns a brief burst of project-colored confetti when a session finishes a task.";
 
+
+/* Custom theme registry — Phase 2B */
+"settings.theme.picker" = "Theme";
+"settings.theme.builtin" = "Built-in";
+"settings.theme.custom" = "My themes";
+"settings.theme.customSection" = "Custom themes";
+"settings.theme.customEmpty" = "No custom themes yet. Create one from a preset or import a JSON file.";
+"settings.theme.createFromPreset" = "+ Create from preset…";
+"settings.theme.importFromFile" = "Import from file…";
+"settings.theme.import.button" = "Import";
+"settings.theme.import.failed" = "Couldn’t import that theme";
+"settings.theme.preset.choose" = "Start from which preset?";
+"settings.theme.row.rename" = "Rename…";
+"settings.theme.row.duplicate" = "Duplicate";
+"settings.theme.row.export" = "Export…";
+"settings.theme.row.delete" = "Delete…";
+"settings.theme.customRow.subtitle" = "forked from %@";
+"settings.theme.delete.confirm" = "Delete this theme?";
+"settings.theme.delete.message" = "“%@” will be removed from your Atoll library. The original preset isn’t affected.";
+"settings.theme.rename.title" = "Rename theme";
+"settings.theme.rename.placeholder" = "Theme name";
+"settings.cancel" = "Cancel";
+"settings.save" = "Save";
+"settings.ok" = "OK";
+
 /* Panel material — added by feat/panel-material */
 "settings.panelMaterial.title" = "Panel material";
 "settings.panelMaterial.help" = "Frosted lets the wallpaper show through the panel. Solid keeps the deep ocean-night look from v1.0.";
 "settings.panelMaterial.solid" = "Solid";
 "settings.panelMaterial.frostedThin" = "Frosted (thin)";
 "settings.panelMaterial.frostedUltraThin" = "Frosted (ultra-thin)";
+

@@ -89,14 +89,14 @@ public final class KimiHookInstallationManager: @unchecked Sendable {
         }
 
         if let contents = mutation.contents {
-            try contents.write(to: configURL, atomically: true, encoding: .utf8)
+            try safeAtomicWrite(contents, to: configURL)
         }
 
         let manifest = KimiHookInstallerManifest(hookCommand: command)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
+        try safeAtomicWrite(encoder.encode(manifest), to: manifestURL)
 
         return try status(hooksBinaryURL: installedBinaryURL)
     }
@@ -118,7 +118,7 @@ public final class KimiHookInstallationManager: @unchecked Sendable {
         }
 
         if let contents = mutation.contents {
-            try contents.write(to: configURL, atomically: true, encoding: .utf8)
+            try safeAtomicWrite(contents, to: configURL)
         } else if fileManager.fileExists(atPath: configURL.path) {
             try fileManager.removeItem(at: configURL)
         }
@@ -160,6 +160,6 @@ public final class KimiHookInstallationManager: @unchecked Sendable {
         if fileManager.fileExists(atPath: backupURL.path) {
             try fileManager.removeItem(at: backupURL)
         }
-        try fileManager.copyItem(at: url, to: backupURL)
+        try safeCopyFile(from: url, to: backupURL)
     }
 }

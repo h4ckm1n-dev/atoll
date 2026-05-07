@@ -35,6 +35,17 @@ public struct OpenCodePluginInstallationStatus: Equatable, Sendable {
     }
 }
 
+public enum OpenCodePluginInstallationError: Error, LocalizedError, Equatable {
+    case invalidConfigJSON(path: String)
+
+    public var errorDescription: String? {
+        switch self {
+        case let .invalidConfigJSON(path):
+            return "OpenCode config at \(path) is not a recognizable JSON object."
+        }
+    }
+}
+
 public struct OpenCodePluginInstallerManifest: Equatable, Codable, Sendable {
     public static let fileName = "open-island-opencode-plugin-install.json"
 
@@ -99,8 +110,11 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
     public func install(pluginSourceData: Data) throws -> OpenCodePluginInstallationStatus {
         try fileManager.createDirectory(at: pluginsDirectory, withIntermediateDirectories: true)
 
-        // Write the JS plugin file
-        try pluginSourceData.write(to: pluginFileURL, options: .atomic)
+        // Write the JS plugin file. Use safeAtomicWrite so a pre-planted
+        // symlink at `plugins/open-island.js` cannot be used to make
+        // OpenCode execute attacker-controlled JS — symlinks are refused
+        // outright.
+        try safeAtomicWrite(pluginSourceData, to: pluginFileURL)
 
         // Register in config.json
         try registerPluginInConfig()
@@ -110,7 +124,7 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
+        try safeAtomicWrite(encoder.encode(manifest), to: manifestURL)
 
         return try status()
     }
@@ -140,7 +154,7 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
     }
 
     private func isPluginRegistered() -> Bool {
-        guard let data = try? Data(contentsOf: configURL),
+        guard let data = (try? readBoundedConfigFile(at: configURL, fileManager: fileManager)),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let plugins = json["plugin"] as? [String] else {
             return false
@@ -154,8 +168,11 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
         let ref = pluginFileReference()
 
         var json: [String: Any]
-        if let data = try? Data(contentsOf: configURL),
-           let existing = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+        if let data = try readBoundedConfigFile(at: configURL, fileManager: fileManager) {
+            let object = try JSONSerialization.jsonObject(with: data)
+            guard let existing = object as? [String: Any] else {
+                throw OpenCodePluginInstallationError.invalidConfigJSON(path: configURL.path)
+            }
             json = existing
         } else {
             json = [:]
@@ -177,13 +194,18 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
             withJSONObject: json,
             options: [.prettyPrinted, .sortedKeys]
         )
-        try outputData.write(to: configURL, options: .atomic)
+        try safeAtomicWrite(outputData, to: configURL)
     }
 
     private func unregisterPluginFromConfig() throws {
-        guard let data = try? Data(contentsOf: configURL),
-              var json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              var plugins = json["plugin"] as? [String] else {
+        guard let data = try readBoundedConfigFile(at: configURL, fileManager: fileManager) else {
+            return
+        }
+        let object = try JSONSerialization.jsonObject(with: data)
+        guard var json = object as? [String: Any] else {
+            throw OpenCodePluginInstallationError.invalidConfigJSON(path: configURL.path)
+        }
+        guard var plugins = json["plugin"] as? [String] else {
             return
         }
 
@@ -209,7 +231,7 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
             withJSONObject: json,
             options: [.prettyPrinted, .sortedKeys]
         )
-        try outputData.write(to: configURL, options: .atomic)
+        try safeAtomicWrite(outputData, to: configURL)
     }
 
     // MARK: - Helpers
@@ -237,6 +259,6 @@ public final class OpenCodePluginInstallationManager: @unchecked Sendable {
         if fileManager.fileExists(atPath: backupURL.path) {
             try fileManager.removeItem(at: backupURL)
         }
-        try fileManager.copyItem(at: url, to: backupURL)
+        try safeCopyFile(from: url, to: backupURL)
     }
 }

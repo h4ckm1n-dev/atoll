@@ -12,6 +12,13 @@ struct AppearanceSettingsPane: View {
     @State private var importErrorMessage: String? = nil
     @State private var renameTarget: CustomTheme? = nil
     @State private var deleteTarget: CustomTheme? = nil
+    @State private var editorContext: EditorContext? = nil
+
+    private struct EditorContext: Identifiable {
+        let id = UUID()
+        let original: CustomTheme?
+        let basedOn: AppTheme
+    }
 
     @Environment(\.themePalette) private var palette
 
@@ -127,6 +134,30 @@ struct AppearanceSettingsPane: View {
                         renameTarget = nil
                     },
                     onCancel: { renameTarget = nil }
+                )
+            }
+            .sheet(item: $editorContext) { ctx in
+                ThemeEditorSheet(
+                    original: ctx.original,
+                    basedOn: ctx.basedOn,
+                    model: model,
+                    lang: lang,
+                    onSave: { saved in
+                        Task { @MainActor in
+                            do {
+                                try await model.themeManager.customRegistry.save(saved)
+                                await model.themeManager.refreshCustomThemes()
+                                model.themeManager.setTheme(.custom(id: saved.id))
+                            } catch {
+                                importErrorMessage = error.localizedDescription
+                                isPresentingImportError = true
+                            }
+                            editorContext = nil
+                        }
+                    },
+                    onCancel: {
+                        editorContext = nil
+                    }
                 )
             }
 
@@ -292,6 +323,9 @@ struct AppearanceSettingsPane: View {
             }
             Spacer()
             Menu {
+                Button(lang.t("settings.theme.row.edit")) {
+                    editorContext = EditorContext(original: theme, basedOn: theme.basedOn)
+                }
                 Button(lang.t("settings.theme.row.rename")) { renameTarget = theme }
                 Button(lang.t("settings.theme.row.duplicate")) { duplicateTheme(theme) }
                 Button(lang.t("settings.theme.row.export")) { exportTheme(theme) }
@@ -315,18 +349,7 @@ struct AppearanceSettingsPane: View {
     }
 
     private func createCustomFromPreset(_ preset: AppTheme) {
-        let presetDisplayName = preset.displayName
-        let theme = CustomTheme.fork(from: preset, displayName: "\(presetDisplayName) copy")
-        Task { @MainActor in
-            do {
-                try await model.themeManager.customRegistry.save(theme)
-                await model.themeManager.refreshCustomThemes()
-                model.themeManager.setTheme(.custom(id: theme.id))
-            } catch {
-                importErrorMessage = error.localizedDescription
-                isPresentingImportError = true
-            }
-        }
+        editorContext = EditorContext(original: nil, basedOn: preset)
     }
 
     private func duplicateTheme(_ theme: CustomTheme) {

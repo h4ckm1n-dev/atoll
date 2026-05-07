@@ -137,6 +137,37 @@ struct ThemeTests {
         }
     }
 
+    // MARK: - Phase 3C: Hex validation + ProjectColor round-trip
+
+    @Test
+    func isValidHexAcceptsLowercaseUppercaseAndOptionalHash() {
+        #expect(ThemePalette.isValidHex("abcdef"))
+        #expect(ThemePalette.isValidHex("ABCDEF"))
+        #expect(ThemePalette.isValidHex("#abcdef"))
+        #expect(ThemePalette.isValidHex("#ABCDEF"))
+        #expect(ThemePalette.isValidHex("000000"))
+        #expect(ThemePalette.isValidHex("ffffff"))
+    }
+
+    @Test
+    func isValidHexRejectsBadInput() {
+        #expect(!ThemePalette.isValidHex(""))
+        #expect(!ThemePalette.isValidHex("abc"))                 // 3 chars
+        #expect(!ThemePalette.isValidHex("xyz123"))              // non-hex
+        #expect(!ThemePalette.isValidHex("0x123456"))            // unsupported prefix
+        #expect(!ThemePalette.isValidHex("abcdefg"))             // 7 chars
+        #expect(!ThemePalette.isValidHex(" abcdef"))             // leading whitespace
+    }
+
+    @Test
+    func projectColorHexRoundtripIsLossless() {
+        let samples = ["162232", "ffffff", "000000", "a6e3a1", "1e1e2e"]
+        for s in samples {
+            let c = ProjectColor.fromHex(s)
+            #expect(c.toHex() == s, "\(s) round-trip lost: \(c.toHex())")
+        }
+    }
+
     @Test
     func appPanelMaterialRoundtripsThroughCodable() throws {
         for mat in AppPanelMaterial.allCases {

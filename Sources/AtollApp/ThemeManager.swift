@@ -55,6 +55,14 @@ public final class ThemeManager {
         return theme.builtInPalette ?? .mocha
     }
 
+    /// Set (or clear) the preview palette used during live editing.
+    /// The synchronous `palette` getter returns the preview value when set,
+    /// so every frame the editor pushes a draft palette here, the island
+    /// retints without any additional plumbing.
+    public func setPreviewPalette(_ palette: ThemePalette?) {
+        previewPalette = palette
+    }
+
     public func setTheme(_ theme: AppTheme) {
         guard self.theme != theme else { return }
         self.theme = theme

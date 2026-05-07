@@ -247,6 +247,7 @@
 "settings.theme.import.button" = "Import";
 "settings.theme.import.failed" = "Couldn’t import that theme";
 "settings.theme.preset.choose" = "Start from which preset?";
+"settings.theme.row.edit" = "Edit…";
 "settings.theme.row.rename" = "Rename…";
 "settings.theme.row.duplicate" = "Duplicate";
 "settings.theme.row.export" = "Export…";
@@ -266,4 +267,14 @@
 "settings.panelMaterial.solid" = "Solid";
 "settings.panelMaterial.frostedThin" = "Frosted (thin)";
 "settings.panelMaterial.frostedUltraThin" = "Frosted (ultra-thin)";
+
+/* Theme editor — added by Phase 3B */
+"theme.editor.title" = "Edit theme";
+"theme.editor.name" = "Theme name";
+"theme.editor.lightToggle" = "Light text";
+"theme.editor.lightToggle.help" = "Use dark text on light surfaces — pick this for light themes.";
+"theme.editor.surfaces" = "Surfaces";
+"theme.editor.foregrounds" = "Foregrounds";
+"theme.editor.accents" = "Accents";
+"theme.editor.resetToBase" = "Reset to base";
 

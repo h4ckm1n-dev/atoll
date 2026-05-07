@@ -515,6 +515,32 @@ final class AppModel {
         }
     }
 
+    /// Whether to advertise on Bonjour AND bind a non-loopback interface.
+    /// Defaults to false — LAN exposure is opt-in (see H4 fix in WatchHTTPEndpoint).
+    var watchLANAdvertiseEnabled: Bool = false {
+        didSet {
+            guard watchLANAdvertiseEnabled != oldValue else { return }
+            UserDefaults.standard.set(watchLANAdvertiseEnabled, forKey: WatchHTTPEndpoint.lanAdvertiseDefaultsKey)
+            // Restart the relay so the new binding takes effect.
+            if watchNotificationEnabled {
+                stopWatchRelay()
+                startWatchRelay()
+            }
+        }
+    }
+
+    /// Whether the Bonjour advertisement should expose the machine name (default false — L8 fix).
+    var watchBonjourShowMachineName: Bool = false {
+        didSet {
+            guard watchBonjourShowMachineName != oldValue else { return }
+            UserDefaults.standard.set(watchBonjourShowMachineName, forKey: WatchHTTPEndpoint.bonjourShowMachineNameDefaultsKey)
+            if watchNotificationEnabled {
+                stopWatchRelay()
+                startWatchRelay()
+            }
+        }
+    }
+
     @ObservationIgnored
     private(set) var watchRelay: WatchNotificationRelay?
 
@@ -523,10 +549,20 @@ final class AppModel {
         watchRelay?.endpoint.currentCode() ?? "----"
     }
 
-    /// Number of currently connected iPhone SSE clients.
+    /// Whether the current pairing code has been "burned" by too many wrong attempts.
+    /// Surfaced so the UI can show "Code burned — regenerate from Settings".
+    var watchPairingCodeBurned: Bool {
+        watchRelay?.endpoint.pairingCodeStatus() == .burned
+    }
+
+    /// Snapshot of currently paired devices (per-device tracking — H5 fix).
+    var watchPairedDevices: [WatchDeviceInfo] {
+        watchRelay?.endpoint.currentDevices() ?? []
+    }
+
+    /// Number of currently paired devices.
     var watchConnectedDevices: Int {
-        // Placeholder — endpoint doesn't expose count yet
-        0
+        watchPairedDevices.count
     }
 
     private func startWatchRelay() {
@@ -656,6 +692,8 @@ final class AppModel {
             }
             statusColorHexes = colors
         }
+        watchLANAdvertiseEnabled = UserDefaults.standard.bool(forKey: WatchHTTPEndpoint.lanAdvertiseDefaultsKey)
+        watchBonjourShowMachineName = UserDefaults.standard.bool(forKey: WatchHTTPEndpoint.bonjourShowMachineNameDefaultsKey)
         watchNotificationEnabled = UserDefaults.standard.bool(forKey: Self.watchNotificationEnabledKey)
         if watchNotificationEnabled {
             startWatchRelay()

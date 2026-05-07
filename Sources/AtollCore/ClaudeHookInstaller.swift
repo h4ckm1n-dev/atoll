@@ -72,7 +72,7 @@ public enum ClaudeHookInstaller {
         hookCommand: String
     ) throws -> ClaudeHookFileMutation {
         var rootObject = try loadRootObject(from: existingData)
-        let existingHooksObject = rootObject["hooks"] as? [String: Any] ?? [:]
+        let existingHooksObject = try validateHooksShape(rootObject["hooks"])
         var hooksObject: [String: Any] = [:]
 
         for (eventName, value) in existingHooksObject {
@@ -115,7 +115,7 @@ public enum ClaudeHookInstaller {
         }
 
         var rootObject = try loadRootObject(from: existingData)
-        var hooksObject = rootObject["hooks"] as? [String: Any] ?? [:]
+        var hooksObject = try validateHooksShape(rootObject["hooks"])
         var mutated = false
 
         for spec in eventSpecs {
@@ -153,12 +153,31 @@ public enum ClaudeHookInstaller {
             return [:]
         }
 
+        if data.count > BoundedFileReader.maxConfigFileBytes {
+            throw ClaudeHookInstallerError.invalidSettingsJSON
+        }
+
         let object = try JSONSerialization.jsonObject(with: data)
         guard let rootObject = object as? [String: Any] else {
             throw ClaudeHookInstallerError.invalidSettingsJSON
         }
 
         return rootObject
+    }
+
+    /// Strictly validates that `hooksValue` (i.e. `root["hooks"]`) is `nil`
+    /// or a `[String: Any]`. Throws `invalidSettingsJSON` for any other shape
+    /// rather than silently dropping the user's data and rebuilding from `[:]`.
+    private static func validateHooksShape(_ hooksValue: Any?) throws -> [String: Any] {
+        guard let hooksValue else { return [:] }
+        if let nsNull = hooksValue as? NSNull {
+            _ = nsNull
+            return [:]
+        }
+        guard let hooks = hooksValue as? [String: Any] else {
+            throw ClaudeHookInstallerError.invalidSettingsJSON
+        }
+        return hooks
     }
 
     private static func serialize(_ object: [String: Any]) throws -> Data {

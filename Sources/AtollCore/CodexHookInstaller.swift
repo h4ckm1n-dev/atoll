@@ -78,7 +78,7 @@ public enum CodexHookInstaller {
         hookCommand: String
     ) throws -> CodexHookFileMutation {
         var rootObject = try loadRootObject(from: existingData)
-        let existingHooksObject = rootObject["hooks"] as? [String: Any] ?? [:]
+        let existingHooksObject = try validateHooksShape(rootObject["hooks"])
         var hooksObject: [String: Any] = [:]
 
         for (eventName, value) in existingHooksObject {
@@ -111,7 +111,7 @@ public enum CodexHookInstaller {
         }
 
         var rootObject = try loadRootObject(from: existingData)
-        var hooksObject = rootObject["hooks"] as? [String: Any] ?? [:]
+        var hooksObject = try validateHooksShape(rootObject["hooks"])
         var mutated = false
 
         for spec in eventSpecs {
@@ -215,12 +215,28 @@ public enum CodexHookInstaller {
             return [:]
         }
 
+        if data.count > BoundedFileReader.maxConfigFileBytes {
+            throw CodexHookInstallerError.invalidHooksJSON
+        }
+
         let object = try JSONSerialization.jsonObject(with: data)
         guard let rootObject = object as? [String: Any] else {
             throw CodexHookInstallerError.invalidHooksJSON
         }
 
         return rootObject
+    }
+
+    /// Strictly validates that `hooksValue` (i.e. `root["hooks"]`) is `nil`
+    /// or a `[String: Any]`. Throws `invalidHooksJSON` for any other shape
+    /// rather than silently dropping the user's data.
+    private static func validateHooksShape(_ hooksValue: Any?) throws -> [String: Any] {
+        guard let hooksValue else { return [:] }
+        if hooksValue is NSNull { return [:] }
+        guard let hooks = hooksValue as? [String: Any] else {
+            throw CodexHookInstallerError.invalidHooksJSON
+        }
+        return hooks
     }
 
     private static func serialize(_ object: [String: Any]) throws -> Data {

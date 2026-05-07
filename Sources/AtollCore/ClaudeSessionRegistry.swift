@@ -146,13 +146,20 @@ public final class ClaudeSessionRegistry: @unchecked Sendable {
 
     public func save(_ records: [ClaudeTrackedSessionRecord]) throws {
         let directoryURL = fileURL.deletingLastPathComponent()
-        try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        try UserPrivateFileWrite.ensurePrivateDirectory(
+            at: directoryURL,
+            fileManager: fileManager
+        )
 
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
 
         let data = try encoder.encode(records)
-        try data.write(to: fileURL, options: .atomic)
+        // TODO(security): persisted records include free-form `summary`
+        // and `title` strings derived from agent transcripts. PII /
+        // token redaction is tracked separately as INFO-level audit
+        // follow-up — apply when the redaction policy lands.
+        try writeUserPrivate(data, to: fileURL)
     }
 }

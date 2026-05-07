@@ -1,3 +1,4 @@
+import AtollCore
 import Foundation
 
 struct HarnessRuntimeEvent: Codable, Equatable {
@@ -91,13 +92,18 @@ final class HarnessRuntimeMonitor {
         launchToCaptureSeconds: Double,
         fileManager: FileManager = .default
     ) throws -> HarnessRuntimeArtifacts {
-        try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        try UserPrivateFileWrite.ensurePrivateDirectory(
+            at: directoryURL,
+            fileManager: fileManager
+        )
+        UserPrivateFileWrite.excludeFromBackup(directoryURL)
 
         let timelinePath = "timeline.json"
         let timelineURL = directoryURL.appendingPathComponent(timelinePath)
         let timelineEncoder = JSONEncoder()
         timelineEncoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        try timelineEncoder.encode(events).write(to: timelineURL)
+        try writeUserPrivate(timelineEncoder.encode(events), to: timelineURL)
+        UserPrivateFileWrite.excludeFromBackup(timelineURL)
 
         let logPath = "runtime.log"
         let logURL = directoryURL.appendingPathComponent(logPath)
@@ -105,7 +111,11 @@ final class HarnessRuntimeMonitor {
             let detail = event.message.map { " - \($0)" } ?? ""
             return String(format: "%7.3fs [%@] %@%@", event.offsetSeconds, event.category, event.name, detail)
         }
-        try (logLines.joined(separator: "\n") + "\n").write(to: logURL, atomically: true, encoding: .utf8)
+        try UserPrivateFileWrite.writeString(
+            logLines.joined(separator: "\n") + "\n",
+            to: logURL
+        )
+        UserPrivateFileWrite.excludeFromBackup(logURL)
 
         return HarnessRuntimeArtifacts.make(
             events: events,

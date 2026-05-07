@@ -106,13 +106,18 @@ public final class CursorSessionRegistry: @unchecked Sendable {
 
     public func save(_ records: [CursorTrackedSessionRecord]) throws {
         let directoryURL = fileURL.deletingLastPathComponent()
-        try fileManager.createDirectory(at: directoryURL, withIntermediateDirectories: true)
+        try UserPrivateFileWrite.ensurePrivateDirectory(
+            at: directoryURL,
+            fileManager: fileManager
+        )
 
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
 
         let data = try encoder.encode(records)
-        try data.write(to: fileURL, options: .atomic)
+        // TODO(security): see ClaudeSessionRegistry.save — same PII
+        // redaction follow-up applies to `summary`/`title` fields.
+        try writeUserPrivate(data, to: fileURL)
     }
 }

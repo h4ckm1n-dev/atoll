@@ -59,12 +59,11 @@ public final class ProjectColorRegistry: @unchecked Sendable {
 
     private func persist() {
         do {
-            try FileManager.default.createDirectory(
-                at: storeURL.deletingLastPathComponent(),
-                withIntermediateDirectories: true
+            try UserPrivateFileWrite.ensurePrivateDirectory(
+                at: storeURL.deletingLastPathComponent()
             )
             let data = try JSONEncoder().encode(overrides)
-            try data.write(to: storeURL, options: .atomic)
+            try writeUserPrivate(data, to: storeURL)
         } catch {
             // Persisting is best-effort — corruption recovery handles re-init next launch.
         }

@@ -387,4 +387,39 @@ extension ThemePalette: Codable {
         guard s.count == 6 else { return false }
         return s.allSatisfy { $0.isHexDigit }
     }
+
+    /// Every named color in the palette, paired with its hex string.
+    /// Used by import validators that need to walk the full palette
+    /// without depending on `Codable`. Order is the canonical
+    /// declaration order so audits and diff tooling stay stable.
+    public func allHexValues() -> [(name: String, hex: String)] {
+        [
+            ("base", base.toHex()),
+            ("mantle", mantle.toHex()),
+            ("crust", crust.toHex()),
+            ("surface0", surface0.toHex()),
+            ("surface1", surface1.toHex()),
+            ("surface2", surface2.toHex()),
+            ("text", text.toHex()),
+            ("subtext1", subtext1.toHex()),
+            ("subtext0", subtext0.toHex()),
+            ("overlay2", overlay2.toHex()),
+            ("overlay1", overlay1.toHex()),
+            ("overlay0", overlay0.toHex()),
+            ("rosewater", rosewater.toHex()),
+            ("flamingo", flamingo.toHex()),
+            ("pink", pink.toHex()),
+            ("mauve", mauve.toHex()),
+            ("red", red.toHex()),
+            ("maroon", maroon.toHex()),
+            ("peach", peach.toHex()),
+            ("yellow", yellow.toHex()),
+            ("green", green.toHex()),
+            ("teal", teal.toHex()),
+            ("sky", sky.toHex()),
+            ("sapphire", sapphire.toHex()),
+            ("blue", blue.toHex()),
+            ("lavender", lavender.toHex()),
+        ]
+    }
 }

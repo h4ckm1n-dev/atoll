@@ -55,3 +55,16 @@ This index is the repository map for humans and coding agents. Read these files 
 - [docs/island-position-investigation.md](./island-position-investigation.md) for notch and external-display placement work
 - [docs/notchi-integration.md](./notchi-integration.md) for integration notes related to Notchi
 - [docs/installed-app-bundle-analysis.md](./installed-app-bundle-analysis.md) for installed-app bundle observations
+
+## Theme Personalization (v1.1 series)
+
+- [docs/plans/2026-05-06-theme-personalization-design.md](./plans/2026-05-06-theme-personalization-design.md) for the 4-phase theme personalization design (custom themes, in-app editor, frosted panel)
+- [docs/plans/2026-05-06-theme-sweep-phase1-plan.md](./plans/2026-05-06-theme-sweep-phase1-plan.md) for the Phase 1 implementation plan (palette sweep across 8 view files)
+- [docs/plans/2026-05-07-phase-2-custom-theme-registry-plan.md](./plans/2026-05-07-phase-2-custom-theme-registry-plan.md) for the Phase 2 plan (custom theme registry + JSON import/export)
+- [docs/plans/2026-05-07-phase-3-theme-editor-plan.md](./plans/2026-05-07-phase-3-theme-editor-plan.md) for the Phase 3 plan (in-app 26-picker editor with live preview)
+- [docs/plans/2026-05-07-phase-3-editor-spec.md](./plans/2026-05-07-phase-3-editor-spec.md) for the HIG specification produced by the architect agent during Phase 3
+- [docs/plans/2026-05-07-phase-4-frosted-panel-plan.md](./plans/2026-05-07-phase-4-frosted-panel-plan.md) for the Phase 4 plan (frosted panel material option)
+
+## Security
+
+- [docs/security/audit-2026-05-03.md](./security/audit-2026-05-03.md) for the P0 security audit on the inline diff feature

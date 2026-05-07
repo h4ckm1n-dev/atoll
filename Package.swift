@@ -33,7 +33,15 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "AtollCore"
+            name: "CSQLiteShim",
+            publicHeadersPath: "include",
+            linkerSettings: [
+                .linkedLibrary("sqlite3")
+            ]
+        ),
+        .target(
+            name: "AtollCore",
+            dependencies: ["CSQLiteShim"]
         ),
         .executableTarget(
             name: "AtollHooks",

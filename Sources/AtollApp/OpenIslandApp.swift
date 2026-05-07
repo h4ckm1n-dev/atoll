@@ -7,6 +7,7 @@ final class OpenIslandAppDelegate: NSObject, NSApplicationDelegate {
     private let harnessLaunchConfiguration = HarnessLaunchConfiguration()
     private let launchedAt = Date()
     private lazy var harnessRuntimeMonitor = HarnessRuntimeMonitor(launchedAt: launchedAt)
+    private lazy var shortcutsManager = ShortcutsManager(model: model)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         ProcessInfo.processInfo.disableAutomaticTermination(
@@ -31,6 +32,8 @@ final class OpenIslandAppDelegate: NSObject, NSApplicationDelegate {
                 loadRuntimeState: harnessLaunchConfiguration.scenario == nil
             )
             harnessRuntimeMonitor.recordMilestone("modelStarted")
+
+            shortcutsManager.start()
 
             if let scenario = harnessLaunchConfiguration.scenario {
                 model.loadDebugSnapshot(

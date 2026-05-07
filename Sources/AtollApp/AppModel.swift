@@ -1144,6 +1144,30 @@ final class AppModel {
         jump(to: focusedSession?.jumpTarget)
     }
 
+    func cycleToNextAttentionSession() {
+        let sessions = state.sessions
+        let count = sessions.count
+        guard count > 0 else { return }
+
+        let startIndex: Int
+        if let selectedID = selectedSessionID,
+           let idx = sessions.firstIndex(where: { $0.id == selectedID }) {
+            startIndex = idx
+        } else {
+            startIndex = -1
+        }
+
+        for offset in 1...count {
+            let probeIndex = ((startIndex + offset) % count + count) % count
+            if probeIndex == startIndex { continue }
+            let candidate = sessions[probeIndex]
+            if candidate.phase.requiresAttention {
+                selectedSessionID = candidate.id
+                return
+            }
+        }
+    }
+
     func jumpToSession(_ session: AgentSession) {
         guard let jumpTarget = session.jumpTarget,
               jumpTarget.terminalApp.lowercased() != "unknown" else {

@@ -619,7 +619,7 @@ struct AppearanceSettingsPane: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .stroke(
-                        selected ? Color.accentColor : palette.text.swiftUIColor.opacity(0.08),
+                        selected ? palette.role(.working).swiftUIColor : palette.text.swiftUIColor.opacity(0.08),
                         lineWidth: selected ? 2 : 1
                     )
             )

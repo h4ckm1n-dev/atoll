@@ -56,7 +56,17 @@ public protocol KeystrokeInjector {
 public struct DefaultKeystrokeInjector: KeystrokeInjector {
     public init() {}
 
+    /// One-shot AX prompt latch — see `AccessibilityPermissionState`.
+    /// Each first call into the keystroke injector triggers a single
+    /// system permission prompt if needed, so the user has a chance to
+    /// grant Accessibility / Automation before the menu click silently
+    /// no-ops.
+    private static let promptOnce = NSLock()
+    nonisolated(unsafe) private static var didPrompt = false
+
     public func sendCmdShiftRightBracket() {
+        Self.promptIfNeeded()
+
         let source = #"""
         tell application id "dev.warp.Warp-Stable" to activate
         delay 0.08
@@ -73,7 +83,40 @@ public struct DefaultKeystrokeInjector: KeystrokeInjector {
         }
         script.executeAndReturnError(&error)
         if let error {
+            // Detect Apple-Events permission denial (-1743) so we can log a
+            // distinct, actionable line. NSAppleScript surfaces this in
+            // `NSAppleScript.errorNumber`.
+            let errorNumber = (error["NSAppleScriptErrorNumber"] as? NSNumber)?.intValue
+                ?? (error["OSAScriptErrorNumberKey"] as? NSNumber)?.intValue
+            if errorNumber == AppleEventErrorCode.notPermitted {
+                NSLog("[OpenIsland] Warp tab advance blocked by TCC (Automation/AX denied). Prompting user.")
+                // Re-prompt — macOS only re-shows if the user hasn't yet
+                // explicitly denied; if they have, this still surfaces in
+                // System Settings.
+                Task { @MainActor in
+                    _ = AccessibilityPermissionState.ensureOrPrompt()
+                }
+                return
+            }
             NSLog("[OpenIsland] Warp tab advance failed: %@", String(describing: error))
+        }
+    }
+
+    private static func promptIfNeeded() {
+        promptOnce.lock()
+        let needPrompt = !didPrompt
+        if needPrompt { didPrompt = true }
+        promptOnce.unlock()
+        guard needPrompt else { return }
+
+        // The AX C API is thread-safe but we MainActor-bounce because the
+        // resulting prompt is UI.
+        if Thread.isMainThread {
+            MainActor.assumeIsolated { _ = AccessibilityPermissionState.ensureOrPrompt() }
+        } else {
+            DispatchQueue.main.async {
+                _ = AccessibilityPermissionState.ensureOrPrompt()
+            }
         }
     }
 }

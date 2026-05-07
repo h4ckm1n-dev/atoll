@@ -34,7 +34,33 @@ public enum CodexHookJSONValue: Equatable, Codable, Sendable {
     case array([CodexHookJSONValue])
     case null
 
+    /// Maximum nesting depth permitted while decoding helper-supplied JSON
+    /// values. Mitigates resource exhaustion from a malicious or buggy hook
+    /// peer sending pathologically deep payloads that would blow the stack
+    /// or pin CPU during decoding (see L1 in 2026-05-07 audit).
+    public static let maxDecodingDepth = 64
+
+    /// Thread-local current decoding depth. Each nested
+    /// `CodexHookJSONValue.init(from:)` call increments before recursing
+    /// into nested objects/arrays and decrements on return. Foundation's
+    /// `JSONDecoder` does not give us a way to thread state through the
+    /// generated child decoders, so a `Thread`-scoped counter is the
+    /// simplest correctness-preserving approach.
+    private static let depthThreadKey = "atoll.CodexHookJSONValue.depth"
+
+    private static var currentDepth: Int {
+        get { (Thread.current.threadDictionary[depthThreadKey] as? Int) ?? 0 }
+        set { Thread.current.threadDictionary[depthThreadKey] = newValue }
+    }
+
     public init(from decoder: any Decoder) throws {
+        let entryDepth = CodexHookJSONValue.currentDepth
+        if entryDepth > CodexHookJSONValue.maxDecodingDepth {
+            throw DecodingError.dataCorruptedError(
+                in: try decoder.singleValueContainer(),
+                debugDescription: "CodexHookJSONValue exceeded maximum nesting depth (\(CodexHookJSONValue.maxDecodingDepth))."
+            )
+        }
         let container = try decoder.singleValueContainer()
 
         if container.decodeNil() {
@@ -45,12 +71,18 @@ public enum CodexHookJSONValue: Equatable, Codable, Sendable {
             self = .number(value)
         } else if let value = try? container.decode(String.self) {
             self = .string(value)
-        } else if let value = try? container.decode([String: CodexHookJSONValue].self) {
-            self = .object(value)
-        } else if let value = try? container.decode([CodexHookJSONValue].self) {
-            self = .array(value)
         } else {
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported JSON value.")
+            // Recursive cases: bump depth before decoding, restore on return.
+            CodexHookJSONValue.currentDepth = entryDepth + 1
+            defer { CodexHookJSONValue.currentDepth = entryDepth }
+
+            if let dictionary = try? container.decode([String: CodexHookJSONValue].self) {
+                self = .object(dictionary)
+            } else if let array = try? container.decode([CodexHookJSONValue].self) {
+                self = .array(array)
+            } else {
+                throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported JSON value.")
+            }
         }
     }
 
@@ -73,6 +105,7 @@ public enum CodexHookJSONValue: Equatable, Codable, Sendable {
         }
     }
 }
+
 
 public struct CodexHookPayload: Equatable, Codable, Sendable {
     public var cwd: String

@@ -9,6 +9,14 @@ public final class BridgeServer: @unchecked Sendable {
         let readSource: DispatchSourceRead
         var role: BridgeClientRole?
         var buffer = Data()
+        /// Per-client token bucket used to drop hostile/runaway frames
+        /// without tearing the connection down (see M1 audit finding).
+        var rateBucket = TokenBucket()
+        /// True once the client has sent a valid `BridgeHello` frame
+        /// (optional — see protocol-version handshake bonus). Used to
+        /// detect protocol-version mismatches without breaking older
+        /// hooks that never send a hello.
+        var didReceiveHello = false
     }
 
     private struct PendingApproval {
@@ -56,13 +64,22 @@ public final class BridgeServer: @unchecked Sendable {
     private let queue = DispatchQueue(label: "app.atoll.bridge.server")
     private let queueKey = DispatchSpecificKey<Void>()
 
+    /// Pluggable peer-credential check. Defaults to same-EUID enforcement.
+    /// Tests inject an alternative to verify rejection paths without needing
+    /// a real cross-UID socket peer.
+    private let peerTrustCheck: @Sendable (Int32) -> Bool
+
     private var listeners: [Listener] = []
     private var clients: [UUID: ClientConnection] = [:]
     private var pendingApprovals: [String: PendingApproval] = [:]
+    private var pendingApprovalOrder: [String] = []
     private var pendingClaudeToolContexts: [String: PendingClaudeToolContext] = [:]
     private var pendingClaudeInteractions: [String: PendingClaudeInteraction] = [:]
+    private var pendingClaudeInteractionOrder: [String] = []
     private var pendingOpenCodeInteractions: [String: PendingOpenCodeInteraction] = [:]
+    private var pendingOpenCodeInteractionOrder: [String] = []
     private var pendingCursorInteractions: [String: PendingCursorInteraction] = [:]
+    private var pendingCursorInteractionOrder: [String] = []
     /// Caches Agent tool description from preToolUse for use by the next subagentStart.
     private var pendingAgentDescriptions: [String: String] = [:]
     /// Maps toolUseID → temporary task ID for TaskCreate, so postToolUse can update with real ID.
@@ -75,9 +92,11 @@ public final class BridgeServer: @unchecked Sendable {
     private var localState = SessionState()
 
     public init(
-        socketURL: URL = BridgeSocketLocation.defaultURL
+        socketURL: URL = BridgeSocketLocation.defaultURL,
+        peerTrustCheck: @Sendable @escaping (Int32) -> Bool = BridgeSecurity.defaultPeerTrustCheck
     ) {
         self.socketURL = socketURL
+        self.peerTrustCheck = peerTrustCheck
         queue.setSpecific(key: queueKey, value: ())
     }
 
@@ -90,23 +109,28 @@ public final class BridgeServer: @unchecked Sendable {
             return
         }
 
-        // Primary socket in a stable, user-owned directory.
+        // Primary (and only) socket in a stable, user-owned directory.
+        // The legacy /tmp listener was removed in the 2026-05-07 hardening
+        // because /tmp is world-readable: any local user could enumerate
+        // and connect to it. Hooks built before the rename will reconnect
+        // to the new path on next invocation; reverse-compat is intentionally
+        // dropped in favor of confidentiality.
         let primaryListener = try bindListener(at: socketURL)
         listeners.append(primaryListener)
-
-        // Also listen on the legacy /tmp path so that older hook binaries
-        // (from already-running Claude Code sessions) can still connect.
-        let legacyURL = BridgeSocketLocation.legacyURL
-        if legacyURL != socketURL {
-            if let legacyListener = try? bindListener(at: legacyURL) {
-                listeners.append(legacyListener)
-            }
-        }
     }
 
     private func bindListener(at url: URL) throws -> Listener {
         let parentURL = url.deletingLastPathComponent()
-        try FileManager.default.createDirectory(at: parentURL, withIntermediateDirectories: true)
+        // Owner-only parent directory so other local users cannot stat or
+        // enumerate the socket path. createDirectory with explicit
+        // posixPermissions does NOT chmod existing dirs, so we also chmod
+        // the leaf afterwards.
+        try FileManager.default.createDirectory(
+            at: parentURL,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        _ = chmod(parentURL.path, 0o700)
         try? FileManager.default.removeItem(at: url)
 
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
@@ -123,11 +147,20 @@ public final class BridgeServer: @unchecked Sendable {
                 throw BridgeTransportError.systemCallFailed("setsockopt", errno)
             }
 
+            // Tighten umask around bind() so the socket inode is created
+            // with mode 0600 from birth, closing the brief window where
+            // it would otherwise be world-readable. We then chmod
+            // unconditionally — belt-and-suspenders if umask was honored
+            // at all, and a no-op if so.
+            let previousUmask = umask(0o077)
+            defer { _ = umask(previousUmask) }
+
             try withUnixSocketAddress(path: url.path) { address, length in
                 guard bind(fd, address, length) != -1 else {
                     throw BridgeTransportError.systemCallFailed("bind", errno)
                 }
             }
+            _ = chmod(url.path, 0o600)
 
             guard listen(fd, 16) != -1 else {
                 throw BridgeTransportError.systemCallFailed("listen", errno)
@@ -173,10 +206,14 @@ public final class BridgeServer: @unchecked Sendable {
 
     private func stopLocked() {
         pendingApprovals.removeAll()
+        pendingApprovalOrder.removeAll()
         pendingClaudeInteractions.removeAll()
+        pendingClaudeInteractionOrder.removeAll()
         pendingClaudeToolContexts.removeAll()
         pendingOpenCodeInteractions.removeAll()
+        pendingOpenCodeInteractionOrder.removeAll()
         pendingCursorInteractions.removeAll()
+        pendingCursorInteractionOrder.removeAll()
 
         let activeConnections = Array(clients.values)
         activeConnections.forEach { $0.readSource.cancel() }
@@ -205,6 +242,25 @@ public final class BridgeServer: @unchecked Sendable {
                 return
             }
 
+            // H1: reject any peer whose effective UID does not match this
+            // process. getpeereid is the kernel-authoritative source — it
+            // cannot be spoofed by a malicious client.
+            guard peerTrustCheck(clientFileDescriptor) else {
+                BridgeServer.logSecurityEvent("bridge: rejected peer (uid mismatch)")
+                close(clientFileDescriptor)
+                continue
+            }
+
+            // H2: hard cap on concurrent client connections to prevent
+            // fd exhaustion / memory growth from a flooding peer.
+            guard clients.count < BridgeSecurity.maxConcurrentClients else {
+                BridgeServer.logSecurityEvent(
+                    "bridge: refusing client (max \(BridgeSecurity.maxConcurrentClients) concurrent)"
+                )
+                close(clientFileDescriptor)
+                continue
+            }
+
             do {
                 try disableSocketSigPipe(clientFileDescriptor)
                 try makeSocketNonBlocking(clientFileDescriptor)
@@ -212,6 +268,18 @@ public final class BridgeServer: @unchecked Sendable {
             } catch {
                 close(clientFileDescriptor)
             }
+        }
+    }
+
+    /// Single chokepoint for security log lines so tests / future audits
+    /// can grep one prefix.
+    static func logSecurityEvent(_ message: @autoclosure () -> String) {
+        // FileHandle.standardError is async-safe; print() routes through
+        // stdout which the app also wires elsewhere. Keep this dependency
+        // light — no os.Logger import.
+        let line = "[atoll.security] " + message() + "\n"
+        if let data = line.data(using: .utf8) {
+            FileHandle.standardError.write(data)
         }
     }
 
@@ -258,12 +326,81 @@ public final class BridgeServer: @unchecked Sendable {
             if bytesRead > 0 {
                 client.buffer.append(localBuffer, count: bytesRead)
 
+                // H2: cap per-client buffer to prevent OOM from a peer
+                // that streams bytes without ever writing a newline.
+                if client.buffer.count > BridgeSecurity.maxClientBufferBytes {
+                    BridgeServer.logSecurityEvent(
+                        "bridge: client buffer overflow (\(client.buffer.count) > \(BridgeSecurity.maxClientBufferBytes))"
+                    )
+                    clients[clientID] = client
+                    removeClient(clientID)
+                    return
+                }
+
+                // H2: cap individual frame size. We scan the *unconsumed*
+                // prefix for a frame longer than the limit; if found, we
+                // drop the whole connection rather than sift partial junk.
+                if let firstNewline = client.buffer.firstIndex(of: UInt8(ascii: "\n")) {
+                    let frameLength = client.buffer.distance(from: client.buffer.startIndex, to: firstNewline)
+                    if frameLength > BridgeSecurity.maxFrameBytes {
+                        BridgeServer.logSecurityEvent(
+                            "bridge: frame too large (\(frameLength) > \(BridgeSecurity.maxFrameBytes))"
+                        )
+                        clients[clientID] = client
+                        removeClient(clientID)
+                        return
+                    }
+                } else if client.buffer.count > BridgeSecurity.maxFrameBytes {
+                    // No newline yet but already over frame limit — abort.
+                    BridgeServer.logSecurityEvent(
+                        "bridge: frame without newline exceeds \(BridgeSecurity.maxFrameBytes) bytes"
+                    )
+                    clients[clientID] = client
+                    removeClient(clientID)
+                    return
+                }
+
                 do {
                     let envelopes = try BridgeCodec.decodeLines(from: &client.buffer)
                     clients[clientID] = client
 
                     for envelope in envelopes {
+                        // Optional defensive handshake: if the peer chooses
+                        // to send a `BridgeHello` first, validate its
+                        // protocol version. Existing client implementations
+                        // (LocalBridgeClient, BridgeCommandClient,
+                        // AtollHooks) do not send one, so absence is not an
+                        // error — we simply skip this check until proven
+                        // otherwise. A mismatched-version hello, however,
+                        // is fatal.
+                        if !client.didReceiveHello, case let .hello(hello) = envelope {
+                            if hello.protocolVersion != BridgeHello().protocolVersion {
+                                BridgeServer.logSecurityEvent(
+                                    "bridge: protocol version mismatch (\(hello.protocolVersion))"
+                                )
+                                removeClient(clientID)
+                                return
+                            }
+                            if var c = clients[clientID] {
+                                c.didReceiveHello = true
+                                clients[clientID] = c
+                            }
+                            continue
+                        }
+
                         if case let .command(command) = envelope {
+                            // M1: token-bucket rate limit. Drop the frame
+                            // when over budget but keep the connection up;
+                            // a legitimate burst should not kill the helper.
+                            guard var c = clients[clientID] else { return }
+                            if !c.rateBucket.tryConsume() {
+                                clients[clientID] = c
+                                BridgeServer.logSecurityEvent(
+                                    "bridge: rate-limit drop for client \(clientID)"
+                                )
+                                continue
+                            }
+                            clients[clientID] = c
                             handle(command, from: clientID)
                         }
                     }
@@ -469,12 +606,14 @@ public final class BridgeServer: @unchecked Sendable {
             ensureSessionExists(for: payload)
             synchronizeJumpTarget(for: payload)
             synchronizeCodexMetadata(for: payload)
-            let prompt = payload.prompt ?? payload.promptPreview ?? "User submitted a prompt to Codex."
+            // L3: truncate helper-supplied strings before they reach SessionState/UI.
+            let prompt = (payload.prompt ?? payload.promptPreview ?? "User submitted a prompt to Codex.")
+                .truncatedForUI()
             emit(
                 .activityUpdated(
                     SessionActivityUpdated(
                         sessionID: payload.sessionID,
-                        summary: "Prompt: \(prompt)",
+                        summary: "Prompt: \(prompt)".truncatedForUI(),
                         phase: .running,
                         timestamp: .now
                     )
@@ -487,7 +626,7 @@ public final class BridgeServer: @unchecked Sendable {
             synchronizeJumpTarget(for: payload)
             synchronizeCodexMetadata(for: payload)
 
-            let command = payload.commandPreview ?? "Bash command"
+            let command = (payload.commandPreview ?? "Bash command").truncatedForUI()
 
             let approvalEvent = AgentEvent.permissionRequested(
                 PermissionRequested(
@@ -495,7 +634,7 @@ public final class BridgeServer: @unchecked Sendable {
                     request: PermissionRequest(
                         title: "Run Bash command",
                         summary: "Codex wants to run a shell command.",
-                        affectedPath: payload.commandText ?? command,
+                        affectedPath: (payload.commandText ?? command).truncatedForUI(),
                         primaryActionTitle: "Allow",
                         secondaryActionTitle: "Deny"
                     ),
@@ -505,17 +644,18 @@ public final class BridgeServer: @unchecked Sendable {
 
             emit(approvalEvent)
 
-            pendingApprovals[payload.sessionID] = PendingApproval(
-                clientID: clientID
+            putPendingApproval(
+                sessionID: payload.sessionID,
+                approval: PendingApproval(clientID: clientID)
             )
 
         case .postToolUse:
             ensureSessionExists(for: payload)
             synchronizeJumpTarget(for: payload)
             synchronizeCodexMetadata(for: payload)
-            let command = payload.commandPreview ?? "Bash command"
-            let responsePreview = payload.toolResponsePreview
-            let summary = responsePreview.map { "Bash finished: \(command) · \($0)" } ?? "Bash finished: \(command)"
+            let command = (payload.commandPreview ?? "Bash command").truncatedForUI()
+            let responsePreview = payload.toolResponsePreview?.truncatedForUI()
+            let summary = (responsePreview.map { "Bash finished: \(command) · \($0)" } ?? "Bash finished: \(command)").truncatedForUI()
 
             emit(
                 .activityUpdated(
@@ -533,7 +673,7 @@ public final class BridgeServer: @unchecked Sendable {
             ensureSessionExists(for: payload)
             synchronizeJumpTarget(for: payload)
             synchronizeCodexMetadata(for: payload)
-            let summary = payload.lastAssistantMessage ?? payload.assistantMessagePreview ?? "Codex completed the turn."
+            let summary = (payload.lastAssistantMessage ?? payload.assistantMessagePreview ?? "Codex completed the turn.").truncatedForUI()
 
             emit(
                 .sessionCompleted(
@@ -593,7 +733,7 @@ public final class BridgeServer: @unchecked Sendable {
                 .activityUpdated(
                     SessionActivityUpdated(
                         sessionID: payload.sessionID,
-                        summary: payload.promptPreview.map { "Prompt: \($0)" } ?? payload.implicitStartSummary,
+                        summary: (payload.promptPreview.map { "Prompt: \($0)" } ?? payload.implicitStartSummary).truncatedForUI(),
                         phase: .running,
                         timestamp: .now
                     )
@@ -632,12 +772,15 @@ public final class BridgeServer: @unchecked Sendable {
                 }
             }
 
-            let summary = payload.toolName.map { "Running \($0)" } ?? "Running \(payload.resolvedAgentTool.displayName) tool"
+            // L3: helper-supplied tool name + input preview are unbounded.
+            let claudePreToolName = payload.toolName?.truncatedForUI()
+            let claudePreToolPreview = payload.toolInputPreview?.truncatedForUI()
+            let summary = claudePreToolName.map { "Running \($0)" } ?? "Running \(payload.resolvedAgentTool.displayName) tool"
             emit(
                 .activityUpdated(
                     SessionActivityUpdated(
                         sessionID: payload.sessionID,
-                        summary: payload.toolInputPreview.map { "\(summary): \($0)" } ?? summary,
+                        summary: (claudePreToolPreview.map { "\(summary): \($0)" } ?? summary).truncatedForUI(),
                         phase: .running,
                         timestamp: .now
                     )
@@ -661,9 +804,12 @@ public final class BridgeServer: @unchecked Sendable {
                     )
                 )
 
-                pendingClaudeInteractions[payload.sessionID] = PendingClaudeInteraction(
-                    clientID: clientID,
-                    kind: .question(payload, prompt)
+                putPendingClaudeInteraction(
+                    sessionID: payload.sessionID,
+                    interaction: PendingClaudeInteraction(
+                        clientID: clientID,
+                        kind: .question(payload, prompt)
+                    )
                 )
             } else {
                 let suggestions = payload.permissionSuggestions ?? []
@@ -673,12 +819,13 @@ public final class BridgeServer: @unchecked Sendable {
                         PermissionRequested(
                             sessionID: payload.sessionID,
                             request: PermissionRequest(
-                                title: payload.permissionRequestTitle,
-                                summary: payload.permissionRequestSummary,
-                                affectedPath: payload.permissionAffectedPath,
+                                // L3: bound title/summary/path before they reach UI labels.
+                                title: payload.permissionRequestTitle.truncatedForUI(),
+                                summary: payload.permissionRequestSummary.truncatedForUI(),
+                                affectedPath: payload.permissionAffectedPath.truncatedForUI(),
                                 primaryActionTitle: "Allow Once",
                                 secondaryActionTitle: "Deny",
-                                toolName: payload.toolName,
+                                toolName: payload.toolName?.truncatedForUI(),
                                 toolUseID: claudeToolUseID(for: payload),
                                 toolInput: payload.toolInput,
                                 suggestedUpdates: suggestions
@@ -688,9 +835,12 @@ public final class BridgeServer: @unchecked Sendable {
                     )
                 )
 
-                pendingClaudeInteractions[payload.sessionID] = PendingClaudeInteraction(
-                    clientID: clientID,
-                    kind: .permission(payload)
+                putPendingClaudeInteraction(
+                    sessionID: payload.sessionID,
+                    interaction: PendingClaudeInteraction(
+                        clientID: clientID,
+                        kind: .permission(payload)
+                    )
                 )
             }
 
@@ -717,12 +867,12 @@ public final class BridgeServer: @unchecked Sendable {
                     return "\(payload.resolvedAgentTool.displayName) captured your answers."
                 }
 
-                if let preview = payload.toolResponsePreview,
-                   let toolName = payload.toolName {
+                if let preview = payload.toolResponsePreview?.truncatedForUI(),
+                   let toolName = payload.toolName?.truncatedForUI() {
                     return "\(toolName) finished: \(preview)"
                 }
 
-                if let toolName = payload.toolName {
+                if let toolName = payload.toolName?.truncatedForUI() {
                     return "\(toolName) finished."
                 }
 
@@ -733,7 +883,7 @@ public final class BridgeServer: @unchecked Sendable {
                 .activityUpdated(
                     SessionActivityUpdated(
                         sessionID: payload.sessionID,
-                        summary: summary,
+                        summary: summary.truncatedForUI(),
                         phase: .running,
                         timestamp: .now
                     )
@@ -752,7 +902,7 @@ public final class BridgeServer: @unchecked Sendable {
                 .activityUpdated(
                     SessionActivityUpdated(
                         sessionID: payload.sessionID,
-                        summary: payload.error ?? "\(payload.resolvedAgentTool.displayName) tool failed.",
+                        summary: (payload.error?.truncatedForUI() ?? "\(payload.resolvedAgentTool.displayName) tool failed."),
                         phase: payload.isInterrupt == true ? .completed : .running,
                         timestamp: .now
                     )
@@ -770,7 +920,7 @@ public final class BridgeServer: @unchecked Sendable {
                 .sessionCompleted(
                     SessionCompleted(
                         sessionID: payload.sessionID,
-                        summary: payload.error ?? "\(payload.resolvedAgentTool.displayName) permission was denied.",
+                        summary: (payload.error?.truncatedForUI() ?? "\(payload.resolvedAgentTool.displayName) permission was denied."),
                         timestamp: .now
                     )
                 )
@@ -795,7 +945,7 @@ public final class BridgeServer: @unchecked Sendable {
                 .activityUpdated(
                     SessionActivityUpdated(
                         sessionID: payload.sessionID,
-                        summary: payload.notificationPreview ?? payload.implicitStartSummary,
+                        summary: (payload.notificationPreview ?? payload.implicitStartSummary).truncatedForUI(),
                         phase: notificationPhase,
                         timestamp: .now
                     )
@@ -816,7 +966,7 @@ public final class BridgeServer: @unchecked Sendable {
                 .sessionCompleted(
                     SessionCompleted(
                         sessionID: payload.sessionID,
-                        summary: payload.lastAssistantMessage ?? payload.assistantMessagePreview ?? "\(payload.resolvedAgentTool.displayName) completed the turn.",
+                        summary: (payload.lastAssistantMessage ?? payload.assistantMessagePreview ?? "\(payload.resolvedAgentTool.displayName) completed the turn.").truncatedForUI(),
                         timestamp: .now,
                         isInterrupt: payload.isInterrupt
                     )
@@ -837,7 +987,7 @@ public final class BridgeServer: @unchecked Sendable {
                 .sessionCompleted(
                     SessionCompleted(
                         sessionID: payload.sessionID,
-                        summary: payload.error ?? payload.lastAssistantMessage ?? payload.assistantMessagePreview ?? "\(payload.resolvedAgentTool.displayName) failed to finish the turn.",
+                        summary: (payload.error ?? payload.lastAssistantMessage ?? payload.assistantMessagePreview ?? "\(payload.resolvedAgentTool.displayName) failed to finish the turn.").truncatedForUI(),
                         timestamp: .now,
                         isInterrupt: payload.isInterrupt
                     )
@@ -856,14 +1006,14 @@ public final class BridgeServer: @unchecked Sendable {
                     ClaudeSubagentInfo(
                         agentID: agentID,
                         agentType: payload.agentType,
-                        taskDescription: desc,
+                        taskDescription: desc?.truncatedForUI(),
                         startedAt: .now
                     ),
                     toSession: payload.sessionID
                 )
             }
 
-            let summary = payload.agentType.map { "Started \($0) subagent." } ?? "Started \(payload.resolvedAgentTool.displayName) subagent."
+            let summary = (payload.agentType.map { "Started \($0) subagent." } ?? "Started \(payload.resolvedAgentTool.displayName) subagent.").truncatedForUI()
             emit(
                 .activityUpdated(
                     SessionActivityUpdated(
@@ -885,9 +1035,9 @@ public final class BridgeServer: @unchecked Sendable {
                 removeSubagent(agentID: agentID, fromSession: payload.sessionID)
             }
 
-            let summary = payload.lastAssistantMessage ?? payload.assistantMessagePreview
+            let summary = (payload.lastAssistantMessage ?? payload.assistantMessagePreview
                 ?? payload.agentType.map { "Finished \($0) subagent." }
-                ?? "Finished \(payload.resolvedAgentTool.displayName) subagent."
+                ?? "Finished \(payload.resolvedAgentTool.displayName) subagent.").truncatedForUI()
             emit(
                 .activityUpdated(
                     SessionActivityUpdated(
@@ -971,7 +1121,7 @@ public final class BridgeServer: @unchecked Sendable {
                 .activityUpdated(
                     SessionActivityUpdated(
                         sessionID: payload.sessionID,
-                        summary: payload.promptPreview.map { "Prompt: \($0)" } ?? payload.implicitStartSummary,
+                        summary: (payload.promptPreview.map { "Prompt: \($0)" } ?? payload.implicitStartSummary).truncatedForUI(),
                         phase: .running,
                         timestamp: .now
                     )
@@ -984,12 +1134,14 @@ public final class BridgeServer: @unchecked Sendable {
             ensureOpenCodeSessionExists(for: payload)
             synchronizeOpenCodeJumpTarget(for: payload)
             synchronizeOpenCodeMetadata(for: payload)
-            let summary = payload.toolName.map { "Running \($0)" } ?? "Running OpenCode tool"
+            let ocToolName = payload.toolName?.truncatedForUI()
+            let ocToolPreview = payload.toolInputPreview?.truncatedForUI()
+            let summary = ocToolName.map { "Running \($0)" } ?? "Running OpenCode tool"
             emit(
                 .activityUpdated(
                     SessionActivityUpdated(
                         sessionID: payload.sessionID,
-                        summary: payload.toolInputPreview.map { "\(summary): \($0)" } ?? summary,
+                        summary: (ocToolPreview.map { "\(summary): \($0)" } ?? summary).truncatedForUI(),
                         phase: .running,
                         timestamp: .now
                     )
@@ -1002,7 +1154,7 @@ public final class BridgeServer: @unchecked Sendable {
             ensureOpenCodeSessionExists(for: payload)
             synchronizeOpenCodeJumpTarget(for: payload)
             synchronizeOpenCodeMetadata(for: payload)
-            let summary = payload.toolName.map { "\($0) finished." } ?? "OpenCode tool finished."
+            let summary = (payload.toolName.map { "\($0.truncatedForUI()) finished." } ?? "OpenCode tool finished.")
             emit(
                 .activityUpdated(
                     SessionActivityUpdated(
@@ -1025,21 +1177,24 @@ public final class BridgeServer: @unchecked Sendable {
                     PermissionRequested(
                         sessionID: payload.sessionID,
                         request: PermissionRequest(
-                            title: payload.permissionTitle ?? payload.toolName.map { "Allow \($0)" } ?? "Allow OpenCode tool",
-                            summary: payload.permissionDescription ?? "OpenCode needs permission to continue.",
-                            affectedPath: payload.toolInputPreview ?? payload.cwd,
+                            title: (payload.permissionTitle ?? payload.toolName.map { "Allow \($0)" } ?? "Allow OpenCode tool").truncatedForUI(),
+                            summary: (payload.permissionDescription ?? "OpenCode needs permission to continue.").truncatedForUI(),
+                            affectedPath: (payload.toolInputPreview ?? payload.cwd).truncatedForUI(),
                             primaryActionTitle: "Allow",
                             secondaryActionTitle: "Deny",
-                            toolName: payload.toolName
+                            toolName: payload.toolName?.truncatedForUI()
                         ),
                         timestamp: .now
                     )
                 )
             )
 
-            pendingOpenCodeInteractions[payload.sessionID] = PendingOpenCodeInteraction(
-                clientID: clientID,
-                kind: .permission(payload)
+            putPendingOpenCodeInteraction(
+                sessionID: payload.sessionID,
+                interaction: PendingOpenCodeInteraction(
+                    clientID: clientID,
+                    kind: .permission(payload)
+                )
             )
 
         case .questionAsked:
@@ -1047,7 +1202,7 @@ public final class BridgeServer: @unchecked Sendable {
             synchronizeOpenCodeJumpTarget(for: payload)
             synchronizeOpenCodeMetadata(for: payload)
 
-            let questionTitle = payload.questionText ?? "OpenCode has a question for you."
+            let questionTitle = (payload.questionText ?? "OpenCode has a question for you.").truncatedForUI()
             emit(
                 .questionAsked(
                     QuestionAsked(
@@ -1061,9 +1216,12 @@ public final class BridgeServer: @unchecked Sendable {
                 )
             )
 
-            pendingOpenCodeInteractions[payload.sessionID] = PendingOpenCodeInteraction(
-                clientID: clientID,
-                kind: .question(payload)
+            putPendingOpenCodeInteraction(
+                sessionID: payload.sessionID,
+                interaction: PendingOpenCodeInteraction(
+                    clientID: clientID,
+                    kind: .question(payload)
+                )
             )
 
         case .stop:
@@ -1075,7 +1233,7 @@ public final class BridgeServer: @unchecked Sendable {
                 .sessionCompleted(
                     SessionCompleted(
                         sessionID: payload.sessionID,
-                        summary: payload.lastAssistantMessage ?? payload.assistantMessagePreview ?? "OpenCode completed the turn.",
+                        summary: (payload.lastAssistantMessage ?? payload.assistantMessagePreview ?? "OpenCode completed the turn.").truncatedForUI(),
                         timestamp: .now
                     )
                 )
@@ -1118,7 +1276,7 @@ public final class BridgeServer: @unchecked Sendable {
                 .activityUpdated(
                     SessionActivityUpdated(
                         sessionID: payload.sessionID,
-                        summary: promptSummary.map { "Prompt: \($0)" } ?? payload.implicitStartSummary,
+                        summary: (promptSummary.map { "Prompt: \($0)" } ?? payload.implicitStartSummary).truncatedForUI(),
                         phase: .running,
                         timestamp: .now
                     )
@@ -1131,7 +1289,7 @@ public final class BridgeServer: @unchecked Sendable {
             ensureCursorSessionExists(for: payload)
             synchronizeCursorJumpTarget(for: payload)
             synchronizeCursorMetadata(for: payload)
-            let shellSummary = payload.commandPreview.map { "Running: \($0)" } ?? "Running shell command"
+            let shellSummary = (payload.commandPreview.map { "Running: \($0)" } ?? "Running shell command").truncatedForUI()
             emit(
                 .activityUpdated(
                     SessionActivityUpdated(
@@ -1149,7 +1307,7 @@ public final class BridgeServer: @unchecked Sendable {
             ensureCursorSessionExists(for: payload)
             synchronizeCursorJumpTarget(for: payload)
             synchronizeCursorMetadata(for: payload)
-            let mcpSummary = payload.toolName.map { "Calling \($0)" } ?? "Calling MCP tool"
+            let mcpSummary = (payload.toolName.map { "Calling \($0)" } ?? "Calling MCP tool").truncatedForUI()
             emit(
                 .activityUpdated(
                     SessionActivityUpdated(
@@ -1167,7 +1325,7 @@ public final class BridgeServer: @unchecked Sendable {
             ensureCursorSessionExists(for: payload)
             synchronizeCursorJumpTarget(for: payload)
             synchronizeCursorMetadata(for: payload)
-            let summary = payload.filePath.map { "Reading \($0)" } ?? "Reading a file"
+            let summary = (payload.filePath.map { "Reading \($0)" } ?? "Reading a file").truncatedForUI()
             emit(
                 .activityUpdated(
                     SessionActivityUpdated(
@@ -1185,7 +1343,7 @@ public final class BridgeServer: @unchecked Sendable {
             ensureCursorSessionExists(for: payload)
             synchronizeCursorJumpTarget(for: payload)
             synchronizeCursorMetadata(for: payload)
-            let summary = payload.filePath.map { "Edited \($0)" } ?? "Cursor edited a file"
+            let summary = (payload.filePath.map { "Edited \($0)" } ?? "Cursor edited a file").truncatedForUI()
             emit(
                 .activityUpdated(
                     SessionActivityUpdated(
@@ -1284,7 +1442,7 @@ public final class BridgeServer: @unchecked Sendable {
                 .sessionCompleted(
                     SessionCompleted(
                         sessionID: payload.sessionID,
-                        summary: payload.reason.map { "Gemini CLI session ended: \($0)." } ?? payload.implicitSummary,
+                        summary: (payload.reason.map { "Gemini CLI session ended: \($0)." } ?? payload.implicitSummary).truncatedForUI(),
                         timestamp: .now,
                         isInterrupt: true,
                         isSessionEnd: true
@@ -1303,7 +1461,7 @@ public final class BridgeServer: @unchecked Sendable {
                 .activityUpdated(
                     SessionActivityUpdated(
                         sessionID: payload.sessionID,
-                        summary: payload.notificationSummary,
+                        summary: payload.notificationSummary.truncatedForUI(),
                         phase: currentPhase,
                         timestamp: .now
                     )
@@ -2435,6 +2593,73 @@ public final class BridgeServer: @unchecked Sendable {
         broadcast([.event(event)])
     }
 
+    // MARK: - Bounded pending-interaction insertion (M1)
+
+    /// FIFO-bounded insert into `pendingApprovals`. Evicts the oldest
+    /// entry once `BridgeSecurity.maxPendingInteractions` is exceeded.
+    private func putPendingApproval(sessionID: String, approval: PendingApproval) {
+        if pendingApprovals[sessionID] == nil {
+            pendingApprovalOrder.append(sessionID)
+        }
+        pendingApprovals[sessionID] = approval
+        evictOldestPending(
+            map: &pendingApprovals,
+            order: &pendingApprovalOrder,
+            label: "approvals"
+        )
+    }
+
+    private func putPendingClaudeInteraction(sessionID: String, interaction: PendingClaudeInteraction) {
+        if pendingClaudeInteractions[sessionID] == nil {
+            pendingClaudeInteractionOrder.append(sessionID)
+        }
+        pendingClaudeInteractions[sessionID] = interaction
+        evictOldestPending(
+            map: &pendingClaudeInteractions,
+            order: &pendingClaudeInteractionOrder,
+            label: "claude"
+        )
+    }
+
+    private func putPendingOpenCodeInteraction(sessionID: String, interaction: PendingOpenCodeInteraction) {
+        if pendingOpenCodeInteractions[sessionID] == nil {
+            pendingOpenCodeInteractionOrder.append(sessionID)
+        }
+        pendingOpenCodeInteractions[sessionID] = interaction
+        evictOldestPending(
+            map: &pendingOpenCodeInteractions,
+            order: &pendingOpenCodeInteractionOrder,
+            label: "opencode"
+        )
+    }
+
+    private func putPendingCursorInteraction(sessionID: String, interaction: PendingCursorInteraction) {
+        if pendingCursorInteractions[sessionID] == nil {
+            pendingCursorInteractionOrder.append(sessionID)
+        }
+        pendingCursorInteractions[sessionID] = interaction
+        evictOldestPending(
+            map: &pendingCursorInteractions,
+            order: &pendingCursorInteractionOrder,
+            label: "cursor"
+        )
+    }
+
+    private func evictOldestPending<Value>(
+        map: inout [String: Value],
+        order: inout [String],
+        label: String
+    ) {
+        while map.count > BridgeSecurity.maxPendingInteractions, let oldest = order.first {
+            order.removeFirst()
+            if map.removeValue(forKey: oldest) != nil {
+                BridgeServer.logSecurityEvent(
+                    "bridge: evicted oldest pending \(label) interaction (sessionID=\(oldest))"
+                )
+            }
+        }
+    }
+
     private func hasSession(id: String) -> Bool {
         localState.session(id: id) != nil || localState.session(id: id) != nil
     }
@@ -2474,6 +2699,7 @@ public final class BridgeServer: @unchecked Sendable {
 
         for sessionID in pendingSessionIDs {
             pendingApprovals.removeValue(forKey: sessionID)
+            pendingApprovalOrder.removeAll(where: { $0 == sessionID })
         }
 
         let pendingClaudeSessionIDs = pendingClaudeInteractions.compactMap { entry -> String? in
@@ -2483,6 +2709,7 @@ public final class BridgeServer: @unchecked Sendable {
 
         for sessionID in pendingClaudeSessionIDs {
             pendingClaudeInteractions.removeValue(forKey: sessionID)
+            pendingClaudeInteractionOrder.removeAll(where: { $0 == sessionID })
             emit(
                 .actionableStateResolved(
                     ActionableStateResolved(
@@ -2501,6 +2728,7 @@ public final class BridgeServer: @unchecked Sendable {
 
         for sessionID in pendingOpenCodeSessionIDs {
             pendingOpenCodeInteractions.removeValue(forKey: sessionID)
+            pendingOpenCodeInteractionOrder.removeAll(where: { $0 == sessionID })
             emit(
                 .actionableStateResolved(
                     ActionableStateResolved(
@@ -2519,6 +2747,7 @@ public final class BridgeServer: @unchecked Sendable {
 
         for sessionID in pendingCursorSessionIDs {
             pendingCursorInteractions.removeValue(forKey: sessionID)
+            pendingCursorInteractionOrder.removeAll(where: { $0 == sessionID })
             emit(
                 .actionableStateResolved(
                     ActionableStateResolved(

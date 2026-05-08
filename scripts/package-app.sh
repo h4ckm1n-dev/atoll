@@ -40,7 +40,13 @@ hooks_binary="$build_bin_dir/AtollHooks"
 setup_binary="$build_bin_dir/AtollSetup"
 brand_icon="$repo_root/Assets/Brand/OpenIsland.icns"
 
-python3 "$brand_script"
+# Brand assets (app icon set + .icns + menu bar Internal/* PNGs) are
+# committed to the repo. Re-running the procedural generator would
+# overwrite a custom-replaced app icon with the parametric design.
+# Opt in by setting ATOLL_REGENERATE_BRAND=1 to refresh procedural art.
+if [ "${ATOLL_REGENERATE_BRAND:-0}" = "1" ]; then
+  python3 "$brand_script"
+fi
 python3 "$dmg_bg_script"
 
 rm -rf "$bundle_dir" "$zip_path" "$dmg_path"

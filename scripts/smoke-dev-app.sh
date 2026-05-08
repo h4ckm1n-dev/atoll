@@ -24,8 +24,10 @@ export OPEN_ISLAND_HARNESS_ARTIFACT_DIR="$artifact_dir"
 
 mkdir -p "$artifact_dir"
 
-echo "Launching OpenIslandApp smoke scenario '${OPEN_ISLAND_HARNESS_SCENARIO}' for ${OPEN_ISLAND_HARNESS_AUTO_EXIT_SECONDS}s"
-swift run OpenIslandApp
+echo "Launching AtollApp smoke scenario '${OPEN_ISLAND_HARNESS_SCENARIO}' for ${OPEN_ISLAND_HARNESS_AUTO_EXIT_SECONDS}s"
+# --harness flag whitelists OPEN_ISLAND_HARNESS_ARTIFACT_DIR under the
+# HarnessLaunchConfiguration path gate (audit M16).
+swift run AtollApp -- --harness
 
 report_path="$artifact_dir/report.json"
 if [[ ! -f "$report_path" ]]; then
@@ -56,4 +58,4 @@ subprocess.run(
 PY
 
 echo "Artifacts written to $artifact_dir"
-echo "OpenIslandApp smoke passed"
+echo "AtollApp smoke passed"

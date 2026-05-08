@@ -28,7 +28,15 @@ app_binary="$build_root/AtollApp"
 hooks_binary="$build_root/AtollHooks"
 setup_binary="$build_root/AtollSetup"
 
-python3 "$brand_script"
+# Brand assets (app icon set + .icns + menu bar Internal/* PNGs) are
+# committed to the repo. Re-running the procedural generator would
+# overwrite a custom-replaced app icon with the parametric ocean-night
+# design. Opt in by setting ATOLL_REGENERATE_BRAND=1 if you actually
+# want to refresh the procedural artwork.
+if [ "${ATOLL_REGENERATE_BRAND:-0}" = "1" ]; then
+  python3 "$brand_script"
+fi
+
 if [ "$skip_setup" = false ]; then
   "$setup_binary" install --hooks-binary "$hooks_binary"
 fi

@@ -2,8 +2,6 @@
   <img src="Assets/Brand/atoll-app-icon.png" alt="Atoll" width="200" height="200">
 </p>
 
-<h1 align="center">Atoll</h1>
-
 <p align="center">
   <strong>The native macOS companion your AI coding agents deserve.</strong>
   <br>

@@ -48,10 +48,6 @@
 "settings.tab.appearance" = "Appearance";
 "settings.theme.title" = "Theme";
 "settings.theme.help" = "Catppuccin palette family for the notch chrome, badges, diff colors, and status indicators. System keeps the previous look.";
-"settings.appearance.mode" = "Mode";
-"settings.appearance.mode.default" = "Default";
-"settings.appearance.mode.custom" = "Custom";
-"settings.appearance.mode.defaultDesc" = "Use the built-in island appearance. Switch to Custom to personalize colors, glyph style, and layout.";
 "settings.appearance.preview" = "Preview";
 "settings.appearance.preview.sessions" = "sessions";
 "settings.appearance.style" = "Style";

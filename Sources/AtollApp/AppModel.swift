@@ -18,7 +18,6 @@ final class AppModel {
     private static let soundMutedDefaultsKey = "overlay.sound.muted"
     private static let showDockIconDefaultsKey = "app.showDockIcon"
     private static let hapticFeedbackEnabledDefaultsKey = "app.hapticFeedbackEnabled"
-    private static let islandAppearanceModeDefaultsKey = "appearance.island.mode"
     private static let islandClosedDisplayStyleDefaultsKey = "appearance.island.closedDisplayStyle"
     private static let islandHideIdleToEdgeDefaultsKey = "appearance.island.hideIdleToEdge"
     private static let islandPixelShapeStyleDefaultsKey = "appearance.island.pixelShapeStyle"
@@ -320,16 +319,6 @@ final class AppModel {
     }
 
     // MARK: - Appearance
-
-    var islandAppearanceMode: IslandAppearanceMode = .default {
-        didSet {
-            guard islandAppearanceMode != oldValue else { return }
-            UserDefaults.standard.set(islandAppearanceMode.rawValue, forKey: Self.islandAppearanceModeDefaultsKey)
-            refreshOverlayPlacementIfVisible()
-        }
-    }
-
-    var isCustomAppearance: Bool { islandAppearanceMode == .custom }
 
     var islandClosedDisplayStyle: IslandClosedDisplayStyle = .detailed {
         didSet {
@@ -676,9 +665,6 @@ final class AppModel {
         }
         completionReplyEnabled = UserDefaults.standard.bool(forKey: Self.completionReplyEnabledDefaultsKey)
         launchAtLoginEnabled = LaunchAtLoginService.shared.isEnabled
-        islandAppearanceMode = IslandAppearanceMode(
-            rawValue: UserDefaults.standard.string(forKey: Self.islandAppearanceModeDefaultsKey) ?? ""
-        ) ?? .default
         islandClosedDisplayStyle = IslandClosedDisplayStyle(
             rawValue: UserDefaults.standard.string(forKey: Self.islandClosedDisplayStyleDefaultsKey) ?? ""
         ) ?? .detailed

@@ -28,10 +28,6 @@
 
 <img width="1800" height="1169" alt="Capture d’écran 2026-05-08 à 16 44 51" src="https://github.com/user-attachments/assets/e8ffb3e8-2cb0-42a6-9b0a-f0591759950f" />
 
-<p align="center">
-  <img src="docs/images/screenshots/session-list.png" alt="Atoll session list — multiple AI coding agents in the notch panel" width="720">
-</p>
-
 ---
 
 ## What is Atoll?

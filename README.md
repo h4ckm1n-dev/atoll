@@ -27,7 +27,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/images/demo.gif" alt="Atoll in action" width="720">
+  <img src="docs/images/screenshots/session-list.png" alt="Atoll session list — multiple AI coding agents in the notch panel" width="720">
 </p>
 
 ---
@@ -48,6 +48,40 @@ The name comes from the geometry: a thin ring of land around a calm lagoon — e
 - **Five Catppuccin themes** + custom theme registry + in-app 26-picker editor with live preview. The whole panel retints, including the inline-diff syntax colors.
 - **Real diff previews** in approval cards. Plan-mode checklists. Project-tinted ambient overlay. Frosted-glass panel option. Jump back to the exact terminal pane in one click.
 - **Open source, GPL v3.** Fork it, mod it, ship your own.
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/images/screenshots/approval-card-with-diff.png" alt="Permission approval card with inline syntax-highlighted diff" width="640">
+</p>
+
+<p align="center">
+  <em>Approval card with inline diff — Myers-diff'd Swift edit, palette-driven syntax colors, peach attention border. See exactly what's about to change before you click Allow.</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/screenshots/question-card.png" alt="Multi-choice question card from the agent" width="640">
+</p>
+
+<p align="center">
+  <em>Question card — structured multi-choice prompt forwarded from the agent. Submit answers without leaving the notch.</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/screenshots/long-completion-card.png" alt="Completion card with full markdown body" width="640">
+</p>
+
+<p align="center">
+  <em>Completion card — themed markdown render of the agent's final reply. Reply inline; Atoll types it back into your terminal.</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/screenshots/completion-card.png" alt="Brief completion notification card" width="640">
+</p>
+
+<p align="center">
+  <em>Brief completion notification — pops out of the notch when an agent finishes, auto-dismisses on its own.</em>
+</p>
 
 ## Features
 

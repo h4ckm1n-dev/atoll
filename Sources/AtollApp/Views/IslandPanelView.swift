@@ -1774,7 +1774,7 @@ private struct IslandSessionRow: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(themePalette.surface0.swiftUIColor)
+                .fill(themePalette.crust.swiftUIColor.opacity(0.45))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)

@@ -369,17 +369,6 @@ struct IslandPanelView: View {
                     )
                     .frame(width: surfaceWidth, height: surfaceHeight)
 
-                AmbientThemeOverlay(
-                    tintColor: spotlightProjectColor,
-                    opacity: AmbientTheme.effectiveOpacity(
-                        enabled: model.ambientThemeEnabled,
-                        sliderValue: model.ambientThemeOpacity
-                    )
-                )
-                .frame(width: surfaceWidth, height: surfaceHeight)
-                .clipShape(surfaceShape)
-                .opacity(hidesClosedSurfaceChrome ? 0 : 1)
-
                 VStack(spacing: 0) {
                     headerRow
                         .frame(height: closedNotchHeight)

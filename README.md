@@ -44,7 +44,7 @@ The name comes from the geometry: a thin ring of land around a calm lagoon — e
 - **Native macOS.** SwiftUI + AppKit. Not an Electron wrapper. Not a Rust-cross-platform thing. Built like a Mac app.
 - **Eleven coding agents** out of the box, with the same surface for all of them. Drop a hook in, sessions show up.
 - **Five Catppuccin themes** + custom theme registry + in-app 26-picker editor with live preview. The whole panel retints, including the inline-diff syntax colors.
-- **Real diff previews** in approval cards. Plan-mode checklists. Project-tinted ambient overlay. Frosted-glass panel option. Jump back to the exact terminal pane in one click.
+- **Real diff previews** in approval cards. Plan-mode checklists. Frosted-glass panel option. Jump back to the exact terminal pane in one click.
 - **Open source, GPL v3.** Fork it, mod it, ship your own.
 
 ## Screenshots
@@ -103,7 +103,6 @@ Atoll captures plan-mode plans from skill-driven `Write` events, parses them wit
 ### 🌴 Notch personalization
 
 - **Project colors** — each project (workspace path) gets a stable hash-derived tint, with a swatch picker in **Settings → Appearance** to override per project. Persisted to `~/Library/Application Support/Atoll/project-colors.json`.
-- **Ambient theme overlay** — the project tint subtly bleeds into the panel surface (opacity-controlled) so glancing at the notch tells you which project is active without reading text.
 - **Frosted panel** — three-way picker: Solid (the v1.0 ocean-night look), Frosted (thin), Frosted (ultra-thin). Frosted variants use macOS Materials with a palette-tinted overlay so theme color still tints the glass while wallpaper bleeds through.
 - **Coconut palm menu bar icon** — custom SwiftUI `Path` shapes, template-tinted to match macOS dark/light/active automatically.
 
@@ -174,7 +173,6 @@ Reply-from-notch into [cmux](https://github.com/saghul/cmux) sessions without a 
 | Custom themes | JSON import/export + 26-picker in-app editor with live preview |
 | Frosted panel | Three-way Solid / Frosted (thin) / Frosted (ultra-thin) picker |
 | Project colors | Hash-derived per-project tint with override picker |
-| Ambient theme overlay | Project tint bleeds into panel surface (opacity-controlled) |
 | i18n | English, Simplified Chinese, Traditional Chinese |
 | Session discovery | Auto-discover from local transcripts, persist across launches |
 

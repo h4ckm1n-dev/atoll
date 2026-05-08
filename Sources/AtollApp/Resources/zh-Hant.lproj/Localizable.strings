@@ -234,15 +234,6 @@
 "island.companion.state.waiting" = "等待輸入";
 "island.companion.state.celebrating" = "剛完成";
 
-/* Ambient theme — added by feat/notch-personalization */
-/* TODO: translate */
-"settings.ambient.title" = "Ambient theme";
-"settings.ambient.toggle" = "Tint island with project color";
-"settings.ambient.intensity" = "Intensity";
-"settings.ambient.subtle" = "Subtle";
-"settings.ambient.bold" = "Bold";
-"settings.ambient.help" = "Tints the inside of the island in the active session's project color, animated when you switch projects.";
-
 /* Celebrations — added by feat/notch-personalization */
 /* TODO: translate */
 "settings.celebrations.title" = "Celebrations";

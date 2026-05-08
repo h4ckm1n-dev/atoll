@@ -244,26 +244,6 @@ struct AppearanceSettingsPane: View {
                 }
             }
 
-            Section(lang.t("settings.ambient.title")) {
-                Toggle(lang.t("settings.ambient.toggle"), isOn: Binding(
-                    get: { model.ambientThemeEnabled },
-                    set: { model.ambientThemeEnabled = $0 }
-                ))
-
-                HStack {
-                    Text(lang.t("settings.ambient.subtle")).font(.caption).foregroundStyle(.secondary)
-                    Slider(value: Binding(
-                        get: { model.ambientThemeOpacity },
-                        set: { model.ambientThemeOpacity = AmbientTheme.clampOpacity($0) }
-                    ), in: AmbientTheme.minOpacity...AmbientTheme.maxOpacity)
-                    Text(lang.t("settings.ambient.bold")).font(.caption).foregroundStyle(.secondary)
-                }
-
-                Text(lang.t("settings.ambient.help"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
             Section(lang.t("settings.celebrations.title")) {
                 Toggle(lang.t("settings.celebrations.toggle"), isOn: Binding(
                     get: { model.celebrationsEnabled },

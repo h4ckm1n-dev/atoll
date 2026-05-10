@@ -10,6 +10,13 @@ final class OpenIslandAppDelegate: NSObject, NSApplicationDelegate {
     private lazy var shortcutsManager = ShortcutsManager(model: model)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NSAppleEventManager.shared().setEventHandler(
+            self,
+            andSelector: #selector(handleGetURLEvent(_:withReplyEvent:)),
+            forEventClass: AEEventClass(kInternetEventClass),
+            andEventID: AEEventID(kAEGetURL)
+        )
+
         ProcessInfo.processInfo.disableAutomaticTermination(
             "Open Island should remain active while monitoring local agent sessions."
         )
@@ -97,6 +104,17 @@ final class OpenIslandAppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         model.showSettings()
         return false
+    }
+
+    @objc
+    private func handleGetURLEvent(_ event: NSAppleEventDescriptor, withReplyEvent replyEvent: NSAppleEventDescriptor) {
+        guard let urlString = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue,
+              let url = URL(string: urlString) else {
+            model.lastActionMessage = "Automation: received an invalid URL."
+            return
+        }
+
+        model.handleAutomationURL(url)
     }
 }
 

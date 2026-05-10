@@ -1146,6 +1146,58 @@ final class AppModel {
         openSessionInIsland(sessionID)
     }
 
+    func handleAutomationURL(_ url: URL) {
+        guard let action = AutomationDeepLink.action(from: url) else {
+            lastActionMessage = "Unsupported automation URL: \(url.absoluteString)"
+            return
+        }
+
+        performAutomationAction(action)
+    }
+
+    func performAutomationAction(_ action: AutomationAction) {
+        switch action {
+        case .toggleOverlay:
+            toggleOverlay()
+            lastActionMessage = "Automation: toggled island overlay."
+        case .showOverlay:
+            showOverlay()
+            lastActionMessage = "Automation: showed island overlay."
+        case .hideOverlay:
+            hideOverlay()
+            lastActionMessage = "Automation: hid island overlay."
+        case .jumpFocusedSession:
+            jumpToFocusedSession()
+        case .approveFocusedPermission:
+            approveFocusedPermission(true)
+        case .denyFocusedPermission:
+            approveFocusedPermission(false)
+        case .cycleAttentionSession:
+            cycleToNextAttentionSession()
+            showOverlay()
+            lastActionMessage = "Automation: selected next pending action."
+        case .showSettings:
+            showSettings()
+            lastActionMessage = "Automation: opened settings."
+        case .showControlCenter:
+            showControlCenter()
+            lastActionMessage = "Automation: opened control center."
+        case .toggleLiveCoding:
+            liveCodingModeEnabled.toggle()
+            lastActionMessage = liveCodingModeEnabled
+                ? "Automation: Live Coding Mode enabled."
+                : "Automation: Live Coding Mode disabled."
+        case .startStreamOverlay:
+            streamOverlayEnabled = true
+        case .stopStreamOverlay:
+            streamOverlayEnabled = false
+        case .copyStreamOverlayURL:
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(streamOverlayURLText, forType: .string)
+            lastActionMessage = "Automation: copied stream overlay URL."
+        }
+    }
+
     // MARK: - Overlay forwarding
 
     func toggleOverlay() { overlay.toggleOverlay() }

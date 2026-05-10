@@ -54,6 +54,7 @@ CLI coding agents are powerful, but they pull attention away from the editor and
 - **Stream overlay** — local-only OBS/browser-source view for stream-safe session status
 - **Approval cockpit** — central Control Center queue for pending approvals and agent questions
 - **Session timeline** — recent event log for narrating agent starts, tools, approvals, questions, and completions
+- **Automation actions** — `atoll://` URL commands for Raycast, Stream Deck, and shell scripts
 - **Notification sounds** — configurable system sounds with mute toggle
 - **i18n** — English and Simplified Chinese
 - **Session discovery** — auto-discover from local transcripts, persist across launches

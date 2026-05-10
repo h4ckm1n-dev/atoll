@@ -100,6 +100,19 @@ cat > "$bundle_dir/Contents/Info.plist" <<EOF
     <string>$bundle_identifier</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>Atoll Automation</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>atoll</string>
+                <string>openisland</string>
+                <string>open-island</string>
+            </array>
+        </dict>
+    </array>
     <key>CFBundleName</key>
     <string>$app_name</string>
     <key>CFBundlePackageType</key>

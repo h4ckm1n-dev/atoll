@@ -331,6 +331,63 @@ struct AppModelSessionListTests {
     }
 
     @Test
+    func automationURLTogglesLiveCodingMode() throws {
+        let model = AppModel()
+        model.liveCodingModeEnabled = false
+        let url = try #require(URL(string: "atoll://action/toggle-live-coding"))
+
+        model.handleAutomationURL(url)
+
+        #expect(model.liveCodingModeEnabled)
+        #expect(model.lastActionMessage == "Automation: Live Coding Mode enabled.")
+    }
+
+    @Test
+    func automationActionCyclesAttentionAndOpensOverlay() {
+        let now = Date(timeIntervalSince1970: 2_000)
+        let model = AppModel()
+        model.state = SessionState(
+            sessions: [
+                AgentSession(
+                    id: "first",
+                    title: "Codex · one",
+                    tool: .codex,
+                    phase: .waitingForApproval,
+                    summary: "First",
+                    updatedAt: now.addingTimeInterval(1),
+                    permissionRequest: PermissionRequest(title: "One", summary: "First", affectedPath: "")
+                ),
+                AgentSession(
+                    id: "second",
+                    title: "Claude · two",
+                    tool: .claudeCode,
+                    phase: .waitingForAnswer,
+                    summary: "Second",
+                    updatedAt: now,
+                    questionPrompt: QuestionPrompt(title: "Second", options: ["Yes"])
+                ),
+            ]
+        )
+        model.selectedSessionID = "first"
+
+        model.performAutomationAction(.cycleAttentionSession)
+
+        #expect(model.selectedSessionID == "second")
+        #expect(model.notchStatus == .opened)
+        #expect(model.lastActionMessage == "Automation: selected next pending action.")
+    }
+
+    @Test
+    func unsupportedAutomationURLUpdatesStatusMessage() throws {
+        let model = AppModel()
+        let url = try #require(URL(string: "atoll://action/unknown"))
+
+        model.handleAutomationURL(url)
+
+        #expect(model.lastActionMessage == "Unsupported automation URL: atoll://action/unknown")
+    }
+
+    @Test
     func rolloutCompletionDoesNotPresentNotificationDuringColdStart() {
         let now = Date(timeIntervalSince1970: 2_000)
         let model = AppModel()

@@ -26,7 +26,6 @@ struct AppearanceSettingsPane: View {
     private var panelMaterialRaw: String = AppPanelMaterial.solid.rawValue
 
     private var lang: LanguageManager { model.lang }
-    private var isCustom: Bool { model.islandAppearanceMode == .custom }
 
     // MARK: - Theme picker binding
 
@@ -161,34 +160,15 @@ struct AppearanceSettingsPane: View {
                 )
             }
 
-            Section(lang.t("settings.appearance.mode")) {
-                Picker(lang.t("settings.appearance.mode"), selection: Binding(
-                    get: { model.islandAppearanceMode },
-                    set: { model.islandAppearanceMode = $0 }
+            Section(lang.t("settings.appearance.style")) {
+                Picker(lang.t("settings.appearance.closedStyle"), selection: Binding(
+                    get: { model.islandClosedDisplayStyle },
+                    set: { model.islandClosedDisplayStyle = $0 }
                 )) {
-                    Text(lang.t("settings.appearance.mode.default")).tag(IslandAppearanceMode.default)
-                    Text(lang.t("settings.appearance.mode.custom")).tag(IslandAppearanceMode.custom)
+                    Text(lang.t("settings.appearance.style.minimal")).tag(IslandClosedDisplayStyle.minimal)
+                    Text(lang.t("settings.appearance.style.detailed")).tag(IslandClosedDisplayStyle.detailed)
                 }
                 .pickerStyle(.segmented)
-
-                if !isCustom {
-                    Text(lang.t("settings.appearance.mode.defaultDesc"))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Section(lang.t("settings.appearance.style")) {
-                if isCustom {
-                    Picker(lang.t("settings.appearance.closedStyle"), selection: Binding(
-                        get: { model.islandClosedDisplayStyle },
-                        set: { model.islandClosedDisplayStyle = $0 }
-                    )) {
-                        Text(lang.t("settings.appearance.style.minimal")).tag(IslandClosedDisplayStyle.minimal)
-                        Text(lang.t("settings.appearance.style.detailed")).tag(IslandClosedDisplayStyle.detailed)
-                    }
-                    .pickerStyle(.segmented)
-                }
 
                 Toggle(lang.t("settings.appearance.hideIdleToEdge"), isOn: Binding(
                     get: { model.hideIdleIslandToEdge },
@@ -200,43 +180,41 @@ struct AppearanceSettingsPane: View {
                     .foregroundStyle(.secondary)
             }
 
-            if isCustom {
-                Section(lang.t("settings.appearance.preview")) {
-                    notchPreviewCard
-                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                        .listRowBackground(Color.clear)
+            Section(lang.t("settings.appearance.preview")) {
+                notchPreviewCard
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                    .listRowBackground(Color.clear)
+            }
+
+            Section(lang.t("settings.appearance.pixelShape")) {
+                HStack(spacing: 12) {
+                    ForEach(IslandPixelShapeStyle.allCases) { style in
+                        pixelShapeCard(style)
+                    }
                 }
 
-                Section(lang.t("settings.appearance.pixelShape")) {
+                if model.islandPixelShapeStyle == .custom {
                     HStack(spacing: 12) {
-                        ForEach(IslandPixelShapeStyle.allCases) { style in
-                            pixelShapeCard(style)
+                        Button(lang.t("settings.appearance.avatar.upload")) {
+                            model.importCustomAvatar()
+                        }
+                        if model.customAvatarImage != nil {
+                            Button(lang.t("settings.appearance.avatar.remove")) {
+                                model.removeCustomAvatar()
+                            }
+                            .foregroundStyle(.red)
                         }
                     }
 
-                    if model.islandPixelShapeStyle == .custom {
-                        HStack(spacing: 12) {
-                            Button(lang.t("settings.appearance.avatar.upload")) {
-                                model.importCustomAvatar()
-                            }
-                            if model.customAvatarImage != nil {
-                                Button(lang.t("settings.appearance.avatar.remove")) {
-                                    model.removeCustomAvatar()
-                                }
-                                .foregroundStyle(.red)
-                            }
-                        }
-
-                        Text(lang.t("settings.appearance.avatar.help"))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text(lang.t("settings.appearance.avatar.help"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
+            }
 
-                Section(lang.t("settings.appearance.statusColors")) {
-                    ForEach(SessionPhase.allCases, id: \.self) { phase in
-                        statusColorRow(phase)
-                    }
+            Section(lang.t("settings.appearance.statusColors")) {
+                ForEach(SessionPhase.allCases, id: \.self) { phase in
+                    statusColorRow(phase)
                 }
             }
 
@@ -264,26 +242,6 @@ struct AppearanceSettingsPane: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-            }
-
-            Section(lang.t("settings.ambient.title")) {
-                Toggle(lang.t("settings.ambient.toggle"), isOn: Binding(
-                    get: { model.ambientThemeEnabled },
-                    set: { model.ambientThemeEnabled = $0 }
-                ))
-
-                HStack {
-                    Text(lang.t("settings.ambient.subtle")).font(.caption).foregroundStyle(.secondary)
-                    Slider(value: Binding(
-                        get: { model.ambientThemeOpacity },
-                        set: { model.ambientThemeOpacity = AmbientTheme.clampOpacity($0) }
-                    ), in: AmbientTheme.minOpacity...AmbientTheme.maxOpacity)
-                    Text(lang.t("settings.ambient.bold")).font(.caption).foregroundStyle(.secondary)
-                }
-
-                Text(lang.t("settings.ambient.help"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
 
             Section(lang.t("settings.celebrations.title")) {

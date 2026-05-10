@@ -204,9 +204,12 @@ struct IslandPanelView: View {
         return session.phase == .running || session.phase.requiresAttention
     }
 
-    /// Scout icon tint: blue if any running, green if any live, else gray.
+    /// Scout icon tint: tracks the spotlight session's phase via the
+    /// user-configured status colors. Falls back to the surfaced-session
+    /// summary (blue running / green idle / gray empty) when no session
+    /// is currently spotlighted.
     private var scoutTint: Color {
-        if model.isCustomAppearance, let phase = closedSpotlightSession?.phase {
+        if let phase = closedSpotlightSession?.phase {
             return model.statusColor(for: phase)
         }
         let sessions = model.surfacedSessions
@@ -366,17 +369,6 @@ struct IslandPanelView: View {
                     )
                     .frame(width: surfaceWidth, height: surfaceHeight)
 
-                AmbientThemeOverlay(
-                    tintColor: spotlightProjectColor,
-                    opacity: AmbientTheme.effectiveOpacity(
-                        enabled: model.ambientThemeEnabled,
-                        sliderValue: model.ambientThemeOpacity
-                    )
-                )
-                .frame(width: surfaceWidth, height: surfaceHeight)
-                .clipShape(surfaceShape)
-                .opacity(hidesClosedSurfaceChrome ? 0 : 1)
-
                 VStack(spacing: 0) {
                     headerRow
                         .frame(height: closedNotchHeight)
@@ -508,22 +500,17 @@ struct IslandPanelView: View {
             HStack(spacing: 0) {
                 if hasClosedPresence {
                     HStack(spacing: 4) {
-                        if model.isCustomAppearance {
-                            ZStack(alignment: .bottomTrailing) {
-                                IslandPixelGlyph(
-                                    tint: scoutTint,
-                                    style: model.islandPixelShapeStyle,
-                                    isAnimating: hasClosedActivity,
-                                    customAvatarImage: model.customAvatarImage
-                                )
-                                .matchedGeometryEffect(id: "island-icon", in: notchNamespace, isSource: true)
+                        ZStack(alignment: .bottomTrailing) {
+                            IslandPixelGlyph(
+                                tint: scoutTint,
+                                style: model.islandPixelShapeStyle,
+                                isAnimating: hasClosedActivity,
+                                customAvatarImage: model.customAvatarImage
+                            )
+                            .matchedGeometryEffect(id: "island-icon", in: notchNamespace, isSource: true)
 
-                                CompanionStateOverlay(state: companionState, palette: model.themeManager.palette)
-                                    .offset(x: 2, y: 2)
-                            }
-                        } else {
-                            OpenIslandIcon(size: 14, isAnimating: hasClosedActivity, tint: scoutTint)
-                                .matchedGeometryEffect(id: "island-icon", in: notchNamespace, isSource: true)
+                            CompanionStateOverlay(state: companionState, palette: model.themeManager.palette)
+                                .offset(x: 2, y: 2)
                         }
 
                         if closedSpotlightSession?.phase.requiresAttention == true {
@@ -852,15 +839,7 @@ struct IslandPanelView: View {
     }
 
     private func phaseColor(_ phase: SessionPhase) -> Color {
-        if model.isCustomAppearance {
-            return model.statusColor(for: phase)
-        }
-        return switch phase {
-        case .running:            palette.role(.working).swiftUIColor
-        case .waitingForApproval: palette.role(.attention).swiftUIColor
-        case .waitingForAnswer:   palette.role(.question).swiftUIColor
-        case .completed:          palette.role(.completion).swiftUIColor
-        }
+        model.statusColor(for: phase)
     }
 
     @ViewBuilder
@@ -2382,23 +2361,6 @@ private struct IslandWideButtonStyle: ButtonStyle {
         case .danger:
             return Color(red: 0.82, green: 0.22, blue: 0.22).opacity(pressedFactor)
         }
-    }
-}
-
-// MARK: - Open Island icon (left side of closed notch)
-
-private struct OpenIslandIcon: View {
-    let size: CGFloat
-    var isAnimating: Bool = false
-    var tint: Color = .mint
-
-    var body: some View {
-        OpenIslandBrandMark(
-            size: size,
-            tint: tint,
-            isAnimating: isAnimating,
-            style: .duotone
-        )
     }
 }
 

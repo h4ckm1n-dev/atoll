@@ -22,13 +22,6 @@ enum TrackedEventIngress {
 
 // MARK: - Island appearance
 
-enum IslandAppearanceMode: String, CaseIterable, Identifiable {
-    case `default`
-    case custom
-
-    var id: String { rawValue }
-}
-
 enum IslandClosedDisplayStyle: String, CaseIterable, Identifiable {
     case minimal
     case detailed

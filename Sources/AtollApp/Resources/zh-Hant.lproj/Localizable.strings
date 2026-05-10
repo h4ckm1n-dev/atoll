@@ -48,10 +48,6 @@
 "settings.tab.appearance" = "個人化";
 "settings.theme.title" = "主題";
 "settings.theme.help" = "為通知島外觀、徽章、差異顏色和狀態指示器選擇 Catppuccin 配色家族。系統主題保留之前的外觀。";
-"settings.appearance.mode" = "模式";
-"settings.appearance.mode.default" = "預設";
-"settings.appearance.mode.custom" = "自訂";
-"settings.appearance.mode.defaultDesc" = "使用內建的島嶼外觀。切換至自訂可個人化顏色、圖形樣式和版面配置。";
 "settings.appearance.preview" = "預覽";
 "settings.appearance.preview.sessions" = "個工作階段";
 "settings.appearance.style" = "樣式";
@@ -237,15 +233,6 @@
 "island.companion.state.working" = "工作中";
 "island.companion.state.waiting" = "等待輸入";
 "island.companion.state.celebrating" = "剛完成";
-
-/* Ambient theme — added by feat/notch-personalization */
-/* TODO: translate */
-"settings.ambient.title" = "Ambient theme";
-"settings.ambient.toggle" = "Tint island with project color";
-"settings.ambient.intensity" = "Intensity";
-"settings.ambient.subtle" = "Subtle";
-"settings.ambient.bold" = "Bold";
-"settings.ambient.help" = "Tints the inside of the island in the active session's project color, animated when you switch projects.";
 
 /* Celebrations — added by feat/notch-personalization */
 /* TODO: translate */

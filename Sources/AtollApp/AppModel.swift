@@ -18,7 +18,6 @@ final class AppModel {
     private static let soundMutedDefaultsKey = "overlay.sound.muted"
     private static let showDockIconDefaultsKey = "app.showDockIcon"
     private static let hapticFeedbackEnabledDefaultsKey = "app.hapticFeedbackEnabled"
-    private static let islandAppearanceModeDefaultsKey = "appearance.island.mode"
     private static let islandClosedDisplayStyleDefaultsKey = "appearance.island.closedDisplayStyle"
     private static let islandHideIdleToEdgeDefaultsKey = "appearance.island.hideIdleToEdge"
     private static let islandPixelShapeStyleDefaultsKey = "appearance.island.pixelShapeStyle"
@@ -26,8 +25,6 @@ final class AppModel {
     private static let showCodexUsageDefaultsKey = "app.showCodexUsage"
     private static let completionReplyEnabledDefaultsKey = "feature.completionReply.enabled"
     private static let suppressFrontmostNotificationsDefaultsKey = "app.suppressFrontmostNotifications"
-    private static let ambientThemeEnabledDefaultsKey = "appearance.ambientTheme.enabled"
-    private static let ambientThemeOpacityDefaultsKey = "appearance.ambientTheme.opacity"
     private static let celebrationsEnabledDefaultsKey = "appearance.celebrations.enabled"
 
     /// Defaults pulled from the Catppuccin Mocha palette so the phase
@@ -321,16 +318,6 @@ final class AppModel {
 
     // MARK: - Appearance
 
-    var islandAppearanceMode: IslandAppearanceMode = .default {
-        didSet {
-            guard islandAppearanceMode != oldValue else { return }
-            UserDefaults.standard.set(islandAppearanceMode.rawValue, forKey: Self.islandAppearanceModeDefaultsKey)
-            refreshOverlayPlacementIfVisible()
-        }
-    }
-
-    var isCustomAppearance: Bool { islandAppearanceMode == .custom }
-
     var islandClosedDisplayStyle: IslandClosedDisplayStyle = .detailed {
         didSet {
             guard islandClosedDisplayStyle != oldValue else { return }
@@ -360,18 +347,6 @@ final class AppModel {
         }
     }
     var customAvatarImage: NSImage? = nil
-    var ambientThemeEnabled: Bool = true {
-        didSet {
-            guard ambientThemeEnabled != oldValue else { return }
-            UserDefaults.standard.set(ambientThemeEnabled, forKey: Self.ambientThemeEnabledDefaultsKey)
-        }
-    }
-    var ambientThemeOpacity: Double = 0.12 {
-        didSet {
-            guard ambientThemeOpacity != oldValue else { return }
-            UserDefaults.standard.set(ambientThemeOpacity, forKey: Self.ambientThemeOpacityDefaultsKey)
-        }
-    }
     var celebrationsEnabled: Bool = true {
         didSet {
             guard celebrationsEnabled != oldValue else { return }
@@ -658,8 +633,6 @@ final class AppModel {
             Self.hapticFeedbackEnabledDefaultsKey: false,
             Self.completionReplyEnabledDefaultsKey: false,
             Self.suppressFrontmostNotificationsDefaultsKey: true,
-            Self.ambientThemeEnabledDefaultsKey: true,
-            Self.ambientThemeOpacityDefaultsKey: 0.12,
             Self.celebrationsEnabledDefaultsKey: true,
         ])
         isSoundMuted = UserDefaults.standard.bool(forKey: Self.soundMutedDefaultsKey)
@@ -676,9 +649,6 @@ final class AppModel {
         }
         completionReplyEnabled = UserDefaults.standard.bool(forKey: Self.completionReplyEnabledDefaultsKey)
         launchAtLoginEnabled = LaunchAtLoginService.shared.isEnabled
-        islandAppearanceMode = IslandAppearanceMode(
-            rawValue: UserDefaults.standard.string(forKey: Self.islandAppearanceModeDefaultsKey) ?? ""
-        ) ?? .default
         islandClosedDisplayStyle = IslandClosedDisplayStyle(
             rawValue: UserDefaults.standard.string(forKey: Self.islandClosedDisplayStyleDefaultsKey) ?? ""
         ) ?? .detailed
@@ -702,8 +672,6 @@ final class AppModel {
         if watchNotificationEnabled {
             startWatchRelay()
         }
-        ambientThemeEnabled = UserDefaults.standard.bool(forKey: Self.ambientThemeEnabledDefaultsKey)
-        ambientThemeOpacity = UserDefaults.standard.double(forKey: Self.ambientThemeOpacityDefaultsKey)
         celebrationsEnabled = UserDefaults.standard.bool(forKey: Self.celebrationsEnabledDefaultsKey)
 
         overlay.appModel = self

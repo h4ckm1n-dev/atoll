@@ -100,8 +100,6 @@ private struct ConditionalDrawingGroup: ViewModifier {
 // MARK: - Main island view
 
 struct IslandPanelView: View {
-    private static let headerControlButtonSize: CGFloat = 22
-    private static let headerControlSpacing: CGFloat = 8
     private static let headerHorizontalPadding: CGFloat = 18
     private static let headerTopPadding: CGFloat = 2
     private static let notchLaneSafetyInset: CGFloat = 12
@@ -112,7 +110,6 @@ struct IslandPanelView: View {
     @Environment(\.themePalette) private var palette
     @Namespace private var notchNamespace
     @State private var isHovering = false
-    @State private var showingQuitConfirmation = false
     @State private var lastCompletionTimestamp: Date?
     @State private var lastCelebrationTimestamp: Date?
 
@@ -273,10 +270,6 @@ struct IslandPanelView: View {
         return (targetOverlayScreen?.safeAreaInsets.top ?? 0) == 0
     }
 
-    private var openedHeaderButtonsWidth: CGFloat {
-        (Self.headerControlButtonSize * 3) + (Self.headerControlSpacing * 2)
-    }
-
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .top) {
@@ -311,14 +304,6 @@ struct IslandPanelView: View {
                 $lastCelebrationTimestamp,
                 window: CelebrationParticles.duration
             )
-        }
-        .alert(model.lang.t("island.quit.confirmTitle"), isPresented: $showingQuitConfirmation) {
-            Button(model.lang.t("island.quit.confirmAction"), role: .destructive) {
-                model.quitApplication()
-            }
-            Button(model.lang.t("settings.general.cancel"), role: .cancel) {}
-        } message: {
-            Text(model.lang.t("island.quit.confirmMessage"))
         }
     }
 
@@ -571,10 +556,8 @@ struct IslandPanelView: View {
                     Color.clear
                         .frame(width: metrics.centerGapWidth)
 
-                    HStack(spacing: Self.headerControlSpacing) {
+                    HStack(spacing: 0) {
                         usageLaneView(providerGroups.right, alignment: .trailing)
-
-                        openedHeaderButtons
                     }
                     .frame(width: metrics.rightLaneWidth, alignment: .trailing)
                 }
@@ -585,53 +568,11 @@ struct IslandPanelView: View {
             HStack(spacing: 12) {
                 openedUsageSummary
                     .frame(maxWidth: .infinity, alignment: .leading)
-
-                openedHeaderButtons
             }
             .padding(.leading, Self.headerHorizontalPadding)
             .padding(.trailing, Self.headerHorizontalPadding)
             .padding(.top, Self.headerTopPadding)
         }
-    }
-
-    private var openedHeaderButtons: some View {
-        HStack(spacing: Self.headerControlSpacing) {
-            headerIconButton(
-                systemName: model.isSoundMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
-                tint: model.isSoundMuted ? palette.role(.attention).swiftUIColor.opacity(0.92) : palette.text.swiftUIColor.opacity(0.62)
-            ) {
-                model.toggleSoundMuted()
-            }
-
-            headerIconButton(systemName: "gearshape.fill", tint: palette.text.swiftUIColor.opacity(0.62)) {
-                model.showSettings()
-            }
-
-            headerIconButton(
-                systemName: "power",
-                tint: palette.text.swiftUIColor.opacity(0.62),
-                accessibilityLabel: model.lang.t("island.quit.confirmTitle")
-            ) {
-                showingQuitConfirmation = true
-            }
-        }
-    }
-
-    private func headerIconButton(
-        systemName: String,
-        tint: Color,
-        accessibilityLabel: String? = nil,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(tint)
-                .frame(width: Self.headerControlButtonSize, height: Self.headerControlButtonSize)
-                .background(palette.surface0.swiftUIColor, in: Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(accessibilityLabel ?? systemName)
     }
 
     private var openedContent: some View {
@@ -662,66 +603,97 @@ struct IslandPanelView: View {
         Button {
             model.showOnboarding()
         } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(palette.role(.working).swiftUIColor)
-                Text(model.lang.t("island.hint.installHooks"))
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.85))
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.4))
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(palette.role(.working).swiftUIColor.opacity(0.14))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(palette.role(.working).swiftUIColor.opacity(0.35), lineWidth: 0.5)
-                    )
+            notchAuxiliaryCard(
+                icon: "sparkles",
+                title: model.lang.t("island.hint.installHooks"),
+                detail: nil,
+                tint: palette.role(.working).swiftUIColor,
+                showsChevron: true
             )
         }
         .buttonStyle(.plain)
     }
 
     private var sessionBootstrapPlaceholder: some View {
-        VStack(spacing: 12) {
-            Spacer()
-            ProgressView()
-                .progressViewStyle(.circular)
-                .tint(palette.text.swiftUIColor.opacity(0.7))
-                .scaleEffect(0.8)
-            Text(model.lang.t("island.checkingTerminals"))
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(palette.text.swiftUIColor.opacity(0.58))
-            Text(model.lang.t("island.terminalOwnership"))
-                .font(.system(size: 12))
-                .foregroundStyle(palette.text.swiftUIColor.opacity(0.28))
-            Spacer()
-        }
-        .frame(maxWidth: .infinity)
+        notchAuxiliaryCard(
+            icon: "antenna.radiowaves.left.and.right",
+            title: model.lang.t("island.checkingTerminals"),
+            detail: model.lang.t("island.terminalOwnership"),
+            tint: palette.blue.swiftUIColor,
+            showsProgress: true
+        )
     }
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Spacer()
-            Text(model.lang.t("island.noTerminals"))
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(palette.text.swiftUIColor.opacity(0.4))
-            Text(model.recentSessions.isEmpty
+        notchAuxiliaryCard(
+            icon: "terminal",
+            title: model.lang.t("island.noTerminals"),
+            detail: model.recentSessions.isEmpty
                 ? model.lang.t("island.startAgent")
-                : model.lang.t("island.recentSessions"))
-                .font(.system(size: 12))
-                .foregroundStyle(palette.text.swiftUIColor.opacity(0.25))
-            Spacer()
+                : model.lang.t("island.recentSessions"),
+            tint: palette.text.swiftUIColor.opacity(0.58)
+        )
+    }
+
+    private func notchAuxiliaryCard(
+        icon: String,
+        title: String,
+        detail: String?,
+        tint: Color,
+        showsProgress: Bool = false,
+        showsChevron: Bool = false
+    ) -> some View {
+        HStack(alignment: .center, spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(tint.opacity(0.12))
+                    .frame(width: 34, height: 34)
+
+                if showsProgress {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(tint.opacity(0.88))
+                        .scaleEffect(0.58)
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(tint.opacity(0.95))
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.82))
+                    .lineLimit(2)
+
+                if let detail {
+                    Text(detail)
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundStyle(palette.text.swiftUIColor.opacity(0.42))
+                        .lineLimit(2)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.35))
+            }
         }
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(palette.crust.swiftUIColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(tint.opacity(0.22))
+        )
     }
 
     private var actionableSessionID: String? {
@@ -988,7 +960,7 @@ struct IslandPanelView: View {
         let contentWidth = max(0, totalWidth - (Self.headerHorizontalPadding * 2))
         guard usesNotchAwareOpenedHeader,
               let screen = targetOverlayScreen else {
-            let rightLaneWidth = min(contentWidth, openedHeaderButtonsWidth + (contentWidth / 2))
+            let rightLaneWidth = contentWidth / 2
             let leftUsageWidth = max(0, contentWidth - rightLaneWidth)
             return OpenedHeaderMetrics(
                 leftUsageWidth: leftUsageWidth,
@@ -1044,6 +1016,8 @@ struct IslandPanelView: View {
         layout: UsageSummaryLayout
     ) -> some View {
         HStack(spacing: 8) {
+            UsageProviderIcon(providerID: provider.id, size: layout.providerIconSize)
+
             Text(layout.usesShortProviderTitle ? provider.shortTitle : provider.title)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(palette.text.swiftUIColor.opacity(0.9))
@@ -1159,6 +1133,38 @@ private struct UsageProviderPresentation: Identifiable {
     }
 }
 
+private struct UsageProviderIcon: View {
+    let providerID: String
+    let size: CGFloat
+
+    var body: some View {
+        ZStack {
+            switch providerID {
+            case "claude":
+                Text("A")
+                    .font(.system(size: size * 0.72, weight: .black, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.92))
+            case "codex":
+                ForEach(0..<6, id: \.self) { index in
+                    Capsule(style: .continuous)
+                        .fill(.white.opacity(0.86))
+                        .frame(width: size * 0.18, height: size * 0.44)
+                        .offset(y: -size * 0.18)
+                        .rotationEffect(.degrees(Double(index) * 60))
+                }
+                Circle()
+                    .fill(Color.black.opacity(0.4))
+                    .frame(width: size * 0.28, height: size * 0.28)
+            default:
+                Circle()
+                    .strokeBorder(.white.opacity(0.82), lineWidth: max(1, size * 0.12))
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+
 private struct UsageWindowPresentation: Identifiable {
     let id: String
     let label: String
@@ -1196,6 +1202,15 @@ private enum UsageSummaryLayout {
 
     var usesShortProviderTitle: Bool {
         self == .minimal
+    }
+
+    var providerIconSize: CGFloat {
+        switch self {
+        case .full, .compact:
+            13
+        case .condensed, .minimal:
+            12
+        }
     }
 
     var providerSpacing: CGFloat {

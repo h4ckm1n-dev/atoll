@@ -4,7 +4,7 @@ import SwiftUI
 import AtollCore
 
 @MainActor
-final class OverlayPanelController {
+final class OverlayPanelController: NSObject {
     private static let minimumOpenedPanelWidth: CGFloat = 680
     private static let maximumOpenedPanelWidth: CGFloat = 740
     private static let openedPanelWidthFactor: CGFloat = 0.46
@@ -42,6 +42,10 @@ final class OverlayPanelController {
     private var hoverCancelGrace: DispatchWorkItem?
     weak var model: AppModel?
     private(set) var notchRect: NSRect = .zero
+
+    override init() {
+        super.init()
+    }
 
     var isVisible: Bool {
         panel?.isVisible == true
@@ -239,6 +243,8 @@ final class OverlayPanelController {
             self?.handleMouseMoved(location)
         } mouseDownHandler: { [weak self] location in
             self?.handleMouseDown(location)
+        } rightMouseDownHandler: { [weak self] location in
+            self?.handleRightMouseDown(location)
         }
     }
 
@@ -276,6 +282,60 @@ final class OverlayPanelController {
                 repostMouseDown(at: screenLocation)
             }
         }
+    }
+
+    private func handleRightMouseDown(_ screenLocation: NSPoint) {
+        guard let model else { return }
+        let isInsideIsland = model.notchStatus == .opened
+            ? isPointInExpandedArea(screenLocation)
+            : isPointInClosedSurfaceArea(screenLocation)
+        guard isInsideIsland else { return }
+
+        cancelHoverOpenImmediately()
+        showContextMenu(at: screenLocation)
+    }
+
+    private func showContextMenu(at screenLocation: NSPoint) {
+        guard let model else { return }
+
+        let menu = NSMenu()
+        menu.autoenablesItems = false
+        menu.addItem(
+            withTitle: model.isSoundMuted ? "Unmute sound" : "Mute sound",
+            action: #selector(toggleSoundFromContextMenu),
+            keyEquivalent: ""
+        ).target = self
+        menu.addItem(
+            withTitle: "Settings",
+            action: #selector(openSettingsFromContextMenu),
+            keyEquivalent: ","
+        ).target = self
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(
+            withTitle: "Quit Open Island",
+            action: #selector(quitFromContextMenu),
+            keyEquivalent: "q"
+        ).target = self
+
+        if let panel, let contentView = panel.contentView {
+            let windowPoint = panel.convertPoint(fromScreen: screenLocation)
+            let viewPoint = contentView.convert(windowPoint, from: nil)
+            menu.popUp(positioning: nil, at: viewPoint, in: contentView)
+        } else {
+            menu.popUp(positioning: nil, at: screenLocation, in: nil)
+        }
+    }
+
+    @objc private func toggleSoundFromContextMenu() {
+        model?.toggleSoundMuted()
+    }
+
+    @objc private func openSettingsFromContextMenu() {
+        model?.showSettings()
+    }
+
+    @objc private func quitFromContextMenu() {
+        model?.quitApplication()
     }
 
     /// Grace period before a hover-open timer is cancelled.  Prevents
@@ -854,13 +914,16 @@ final class NotchEventMonitors {
     private var localMoveMonitor: Any?
     private var globalClickMonitor: Any?
     private var localClickMonitor: Any?
+    private var globalRightClickMonitor: Any?
+    private var localRightClickMonitor: Any?
     private var lastMoveTime: TimeInterval = 0
 
     var isActive: Bool { globalMoveMonitor != nil }
 
     func start(
         mouseMoveHandler: @MainActor @escaping @Sendable (NSPoint) -> Void,
-        mouseDownHandler: @MainActor @escaping @Sendable (NSPoint) -> Void
+        mouseDownHandler: @MainActor @escaping @Sendable (NSPoint) -> Void,
+        rightMouseDownHandler: @MainActor @escaping @Sendable (NSPoint) -> Void
     ) {
         let throttleInterval: TimeInterval = 0.05
 
@@ -893,6 +956,17 @@ final class NotchEventMonitors {
             Task { @MainActor in mouseDownHandler(location) }
             return event
         }
+
+        globalRightClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: .rightMouseDown) { event in
+            let location = NSEvent.mouseLocation
+            Task { @MainActor in rightMouseDownHandler(location) }
+        }
+
+        localRightClickMonitor = NSEvent.addLocalMonitorForEvents(matching: .rightMouseDown) { event in
+            let location = NSEvent.mouseLocation
+            Task { @MainActor in rightMouseDownHandler(location) }
+            return event
+        }
     }
 
     func stop() {
@@ -900,10 +974,14 @@ final class NotchEventMonitors {
         if let m = localMoveMonitor { NSEvent.removeMonitor(m) }
         if let m = globalClickMonitor { NSEvent.removeMonitor(m) }
         if let m = localClickMonitor { NSEvent.removeMonitor(m) }
+        if let m = globalRightClickMonitor { NSEvent.removeMonitor(m) }
+        if let m = localRightClickMonitor { NSEvent.removeMonitor(m) }
         globalMoveMonitor = nil
         localMoveMonitor = nil
         globalClickMonitor = nil
         localClickMonitor = nil
+        globalRightClickMonitor = nil
+        localRightClickMonitor = nil
     }
 }
 

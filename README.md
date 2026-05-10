@@ -168,6 +168,7 @@ Reply-from-notch into [cmux](https://github.com/saghul/cmux) sessions without a 
 | Notification mode | Auto-height panel for permission requests and session events |
 | Stream overlay | Local-only OBS/browser-source view for stream-safe session status |
 | Approval cockpit | Control Center queue for pending approvals and agent questions |
+| Session timeline | Recent event log for starts, tools, approvals, questions, and completions |
 | Notification sounds | Configurable system sounds, mute toggle |
 | Inline diff preview | Myers diff + lightweight syntax highlighting in approval cards |
 | Plan mode | Pre-approval review + post-approval interactive checklist |

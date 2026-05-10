@@ -44,6 +44,7 @@ struct ControlCenterView: View {
                 }
 
                 ApprovalCockpitView(model: model)
+                SessionTimelineView(model: model)
 
                 VStack(alignment: .leading, spacing: 10) {
                     Text(lang.t("debug.scenarios"))

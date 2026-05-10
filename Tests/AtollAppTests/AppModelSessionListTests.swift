@@ -305,6 +305,32 @@ struct AppModelSessionListTests {
     }
 
     @Test
+    func trackedEventsRecordRecentTimelineEntriesWithNewestFirstAndBoundedCount() {
+        let now = Date(timeIntervalSince1970: 2_000)
+        let model = AppModel()
+
+        for index in 0..<45 {
+            model.applyTrackedEvent(
+                .sessionStarted(
+                    SessionStarted(
+                        sessionID: "session-\(index)",
+                        title: "Codex · project-\(index)",
+                        tool: .codex,
+                        summary: "Started \(index)",
+                        timestamp: now.addingTimeInterval(TimeInterval(index))
+                    )
+                ),
+                updateLastActionMessage: false,
+                ingress: .bridge
+            )
+        }
+
+        #expect(model.sessionTimelineEntries.count == 40)
+        #expect(model.sessionTimelineEntries.first?.sessionID == "session-44")
+        #expect(model.sessionTimelineEntries.last?.sessionID == "session-5")
+    }
+
+    @Test
     func rolloutCompletionDoesNotPresentNotificationDuringColdStart() {
         let now = Date(timeIntervalSince1970: 2_000)
         let model = AppModel()

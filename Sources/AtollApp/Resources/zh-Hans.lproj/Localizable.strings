@@ -209,6 +209,21 @@
 "cockpit.deny" = "拒绝";
 "cockpit.alwaysAllow" = "总是允许";
 
+/* Session Timeline */
+"timeline.title" = "会话时间线";
+"timeline.recent" = "%lld 个最近事件";
+"timeline.empty" = "还没有会话事件";
+"timeline.more" = "+%lld 个更早事件";
+"timeline.open" = "在岛屿中打开";
+"timeline.kind.started" = "已开始";
+"timeline.kind.activity" = "活动";
+"timeline.kind.permission" = "审批";
+"timeline.kind.question" = "问题";
+"timeline.kind.completion" = "完成";
+"timeline.kind.jump" = "跳转";
+"timeline.kind.metadata" = "工具";
+"timeline.kind.resolved" = "已处理";
+
 /* Debug Panel */
 "debug.title" = "Atoll 调试";
 "debug.description" = "基于 Mock 的 Notch 界面测试工具，用于验证会话列表、审批、问答和完成卡片。";

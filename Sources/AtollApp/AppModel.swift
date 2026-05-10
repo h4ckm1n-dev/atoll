@@ -42,6 +42,7 @@ final class AppModel {
     private static let syntheticClaudeSessionPrefix = "claude-process:"
     private static let liveSessionStalenessWindow: TimeInterval = 15 * 60
     private static let jumpOverlayDismissLeadTime: Duration = .milliseconds(20)
+    private static let sessionTimelineLimit = 40
     static let hoverOpenDelay: TimeInterval = 0.15
 
     struct AcceptanceStep: Identifiable {
@@ -213,6 +214,7 @@ final class AppModel {
             harnessRuntimeMonitor?.recordLog(lastActionMessage)
         }
     }
+    var sessionTimelineEntries: [SessionTimelineEntry] = []
 
     /// Banner-style warning shown to the user when an operation that
     /// requires Accessibility / Automation permission is denied by macOS
@@ -1135,9 +1137,13 @@ final class AppModel {
         selectedSessionID = sessionID
     }
 
-    func openActionableSession(_ sessionID: String) {
+    func openSessionInIsland(_ sessionID: String) {
         selectedSessionID = sessionID
         notchOpen(reason: .click, surface: .sessionList(actionableSessionID: sessionID))
+    }
+
+    func openActionableSession(_ sessionID: String) {
+        openSessionInIsland(sessionID)
     }
 
     // MARK: - Overlay forwarding
@@ -1474,6 +1480,7 @@ final class AppModel {
         }
 
         state.apply(event)
+        recordTimelineEvent(event)
         capturePlanIfPresent(in: event)
         reconcileIslandSurfaceAfterStateChange()
         if ingress == .bridge {
@@ -1490,23 +1497,7 @@ final class AppModel {
 
         // Push relevant events to the Watch/iPhone via the relay
         if let relay = watchRelay {
-            let eventSessionID: String? = {
-                switch event {
-                case let .sessionStarted(p): return p.sessionID
-                case let .activityUpdated(p): return p.sessionID
-                case let .permissionRequested(p): return p.sessionID
-                case let .questionAsked(p): return p.sessionID
-                case let .sessionCompleted(p): return p.sessionID
-                case let .jumpTargetUpdated(p): return p.sessionID
-                case let .sessionMetadataUpdated(p): return p.sessionID
-                case let .claudeSessionMetadataUpdated(p): return p.sessionID
-                case let .geminiSessionMetadataUpdated(p): return p.sessionID
-                case let .openCodeSessionMetadataUpdated(p): return p.sessionID
-                case let .cursorSessionMetadataUpdated(p): return p.sessionID
-                case let .actionableStateResolved(p): return p.sessionID
-                }
-            }()
-            let session = eventSessionID.flatMap { state.session(id: $0) }
+            let session = state.session(id: event.sessionID)
             relay.notifyEvent(event, session: session)
         }
 
@@ -1520,6 +1511,14 @@ final class AppModel {
                 wasAlreadyCompleted: wasAlreadyCompleted,
                 ingress: ingress
             )
+        }
+    }
+
+    private func recordTimelineEvent(_ event: AgentEvent) {
+        let entry = SessionTimelineEntry.make(from: event, session: state.session(id: event.sessionID))
+        sessionTimelineEntries.insert(entry, at: 0)
+        if sessionTimelineEntries.count > Self.sessionTimelineLimit {
+            sessionTimelineEntries.removeSubrange(Self.sessionTimelineLimit...)
         }
     }
 

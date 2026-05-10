@@ -208,6 +208,21 @@
 "cockpit.deny" = "拒絕";
 "cockpit.alwaysAllow" = "一律允許";
 
+/* Session Timeline */
+"timeline.title" = "工作階段時間線";
+"timeline.recent" = "%lld 個最近事件";
+"timeline.empty" = "尚無工作階段事件";
+"timeline.more" = "+%lld 個更早事件";
+"timeline.open" = "在島嶼中開啟";
+"timeline.kind.started" = "已開始";
+"timeline.kind.activity" = "活動";
+"timeline.kind.permission" = "核准";
+"timeline.kind.question" = "問題";
+"timeline.kind.completion" = "完成";
+"timeline.kind.jump" = "跳轉";
+"timeline.kind.metadata" = "工具";
+"timeline.kind.resolved" = "已處理";
+
 /* Debug Panel */
 "debug.title" = "Atoll 除錯";
 "debug.description" = "基於 Mock 的 Notch 介面測試工具，用於驗證工作階段清單、核准、問答和完成卡片。";

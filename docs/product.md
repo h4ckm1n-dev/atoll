@@ -53,6 +53,7 @@ CLI coding agents are powerful, but they pull attention away from the editor and
 - **Notification mode** — auto-height panel for permission requests and session events
 - **Stream overlay** — local-only OBS/browser-source view for stream-safe session status
 - **Approval cockpit** — central Control Center queue for pending approvals and agent questions
+- **Session timeline** — recent event log for narrating agent starts, tools, approvals, questions, and completions
 - **Notification sounds** — configurable system sounds with mute toggle
 - **i18n** — English and Simplified Chinese
 - **Session discovery** — auto-discover from local transcripts, persist across launches

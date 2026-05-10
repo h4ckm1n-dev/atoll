@@ -209,6 +209,21 @@
 "cockpit.deny" = "Deny";
 "cockpit.alwaysAllow" = "Always";
 
+/* Session Timeline */
+"timeline.title" = "Session Timeline";
+"timeline.recent" = "%lld recent events";
+"timeline.empty" = "No session events yet";
+"timeline.more" = "+%lld older";
+"timeline.open" = "Open in island";
+"timeline.kind.started" = "Started";
+"timeline.kind.activity" = "Activity";
+"timeline.kind.permission" = "Approval";
+"timeline.kind.question" = "Question";
+"timeline.kind.completion" = "Done";
+"timeline.kind.jump" = "Jump";
+"timeline.kind.metadata" = "Tool";
+"timeline.kind.resolved" = "Resolved";
+
 /* Debug Panel */
 "debug.title" = "Atoll Debug";
 "debug.description" = "Mock-driven notch surface harness for validating session list, approval, question, and completion cards.";

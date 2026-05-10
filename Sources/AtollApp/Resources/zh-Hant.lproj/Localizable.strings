@@ -44,6 +44,11 @@
 "settings.general.languageEnglish" = "English";
 "settings.general.languageChinese" = "简体中文";
 "settings.general.languageTraditionalChinese" = "繁體中文";
+"settings.stream.title" = "直播";
+"settings.stream.overlay" = "OBS 瀏覽器浮層";
+"settings.stream.url" = "浮層 URL";
+"settings.stream.copyURL" = "複製";
+"settings.stream.help" = "將這個 URL 加入為 OBS 瀏覽器來源。浮層僅本機可存取，且一律會隱藏可見工作階段文字中的敏感資訊。";
 
 /* Settings - Appearance */
 "settings.tab.appearance" = "個人化";

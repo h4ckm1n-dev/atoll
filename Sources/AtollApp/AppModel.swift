@@ -25,6 +25,7 @@ final class AppModel {
     private static let showCodexUsageDefaultsKey = "app.showCodexUsage"
     private static let completionReplyEnabledDefaultsKey = "feature.completionReply.enabled"
     private static let liveCodingModeEnabledDefaultsKey = "feature.liveCodingMode.enabled"
+    private static let streamOverlayEnabledDefaultsKey = "feature.streamOverlay.enabled"
     private static let suppressFrontmostNotificationsDefaultsKey = "app.suppressFrontmostNotifications"
     private static let celebrationsEnabledDefaultsKey = "appearance.celebrations.enabled"
 
@@ -57,6 +58,7 @@ final class AppModel {
             _cachedSessionBuckets = nil
             bridgeServer.updateStateSnapshot(state)
             refreshContextUsageRegistry()
+            refreshStreamOverlaySnapshot()
         }
     }
     @ObservationIgnored private var _cachedSessionBuckets: (primary: [AgentSession], overflow: [AgentSession])?
@@ -271,7 +273,19 @@ final class AppModel {
             guard hasFinishedInit, liveCodingModeEnabled != oldValue else { return }
             UserDefaults.standard.set(liveCodingModeEnabled, forKey: Self.liveCodingModeEnabledDefaultsKey)
             updateWatchRelayRedactor()
+            refreshStreamOverlaySnapshot()
             refreshOverlayPlacementIfVisible()
+        }
+    }
+    var streamOverlayEnabled: Bool = false {
+        didSet {
+            guard hasFinishedInit, streamOverlayEnabled != oldValue else { return }
+            UserDefaults.standard.set(streamOverlayEnabled, forKey: Self.streamOverlayEnabledDefaultsKey)
+            if streamOverlayEnabled {
+                startStreamOverlay()
+            } else {
+                stopStreamOverlay()
+            }
         }
     }
     var suppressFrontmostNotifications: Bool = true {
@@ -434,6 +448,33 @@ final class AppModel {
                 contextUsageRegistry.recordUsage(sessionID: session.id, transcriptPath: path)
             }
         }
+    }
+
+    var streamOverlayURLText: String {
+        streamOverlayEndpoint.overlayURLString
+    }
+
+    private func refreshStreamOverlaySnapshot() {
+        streamOverlaySnapshotCache.set(
+            StreamOverlaySnapshot.make(
+                from: state.sessions,
+                visibleTextRedactor: { LiveCodingRedactor.redact($0) }
+            )
+        )
+    }
+
+    private func startStreamOverlay() {
+        refreshStreamOverlaySnapshot()
+        streamOverlayEndpoint.snapshotProvider = { [streamOverlaySnapshotCache] in
+            streamOverlaySnapshotCache.get()
+        }
+        streamOverlayEndpoint.start()
+        lastActionMessage = "Stream overlay available at \(streamOverlayEndpoint.overlayURLString)."
+    }
+
+    private func stopStreamOverlay() {
+        streamOverlayEndpoint.stop()
+        lastActionMessage = "Stream overlay disabled."
     }
 
     func statusColor(for phase: SessionPhase) -> Color {
@@ -630,6 +671,12 @@ final class AppModel {
     @ObservationIgnored
     private let isNotificationSessionAlreadyFrontmost: @Sendable (AgentSession) async -> Bool
 
+    @ObservationIgnored
+    private let streamOverlayEndpoint = StreamOverlayHTTPEndpoint()
+
+    @ObservationIgnored
+    private let streamOverlaySnapshotCache = StreamOverlaySnapshotCache()
+
 
     @ObservationIgnored
     var harnessRuntimeMonitor: HarnessRuntimeMonitor?
@@ -656,6 +703,7 @@ final class AppModel {
             Self.hapticFeedbackEnabledDefaultsKey: false,
             Self.completionReplyEnabledDefaultsKey: false,
             Self.liveCodingModeEnabledDefaultsKey: false,
+            Self.streamOverlayEnabledDefaultsKey: false,
             Self.suppressFrontmostNotificationsDefaultsKey: true,
             Self.celebrationsEnabledDefaultsKey: true,
         ])
@@ -673,6 +721,7 @@ final class AppModel {
         }
         completionReplyEnabled = UserDefaults.standard.bool(forKey: Self.completionReplyEnabledDefaultsKey)
         liveCodingModeEnabled = UserDefaults.standard.bool(forKey: Self.liveCodingModeEnabledDefaultsKey)
+        streamOverlayEnabled = UserDefaults.standard.bool(forKey: Self.streamOverlayEnabledDefaultsKey)
         launchAtLoginEnabled = LaunchAtLoginService.shared.isEnabled
         islandClosedDisplayStyle = IslandClosedDisplayStyle(
             rawValue: UserDefaults.standard.string(forKey: Self.islandClosedDisplayStyleDefaultsKey) ?? ""
@@ -773,6 +822,10 @@ final class AppModel {
 
         refreshOverlayDisplayConfiguration()
         hasFinishedInit = true
+        refreshStreamOverlaySnapshot()
+        if streamOverlayEnabled {
+            startStreamOverlay()
+        }
     }
 
     var sessions: [AgentSession] {

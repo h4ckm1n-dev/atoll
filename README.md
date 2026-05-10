@@ -166,6 +166,7 @@ Reply-from-notch into [cmux](https://github.com/saghul/cmux) sessions without a 
 | Notch / top-bar overlay | Notch area on notch Macs, top-center bar on others |
 | Control center | Hook status, usage dashboard, theme picker, project colors |
 | Notification mode | Auto-height panel for permission requests and session events |
+| Stream overlay | Local-only OBS/browser-source view for stream-safe session status |
 | Notification sounds | Configurable system sounds, mute toggle |
 | Inline diff preview | Myers diff + lightweight syntax highlighting in approval cards |
 | Plan mode | Pre-approval review + post-approval interactive checklist |

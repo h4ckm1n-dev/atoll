@@ -44,6 +44,11 @@
 "settings.general.languageEnglish" = "English";
 "settings.general.languageChinese" = "Chinese (Simplified)";
 "settings.general.languageTraditionalChinese" = "Chinese (Traditional)";
+"settings.stream.title" = "Streaming";
+"settings.stream.overlay" = "OBS browser overlay";
+"settings.stream.url" = "Overlay URL";
+"settings.stream.copyURL" = "Copy";
+"settings.stream.help" = "Add this URL as an OBS Browser Source. The overlay is local-only and always redacts visible session text.";
 
 /* Settings - Appearance */
 "settings.tab.appearance" = "Appearance";

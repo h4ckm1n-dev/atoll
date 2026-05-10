@@ -229,6 +229,32 @@ struct GeneralSettingsPane: View {
                 ))
             }
 
+            Section(lang.t("settings.stream.title")) {
+                Toggle(lang.t("settings.stream.overlay"), isOn: Binding(
+                    get: { model.streamOverlayEnabled },
+                    set: { model.streamOverlayEnabled = $0 }
+                ))
+
+                LabeledContent(lang.t("settings.stream.url")) {
+                    HStack(spacing: 8) {
+                        Text(model.streamOverlayURLText)
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Button(lang.t("settings.stream.copyURL")) {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(model.streamOverlayURLText, forType: .string)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+
+                Text(lang.t("settings.stream.help"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
         }
         .formStyle(.grouped)
         .navigationTitle(lang.t("settings.tab.general"))

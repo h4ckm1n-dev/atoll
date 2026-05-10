@@ -10,6 +10,7 @@ This index is the repository map for humans and coding agents. Read these files 
 - [docs/roadmap.zh-CN.md](./roadmap.zh-CN.md) for the Chinese roadmap and contribution focus areas
 - [docs/product.md](./product.md) for the product scope, supported agents, and terminals
 - [docs/architecture.md](./architecture.md) for the runtime shape and transport boundaries
+- [docs/live-coder-guide.md](./live-coder-guide.md) for the creator quick start, OBS overlay, and stream controls
 - [docs/automation-actions.md](./automation-actions.md) for Raycast, Stream Deck, and URL action commands
 - [docs/quality.md](./quality.md) for the current harness contract and verification expectations
 - [docs/worktree-workflow.md](./worktree-workflow.md) for the parallel worktree lifecycle

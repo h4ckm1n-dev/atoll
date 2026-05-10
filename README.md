@@ -183,6 +183,14 @@ Reply-from-notch into [cmux](https://github.com/saghul/cmux) sessions without a 
 
 </details>
 
+### For live coders
+
+Atoll now has a focused creator flow: **Settings > Setup > Creator Quick Start**
+turns on Live Coding Mode, starts the local OBS overlay, copies the browser
+source URL, and gives you `atoll://` action URLs for Raycast, Stream Deck, or
+shell scripts. See [docs/live-coder-guide.md](docs/live-coder-guide.md) for the
+full stream setup checklist.
+
 ## Quick Start
 
 ### Build from source

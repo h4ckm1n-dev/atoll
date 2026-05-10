@@ -9,6 +9,7 @@ CLI coding agents are powerful, but they pull attention away from the editor and
 - macOS developers using terminal-based coding agents daily
 - Users running more than one agent or more than one terminal session
 - Users who care about low latency, native behavior, and open-source transparency
+- Live coders who need stream-safe agent status, fast approvals, OBS output, and launcher controls
 
 ## Product Principles
 

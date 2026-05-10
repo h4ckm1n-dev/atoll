@@ -1,0 +1,125 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+        "config:recommended",
+        ":semanticCommits",
+        ":semanticPrefixFix",
+        ":ignoreUnstable",
+        ":enableVulnerabilityAlerts",
+        ":separateMajorReleases"
+    ],
+    "packageRules": [
+        {
+            "groupName": "patch dependencies",
+            "groupSlug": "patch-deps",
+            "matchUpdateTypes": [
+                "patch"
+            ],
+            "automerge": true,
+            "schedule": [
+                "after 10pm",
+                "before 5am"
+            ],
+            "labels": [
+                "dependencies",
+                "patch"
+            ],
+            "matchPackageNames": [
+                "*",
+                "!/^@solana//",
+                "!/^@project-serum//",
+                "!/^@metaplex//"
+            ]
+        },
+        {
+            "groupName": "minor dependencies",
+            "groupSlug": "minor-deps",
+            "matchUpdateTypes": [
+                "minor"
+            ],
+            "automerge": true,
+            "schedule": [
+                "after 10pm",
+                "before 5am"
+            ],
+            "labels": [
+                "dependencies",
+                "minor"
+            ],
+            "matchPackageNames": [
+                "*",
+                "!/^@solana//",
+                "!/^@project-serum//",
+                "!/^@metaplex//"
+            ]
+        },
+        {
+            "groupName": "major dependencies",
+            "groupSlug": "major-deps",
+            "matchUpdateTypes": [
+                "major"
+            ],
+            "automerge": false,
+            "labels": [
+                "dependencies",
+                "major"
+            ],
+            "minimumReleaseAge": "14 days",
+            "matchPackageNames": [
+                "*",
+                "!/^@solana//",
+                "!/^@project-serum//",
+                "!/^@metaplex//"
+            ]
+        },
+        {
+            "groupName": "Solana ecosystem",
+            "groupSlug": "solana-deps",
+            "matchUpdateTypes": [
+                "major",
+                "minor",
+                "patch"
+            ],
+            "automerge": false,
+            "labels": [
+                "dependencies",
+                "solana-ecosystem"
+            ],
+            "minimumReleaseAge": "21 days",
+            "reviewers": [
+                "team:developers"
+            ],
+            "matchPackageNames": [
+                "/^@solana//",
+                "/^@project-serum//",
+                "/^@metaplex//"
+            ]
+        },
+        {
+            "groupName": "Next.js",
+            "matchPackageNames": [
+                "next",
+                "@types/next"
+            ],
+            "matchUpdateTypes": [
+                "major",
+                "minor",
+                "patch"
+            ],
+            "minimumReleaseAge": "3 days",
+            "labels": [
+                "dependencies",
+                "next.js"
+            ]
+        }
+    ],
+    "automergeType": "branch",
+    "automerge": true,
+    "dependencyDashboard": true,
+    "timezone": "Europe/Paris",
+    "recreateWhen": "always",
+    "prConcurrentLimit": 10,
+    "prHourlyLimit": 4,
+    "semanticCommits": "enabled",
+    "commitMessagePrefix": "chore(deps):"
+}

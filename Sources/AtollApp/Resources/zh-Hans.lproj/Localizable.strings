@@ -120,6 +120,25 @@
 "setup.diagnostics.recheck" = "重新检查";
 "setup.diagnostics.repair" = "修复 Hooks";
 "setup.diagnostics.allHealthy" = "所有 Hooks 运行正常。";
+"setup.section.creator" = "创作者快速开始";
+"setup.creator.title" = "开播时不暴露你的工作区";
+"setup.creator.message" = "开启直播安全文本，启动本机 OBS 浮层，并复制 Raycast 或 Stream Deck 可用的动作 URL。";
+"setup.creator.progress" = "%d/%d 已就绪";
+"setup.creator.apply" = "应用直播设置";
+"setup.creator.copyOverlayURL" = "复制 OBS URL";
+"setup.creator.copyActions" = "复制动作 URL";
+"setup.creator.finish" = "完成";
+"setup.creator.ready" = "就绪";
+"setup.creator.pending" = "待处理";
+"setup.creator.footer" = "OBS 浮层只监听 127.0.0.1；启用 Live Coding Mode 后，可见会话文本会先被脱敏。";
+"setup.creator.step.agents.title" = "Agent Hooks";
+"setup.creator.step.agents.detail" = "为你使用的编码 Agent 安装 hooks，会话就会自动出现在 Atoll 中。";
+"setup.creator.step.privacy.title" = "直播安全文本";
+"setup.creator.step.privacy.detail" = "Live Coding Mode 会在内容进入直播界面前隐藏路径、密钥、邮箱、token 和嘈杂 diff。";
+"setup.creator.step.overlay.title" = "OBS 浮层";
+"setup.creator.step.overlay.detail" = "启动本机浏览器源端点，并把 URL 粘贴到 OBS。";
+"setup.creator.step.finished.title" = "安装引导已确认";
+"setup.creator.step.finished.detail" = "当你的直播设置准备好后，标记这个快速开始为完成。";
 
 /* Settings - Placeholder */
 "settings.lab.comingSoon" = "实验性功能即将推出。";

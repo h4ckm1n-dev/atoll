@@ -10,6 +10,8 @@ open "atoll://action/toggle-overlay"
 ```
 
 The app also accepts the `openisland://` and `open-island://` scheme aliases.
+Settings > Setup > Creator Quick Start can copy the OBS overlay URL and a
+ready-to-paste action URL list.
 
 ## Actions
 

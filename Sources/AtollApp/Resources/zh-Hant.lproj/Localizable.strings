@@ -120,6 +120,25 @@
 "setup.diagnostics.recheck" = "重新檢查";
 "setup.diagnostics.repair" = "修復 Hooks";
 "setup.diagnostics.allHealthy" = "所有 Hooks 運作正常。";
+"setup.section.creator" = "創作者快速開始";
+"setup.creator.title" = "開播時不暴露你的工作區";
+"setup.creator.message" = "開啟直播安全文字，啟動本機 OBS 浮層，並複製 Raycast 或 Stream Deck 可用的動作 URL。";
+"setup.creator.progress" = "%d/%d 已就緒";
+"setup.creator.apply" = "套用直播設定";
+"setup.creator.copyOverlayURL" = "複製 OBS URL";
+"setup.creator.copyActions" = "複製動作 URL";
+"setup.creator.finish" = "完成";
+"setup.creator.ready" = "就緒";
+"setup.creator.pending" = "待處理";
+"setup.creator.footer" = "OBS 浮層只監聽 127.0.0.1；啟用 Live Coding Mode 後，可見工作階段文字會先被脫敏。";
+"setup.creator.step.agents.title" = "Agent Hooks";
+"setup.creator.step.agents.detail" = "為你使用的編碼 Agent 安裝 hooks，工作階段就會自動出現在 Atoll 中。";
+"setup.creator.step.privacy.title" = "直播安全文字";
+"setup.creator.step.privacy.detail" = "Live Coding Mode 會在內容進入直播介面前隱藏路徑、金鑰、電子郵件、token 和嘈雜 diff。";
+"setup.creator.step.overlay.title" = "OBS 浮層";
+"setup.creator.step.overlay.detail" = "啟動本機瀏覽器來源端點，並把 URL 貼到 OBS。";
+"setup.creator.step.finished.title" = "安裝引導已確認";
+"setup.creator.step.finished.detail" = "當你的直播設定準備好後，將這個快速開始標記為完成。";
 
 /* Settings - Placeholder */
 "settings.lab.comingSoon" = "實驗性功能即將推出。";

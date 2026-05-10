@@ -456,6 +456,8 @@ struct SetupSettingsPane: View {
 
     var body: some View {
         Form {
+            creatorQuickStartSection
+
             if !model.hasAnyInstalledAgent {
                 emptyStateBanner
             }
@@ -773,6 +775,117 @@ struct SetupSettingsPane: View {
         model.claudeHooksInstalled && model.codexHooksInstalled && model.openCodePluginInstalled
             && model.qoderHooksInstalled && model.qwenCodeHooksInstalled && model.factoryHooksInstalled && model.codebuddyHooksInstalled
             && model.cursorHooksInstalled && model.geminiHooksInstalled && model.kimiHooksInstalled && model.claudeUsageInstalled
+    }
+
+    @ViewBuilder
+    private var creatorQuickStartSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "record.circle")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(palette.role(.working).swiftUIColor)
+                        .frame(width: 28)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(lang.t("setup.creator.title"))
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(lang.t("setup.creator.message"))
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer()
+
+                    Text(lang.t(
+                        "setup.creator.progress",
+                        model.creatorQuickStartCompletedCount,
+                        model.creatorQuickStartTotalCount
+                    ))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(model.creatorQuickStartSteps) { step in
+                        creatorQuickStartStepRow(step)
+                    }
+                }
+
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 8) {
+                        creatorQuickStartActions
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        creatorQuickStartActions
+                    }
+                }
+                .controlSize(.small)
+            }
+            .padding(.vertical, 4)
+        } header: {
+            Text(lang.t("setup.section.creator"))
+        } footer: {
+            Text(lang.t("setup.creator.footer"))
+        }
+    }
+
+    @ViewBuilder
+    private var creatorQuickStartActions: some View {
+        Button {
+            model.applyCreatorStreamingDefaults()
+        } label: {
+            Label(lang.t("setup.creator.apply"), systemImage: "wand.and.stars")
+        }
+        .buttonStyle(.borderedProminent)
+
+        Button {
+            model.copyStreamOverlayURLToPasteboard()
+        } label: {
+            Label(lang.t("setup.creator.copyOverlayURL"), systemImage: "link")
+        }
+        .buttonStyle(.bordered)
+
+        Button {
+            model.copyCreatorAutomationActionURLs()
+        } label: {
+            Label(lang.t("setup.creator.copyActions"), systemImage: "keyboard")
+        }
+        .buttonStyle(.bordered)
+
+        if !model.firstLaunchCompleted {
+            Button {
+                model.completeCreatorOnboarding()
+            } label: {
+                Label(lang.t("setup.creator.finish"), systemImage: "checkmark.circle")
+            }
+            .buttonStyle(.bordered)
+        }
+    }
+
+    private func creatorQuickStartStepRow(_ step: AppModel.CreatorQuickStartStep) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: step.isComplete ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(step.isComplete ? .green : .secondary)
+                .frame(width: 16, alignment: .center)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(lang.t("setup.creator.step.\(step.id).title"))
+                    .font(.system(size: 12, weight: .medium))
+                Text(lang.t("setup.creator.step.\(step.id).detail"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer()
+
+            Text(step.isComplete ? lang.t("setup.creator.ready") : lang.t("setup.creator.pending"))
+                .font(.caption)
+                .foregroundStyle(step.isComplete ? .green : .secondary)
+        }
     }
 
     @ViewBuilder

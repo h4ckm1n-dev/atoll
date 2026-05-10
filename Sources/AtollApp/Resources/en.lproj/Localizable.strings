@@ -120,6 +120,25 @@
 "setup.diagnostics.recheck" = "Re-check";
 "setup.diagnostics.repair" = "Repair Hooks";
 "setup.diagnostics.allHealthy" = "All hooks are healthy.";
+"setup.section.creator" = "Creator Quick Start";
+"setup.creator.title" = "Go live without leaking your workspace";
+"setup.creator.message" = "Enable stream-safe text, start the local OBS overlay, and copy action URLs for Raycast or Stream Deck.";
+"setup.creator.progress" = "%d of %d ready";
+"setup.creator.apply" = "Apply Stream Setup";
+"setup.creator.copyOverlayURL" = "Copy OBS URL";
+"setup.creator.copyActions" = "Copy Action URLs";
+"setup.creator.finish" = "Done";
+"setup.creator.ready" = "Ready";
+"setup.creator.pending" = "Pending";
+"setup.creator.footer" = "The OBS overlay stays on 127.0.0.1 and visible session text is redacted when Live Coding Mode is enabled.";
+"setup.creator.step.agents.title" = "Agent hooks";
+"setup.creator.step.agents.detail" = "Install hooks for the coding agents you use so sessions appear automatically.";
+"setup.creator.step.privacy.title" = "Stream-safe text";
+"setup.creator.step.privacy.detail" = "Live Coding Mode redacts paths, secrets, emails, tokens, and noisy diffs before they reach stream surfaces.";
+"setup.creator.step.overlay.title" = "OBS overlay";
+"setup.creator.step.overlay.detail" = "Start the local browser-source endpoint and paste its URL into OBS.";
+"setup.creator.step.finished.title" = "Onboarding acknowledged";
+"setup.creator.step.finished.detail" = "Mark this quick start done once your stream setup is ready.";
 
 /* Settings - Placeholder */
 "settings.lab.comingSoon" = "Experimental features coming soon.";

@@ -52,6 +52,11 @@ final class AppModel {
         let isComplete: Bool
     }
 
+    struct CreatorQuickStartStep: Identifiable {
+        let id: String
+        let isComplete: Bool
+    }
+
     let lang = LanguageManager.shared
 
     var state = SessionState() {
@@ -953,6 +958,36 @@ final class AppModel {
         ]
     }
 
+    var creatorQuickStartSteps: [CreatorQuickStartStep] {
+        [
+            CreatorQuickStartStep(id: "agents", isComplete: hasAnyInstalledAgent),
+            CreatorQuickStartStep(id: "privacy", isComplete: liveCodingModeEnabled),
+            CreatorQuickStartStep(id: "overlay", isComplete: streamOverlayEnabled),
+            CreatorQuickStartStep(id: "finished", isComplete: firstLaunchCompleted),
+        ]
+    }
+
+    var creatorQuickStartCompletedCount: Int {
+        creatorQuickStartSteps.filter(\.isComplete).count
+    }
+
+    var creatorQuickStartTotalCount: Int {
+        creatorQuickStartSteps.count
+    }
+
+    var creatorAutomationActionCheatSheet: String {
+        [
+            "Toggle Island: \(AutomationDeepLink.urlString(for: .toggleOverlay))",
+            "Next pending session: \(AutomationDeepLink.urlString(for: .cycleAttentionSession))",
+            "Jump to focused session: \(AutomationDeepLink.urlString(for: .jumpFocusedSession))",
+            "Approve focused permission: \(AutomationDeepLink.urlString(for: .approveFocusedPermission))",
+            "Deny focused permission: \(AutomationDeepLink.urlString(for: .denyFocusedPermission))",
+            "Toggle Live Coding Mode: \(AutomationDeepLink.urlString(for: .toggleLiveCoding))",
+            "Start OBS overlay: \(AutomationDeepLink.urlString(for: .startStreamOverlay))",
+            "Copy OBS overlay URL: \(AutomationDeepLink.urlString(for: .copyStreamOverlayURL))",
+        ].joined(separator: "\n")
+    }
+
     var acceptanceCompletedCount: Int {
         acceptanceSteps.filter(\.isComplete).count
     }
@@ -1192,8 +1227,7 @@ final class AppModel {
         case .stopStreamOverlay:
             streamOverlayEnabled = false
         case .copyStreamOverlayURL:
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(streamOverlayURLText, forType: .string)
+            copyStreamOverlayURLToPasteboard()
             lastActionMessage = "Automation: copied stream overlay URL."
         }
     }
@@ -1254,6 +1288,33 @@ final class AppModel {
     func showOnboarding() {
         showSettings()
         NotificationCenter.default.post(name: .openIslandSelectSetupTab, object: nil)
+    }
+
+    func applyCreatorStreamingDefaults() {
+        liveCodingModeEnabled = true
+        streamOverlayEnabled = true
+        suppressFrontmostNotifications = false
+        firstLaunchCompleted = true
+        copyStreamOverlayURLToPasteboard()
+        showOverlay()
+        lastActionMessage = "Creator quick start applied. OBS overlay URL copied."
+    }
+
+    func copyStreamOverlayURLToPasteboard() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(streamOverlayURLText, forType: .string)
+        lastActionMessage = "Stream overlay URL copied."
+    }
+
+    func copyCreatorAutomationActionURLs() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(creatorAutomationActionCheatSheet, forType: .string)
+        lastActionMessage = "Creator automation action URLs copied."
+    }
+
+    func completeCreatorOnboarding() {
+        firstLaunchCompleted = true
+        lastActionMessage = "Creator quick start completed."
     }
 
     func showControlCenter() {

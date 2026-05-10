@@ -388,6 +388,48 @@ struct AppModelSessionListTests {
     }
 
     @Test
+    func creatorQuickStartAppliesStreamingDefaults() {
+        let model = AppModel()
+        let previousLiveCoding = model.liveCodingModeEnabled
+        let previousStreamOverlay = model.streamOverlayEnabled
+        let previousSuppressFocused = model.suppressFrontmostNotifications
+        let previousFirstLaunch = model.firstLaunchCompleted
+        defer {
+            model.liveCodingModeEnabled = previousLiveCoding
+            model.streamOverlayEnabled = previousStreamOverlay
+            model.suppressFrontmostNotifications = previousSuppressFocused
+            model.firstLaunchCompleted = previousFirstLaunch
+        }
+
+        model.liveCodingModeEnabled = false
+        model.streamOverlayEnabled = false
+        model.suppressFrontmostNotifications = true
+        model.firstLaunchCompleted = false
+
+        model.applyCreatorStreamingDefaults()
+
+        #expect(model.liveCodingModeEnabled)
+        #expect(model.streamOverlayEnabled)
+        #expect(model.suppressFrontmostNotifications == false)
+        #expect(model.firstLaunchCompleted)
+        #expect(model.lastActionMessage == "Creator quick start applied. OBS overlay URL copied.")
+        #expect(model.creatorQuickStartSteps.first { $0.id == "privacy" }?.isComplete == true)
+        #expect(model.creatorQuickStartSteps.first { $0.id == "overlay" }?.isComplete == true)
+        #expect(model.creatorQuickStartSteps.first { $0.id == "finished" }?.isComplete == true)
+    }
+
+    @Test
+    func creatorAutomationActionCheatSheetIncludesLiveCodingActions() {
+        let model = AppModel()
+        let cheatSheet = model.creatorAutomationActionCheatSheet
+
+        #expect(cheatSheet.contains("atoll://action/cycle-attention-session"))
+        #expect(cheatSheet.contains("atoll://action/approve-focused-permission"))
+        #expect(cheatSheet.contains("atoll://action/toggle-live-coding"))
+        #expect(cheatSheet.contains("atoll://action/copy-stream-overlay-url"))
+    }
+
+    @Test
     func rolloutCompletionDoesNotPresentNotificationDuringColdStart() {
         let now = Date(timeIntervalSince1970: 2_000)
         let model = AppModel()

@@ -12,6 +12,11 @@ extension Notification.Name {
     static let openIslandSelectSetupTab = Notification.Name("openIslandSelectSetupTab")
 }
 
+enum IslandKeyboardNavigationDirection {
+    case previous
+    case next
+}
+
 @MainActor
 @Observable
 final class AppModel {
@@ -69,6 +74,8 @@ final class AppModel {
     }
     @ObservationIgnored private var _cachedSessionBuckets: (primary: [AgentSession], overflow: [AgentSession])?
     var selectedSessionID: String?
+    var keyboardReplySessionID: String?
+    var keyboardReplySubmittedSessionID: String?
     let hooks = HookInstallationCoordinator()
     let overlay = OverlayUICoordinator()
     let discovery = SessionDiscoveryCoordinator()
@@ -676,6 +683,9 @@ final class AppModel {
     private let terminalJumpAction: @Sendable (JumpTarget) throws -> String
 
     @ObservationIgnored
+    private let terminalTextSendAction: @Sendable (String, AgentSession) -> Bool
+
+    @ObservationIgnored
     private let isNotificationSessionAlreadyFrontmost: @Sendable (AgentSession) async -> Bool
 
     @ObservationIgnored
@@ -698,11 +708,15 @@ final class AppModel {
         terminalJumpAction: @escaping @Sendable (JumpTarget) throws -> String = { target in
             try TerminalJumpService().jump(to: target)
         },
+        terminalTextSendAction: @escaping @Sendable (String, AgentSession) -> Bool = { text, session in
+            TerminalTextSender.send(text, to: session)
+        },
         isNotificationSessionAlreadyFrontmost: @escaping @Sendable (AgentSession) async -> Bool = { session in
             await ForegroundTerminalSessionProbe().matches(session: session)
         }
     ) {
         self.terminalJumpAction = terminalJumpAction
+        self.terminalTextSendAction = terminalTextSendAction
         self.isNotificationSessionAlreadyFrontmost = isNotificationSessionAlreadyFrontmost
         UserDefaults.standard.register(defaults: [
             Self.showDockIconDefaultsKey: true,
@@ -1168,12 +1182,86 @@ final class AppModel {
     }
 
     func select(sessionID: String) {
-        selectedSessionID = sessionID
+        updateSelectedSessionID(sessionID)
     }
 
     func openSessionInIsland(_ sessionID: String) {
-        selectedSessionID = sessionID
+        updateSelectedSessionID(sessionID)
         notchOpen(reason: .click, surface: .sessionList(actionableSessionID: sessionID))
+    }
+
+    func selectAdjacentIslandSession(_ direction: IslandKeyboardNavigationDirection) {
+        guard notchStatus == .opened else { return }
+        let sessions = islandListSessions
+        guard !sessions.isEmpty else { return }
+
+        let currentIndex = selectedSessionID.flatMap { selectedID in
+            sessions.firstIndex { $0.id == selectedID }
+        }
+
+        let nextIndex: Int
+        switch direction {
+        case .next:
+            nextIndex = currentIndex.map { ($0 + 1) % sessions.count } ?? 0
+        case .previous:
+            nextIndex = currentIndex.map { ($0 - 1 + sessions.count) % sessions.count } ?? sessions.count - 1
+        }
+
+        updateSelectedSessionID(sessions[nextIndex].id)
+    }
+
+    func handleIslandKeyboardEnter() {
+        guard notchStatus == .opened else {
+            showOverlay()
+            return
+        }
+        guard let session = focusedSession else {
+            return
+        }
+
+        if keyboardReplySessionID == session.id {
+            return
+        }
+
+        if keyboardReplySubmittedSessionID == session.id {
+            keyboardReplySubmittedSessionID = nil
+            jumpToSession(session)
+            return
+        }
+
+        if TerminalTextSender.canReply(to: session, enabled: completionReplyEnabled) {
+            openSessionInIsland(session.id)
+            keyboardReplySessionID = session.id
+            keyboardReplySubmittedSessionID = nil
+            lastActionMessage = "Typing reply to \(session.title)."
+            return
+        }
+
+        jumpToSession(session)
+    }
+
+    func handleIslandKeyboardEscape() {
+        if keyboardReplySessionID != nil {
+            cancelIslandKeyboardReply()
+            return
+        }
+
+        if notchStatus == .opened {
+            notchClose()
+        }
+    }
+
+    func cancelIslandKeyboardReply() {
+        keyboardReplySessionID = nil
+    }
+
+    func submitIslandKeyboardReply(for session: AgentSession, text: String) {
+        let wasKeyboardReply = keyboardReplySessionID == session.id
+        if wasKeyboardReply {
+            keyboardReplySessionID = nil
+            keyboardReplySubmittedSessionID = session.id
+        }
+        replyToSession(session, text: text)
     }
 
     func openActionableSession(_ sessionID: String) {
@@ -1385,7 +1473,7 @@ final class AppModel {
             if probeIndex == startIndex { continue }
             let candidate = sessions[probeIndex]
             if candidate.phase.requiresAttention {
-                selectedSessionID = candidate.id
+                updateSelectedSessionID(candidate.id)
                 return
             }
         }
@@ -1529,10 +1617,11 @@ final class AppModel {
         refreshOverlayPlacementIfVisible()
 
         lastActionMessage = "Sending reply to \(session.title)…"
+        let sendAction = terminalTextSendAction
 
         Task { [weak self] in
             let success = await Task.detached(priority: .userInitiated) {
-                TerminalTextSender.send(text, to: session)
+                sendAction(text, session)
             }.value
 
             self?.lastActionMessage = success
@@ -1682,18 +1771,33 @@ final class AppModel {
             && surface.matchesCurrentState(of: session)
     }
 
+    private func updateSelectedSessionID(_ sessionID: String?) {
+        if selectedSessionID != sessionID {
+            keyboardReplySessionID = nil
+            keyboardReplySubmittedSessionID = nil
+        }
+        selectedSessionID = sessionID
+    }
+
     private func synchronizeSelection() {
         let surfacedIDs = Set(surfacedSessions.map(\.id))
+        let existingIDs = Set(state.sessions.map(\.id))
+        if let keyboardReplySessionID, !existingIDs.contains(keyboardReplySessionID) {
+            self.keyboardReplySessionID = nil
+        }
+        if let keyboardReplySubmittedSessionID, !existingIDs.contains(keyboardReplySubmittedSessionID) {
+            self.keyboardReplySubmittedSessionID = nil
+        }
 
         if let activeAction = state.activeActionableSession {
-            selectedSessionID = activeAction.id
+            updateSelectedSessionID(activeAction.id)
             return
         }
 
         guard let selectedSessionID,
               surfacedIDs.contains(selectedSessionID),
               state.session(id: selectedSessionID) != nil else {
-            self.selectedSessionID = surfacedSessions.first?.id ?? state.sessions.first?.id
+            updateSelectedSessionID(surfacedSessions.first?.id ?? state.sessions.first?.id)
             return
         }
     }

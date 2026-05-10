@@ -378,6 +378,127 @@ struct AppModelSessionListTests {
     }
 
     @Test
+    func islandKeyboardNavigationWrapsVisibleSessions() {
+        let now = Date(timeIntervalSince1970: 2_000)
+        let model = AppModel()
+        var first = AgentSession(
+            id: "first",
+            title: "A · first",
+            tool: .codex,
+            origin: .live,
+            attachmentState: .attached,
+            phase: .running,
+            summary: "First",
+            updatedAt: now,
+            jumpTarget: JumpTarget(
+                terminalApp: "Ghostty",
+                workspaceName: "first",
+                paneTitle: "codex ~/first",
+                workingDirectory: "/tmp/first",
+                terminalSessionID: "ghostty-1"
+            )
+        )
+        first.isProcessAlive = true
+        var second = AgentSession(
+            id: "second",
+            title: "B · second",
+            tool: .codex,
+            origin: .live,
+            attachmentState: .attached,
+            phase: .running,
+            summary: "Second",
+            updatedAt: now,
+            jumpTarget: JumpTarget(
+                terminalApp: "Ghostty",
+                workspaceName: "second",
+                paneTitle: "codex ~/second",
+                workingDirectory: "/tmp/second",
+                terminalSessionID: "ghostty-2"
+            )
+        )
+        second.isProcessAlive = true
+        model.state = SessionState(sessions: [first, second])
+        model.notchStatus = .opened
+        model.selectedSessionID = "first"
+
+        model.selectAdjacentIslandSession(.next)
+        #expect(model.selectedSessionID == "second")
+
+        model.selectAdjacentIslandSession(.next)
+        #expect(model.selectedSessionID == "first")
+
+        model.selectAdjacentIslandSession(.previous)
+        #expect(model.selectedSessionID == "second")
+    }
+
+    @Test
+    func islandKeyboardEnterReplyThenTerminalJumpFlow() async throws {
+        let now = Date(timeIntervalSince1970: 2_000)
+        let recorder = TerminalActionRecorder()
+        let model = AppModel(
+            terminalJumpAction: { _ in
+                recorder.recordJump()
+                return "Focused the matching Ghostty terminal."
+            },
+            terminalTextSendAction: { text, session in
+                recorder.recordSend(text: text, sessionID: session.id)
+                return true
+            }
+        )
+        var session = AgentSession(
+            id: "reply-session",
+            title: "Codex · reply",
+            tool: .codex,
+            origin: .live,
+            attachmentState: .attached,
+            phase: .completed,
+            summary: "Done",
+            updatedAt: now,
+            jumpTarget: JumpTarget(
+                terminalApp: "Ghostty",
+                workspaceName: "reply",
+                paneTitle: "codex ~/reply",
+                workingDirectory: "/tmp/reply",
+                terminalSessionID: "ghostty-reply"
+            )
+        )
+        session.isProcessAlive = true
+        model.state = SessionState(sessions: [session])
+        model.notchStatus = .opened
+        model.notchOpenReason = .click
+        model.islandSurface = .sessionList()
+        model.completionReplyEnabled = true
+        model.selectedSessionID = session.id
+
+        model.handleIslandKeyboardEnter()
+        #expect(model.keyboardReplySessionID == session.id)
+        #expect(model.keyboardReplySubmittedSessionID == nil)
+
+        model.submitIslandKeyboardReply(for: session, text: "ship it")
+        #expect(model.keyboardReplySessionID == nil)
+        #expect(model.keyboardReplySubmittedSessionID == session.id)
+
+        for _ in 0..<20 {
+            if recorder.sentTexts.first?.0 == "ship it",
+               recorder.sentTexts.first?.1 == session.id {
+                break
+            }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        #expect(recorder.sentTexts.count == 1)
+        #expect(recorder.sentTexts.first?.0 == "ship it")
+        #expect(recorder.sentTexts.first?.1 == session.id)
+
+        model.handleIslandKeyboardEnter()
+        for _ in 0..<20 {
+            if recorder.jumpCount == 1 { break }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        #expect(recorder.jumpCount == 1)
+        #expect(model.keyboardReplySubmittedSessionID == nil)
+    }
+
+    @Test
     func unsupportedAutomationURLUpdatesStatusMessage() throws {
         let model = AppModel()
         let url = try #require(URL(string: "atoll://action/unknown"))
@@ -1008,5 +1129,31 @@ struct AppModelSessionListTests {
 
         let claudeSessions = model.state.sessions.filter { $0.tool == .claudeCode }
         #expect(claudeSessions.count == 2)
+    }
+}
+
+private final class TerminalActionRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _sentTexts: [(String, String)] = []
+    private var _jumpCount = 0
+
+    var sentTexts: [(String, String)] {
+        lock.withLock { _sentTexts }
+    }
+
+    var jumpCount: Int {
+        lock.withLock { _jumpCount }
+    }
+
+    func recordSend(text: String, sessionID: String) {
+        lock.withLock {
+            _sentTexts.append((text, sessionID))
+        }
+    }
+
+    func recordJump() {
+        lock.withLock {
+            _jumpCount += 1
+        }
     }
 }

@@ -776,13 +776,16 @@ struct IslandPanelView: View {
                     session: session,
                     referenceDate: context.date,
                     isActionable: true,
+                    isKeyboardSelected: model.selectedSessionID == session.id,
+                    isKeyboardReplyFocused: model.keyboardReplySessionID == session.id,
                     useDrawingGroup: model.notchStatus == .opened,
                     isInteractive: model.notchStatus == .opened,
                     lang: model.lang,
                     onApprove: { model.approvePermission(for: session.id, action: $0) },
                     onAnswer: { model.answerQuestion(for: session.id, answer: $0) },
                     onReply: TerminalTextSender.canReply(to: session, enabled: model.completionReplyEnabled)
-                        ? { model.replyToSession(session, text: $0) } : nil,
+                        ? { model.submitIslandKeyboardReply(for: session, text: $0) } : nil,
+                    onCancelReply: { model.cancelIslandKeyboardReply() },
                     contextUsage: model.contextUsageRegistry.usage(for: session.id),
                     planState: model.planModeRegistry.plan(for: session.id),
                     onTogglePlanStep: { stepID in
@@ -812,13 +815,16 @@ struct IslandPanelView: View {
                         session: session,
                         referenceDate: context.date,
                         isActionable: session.phase.requiresAttention || session.id == actionableSessionID,
+                        isKeyboardSelected: model.selectedSessionID == session.id,
+                        isKeyboardReplyFocused: model.keyboardReplySessionID == session.id,
                         useDrawingGroup: model.notchStatus == .opened,
                         isInteractive: model.notchStatus == .opened,
                         lang: model.lang,
                         onApprove: { model.approvePermission(for: session.id, action: $0) },
                         onAnswer: { model.answerQuestion(for: session.id, answer: $0) },
                         onReply: TerminalTextSender.canReply(to: session, enabled: model.completionReplyEnabled)
-                            ? { model.replyToSession(session, text: $0) } : nil,
+                            ? { model.submitIslandKeyboardReply(for: session, text: $0) } : nil,
+                        onCancelReply: { model.cancelIslandKeyboardReply() },
                         contextUsage: model.contextUsageRegistry.usage(for: session.id),
                         planState: model.planModeRegistry.plan(for: session.id),
                         onTogglePlanStep: { stepID in
@@ -1245,12 +1251,15 @@ private struct IslandSessionRow: View {
     let session: AgentSession
     let referenceDate: Date
     var isActionable: Bool = false
+    var isKeyboardSelected: Bool = false
+    var isKeyboardReplyFocused: Bool = false
     var useDrawingGroup: Bool = true
     var isInteractive: Bool = true
     var lang: LanguageManager = .shared
     var onApprove: ((ApprovalAction) -> Void)?
     var onAnswer: ((QuestionPromptResponse) -> Void)?
     var onReply: ((String) -> Void)?
+    var onCancelReply: (() -> Void)?
     var contextUsage: ContextUsage? = nil
     var planState: PlanState? = nil
     var onTogglePlanStep: ((String) -> Void)? = nil
@@ -1405,19 +1414,19 @@ private struct IslandSessionRow: View {
         }
         .background(
             RoundedRectangle(cornerRadius: isActionable ? 24 : 22, style: .continuous)
-                .fill(isHighlighted ? themePalette.text.swiftUIColor.opacity(isActionable ? 0.06 : 0.05) : themePalette.crust.swiftUIColor)
+                .fill(isVisuallySelected ? themePalette.text.swiftUIColor.opacity(isActionable ? 0.07 : 0.055) : themePalette.crust.swiftUIColor)
         )
         .overlay(
             RoundedRectangle(cornerRadius: isActionable ? 24 : 22, style: .continuous)
                 .strokeBorder(actionableBorderColor)
         )
         .compositingGroup()
-        .shadow(color: .black.opacity(0.24), radius: isHighlighted ? 8 : 0, y: isHighlighted ? 6 : 0)
+        .shadow(color: .black.opacity(0.24), radius: isVisuallySelected ? 8 : 0, y: isVisuallySelected ? 6 : 0)
         .overlay(
             Group {
                 if !isActionable {
                     Rectangle()
-                        .fill(Color.white.opacity(isHighlighted ? 0 : 0.02))
+                        .fill(Color.white.opacity(isVisuallySelected ? 0 : 0.02))
                         .frame(height: 1)
                 }
             },
@@ -1426,6 +1435,8 @@ private struct IslandSessionRow: View {
         .modifier(ConditionalDrawingGroup(enabled: useDrawingGroup && !isActionable))
         .contentShape(RoundedRectangle(cornerRadius: isActionable ? 24 : 22, style: .continuous))
         .animation(.easeInOut(duration: 0.15), value: isHighlighted)
+        .animation(.easeInOut(duration: 0.15), value: isKeyboardSelected)
+        .animation(.easeInOut(duration: 0.15), value: isKeyboardReplyFocused)
         .onTapGesture(perform: handlePrimaryTap)
         .onHover { hovering in
             guard isInteractive else { return }
@@ -1439,10 +1450,20 @@ private struct IslandSessionRow: View {
     }
 
     private var actionableBorderColor: Color {
+        if isKeyboardReplyFocused {
+            return themePalette.sky.swiftUIColor.opacity(0.66)
+        }
+        if isKeyboardSelected {
+            return themePalette.blue.swiftUIColor.opacity(0.52)
+        }
         if isActionable {
             return actionableStatusTint.opacity(isHighlighted ? 0.45 : 0.28)
         }
         return isHighlighted ? themePalette.text.swiftUIColor.opacity(0.24) : themePalette.text.swiftUIColor.opacity(0.04)
+    }
+
+    private var isVisuallySelected: Bool {
+        isHighlighted || isKeyboardSelected || isKeyboardReplyFocused
     }
 
     private var actionableStatusTint: Color {
@@ -1780,7 +1801,9 @@ private struct IslandSessionRow: View {
             ReplyTextField(
                 placeholder: lang.t("completion.replyPlaceholder"),
                 text: $replyText,
-                onSubmit: { submitReply() }
+                isFocused: isKeyboardReplyFocused,
+                onSubmit: { submitReply() },
+                onCancel: { onCancelReply?() }
             )
             .frame(height: 32)
 
@@ -1799,11 +1822,13 @@ private struct IslandSessionRow: View {
         .padding(.vertical, 10)
     }
 
-    private func submitReply() {
+    @discardableResult
+    private func submitReply() -> Bool {
         let text = replyText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+        guard !text.isEmpty else { return false }
         replyText = ""
         onReply?(text)
+        return true
     }
 
     // MARK: - Actionable helpers
@@ -2187,7 +2212,9 @@ private struct StructuredQuestionPromptView: View {
             onSubmit: {
                 if hasCompleteSelection {
                     onAnswer(QuestionPromptResponse(answers: answerMap))
+                    return true
                 }
+                return false
             }
         )
         .frame(height: 22)
@@ -2307,7 +2334,10 @@ private struct StructuredQuestionPromptView: View {
 private struct ReplyTextField: NSViewRepresentable {
     var placeholder: String
     @Binding var text: String
-    var onSubmit: () -> Void
+    var isFocused: Bool = false
+    var resignsOnSubmit: Bool = true
+    var onSubmit: () -> Bool
+    var onCancel: (() -> Void)?
 
     func makeNSView(context: Context) -> NSTextField {
         let field = NSTextField()
@@ -2334,19 +2364,39 @@ private struct ReplyTextField: NSViewRepresentable {
             nsView.stringValue = text
         }
         context.coordinator.onSubmit = onSubmit
+        context.coordinator.onCancel = onCancel
+        context.coordinator.resignsOnSubmit = resignsOnSubmit
+
+        if isFocused,
+           nsView.window?.firstResponder !== nsView.currentEditor() {
+            DispatchQueue.main.async { [weak nsView] in
+                guard let nsView else { return }
+                nsView.window?.makeFirstResponder(nsView)
+            }
+        }
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, onSubmit: onSubmit)
+        Coordinator(text: $text, onSubmit: onSubmit, onCancel: onCancel, resignsOnSubmit: resignsOnSubmit)
     }
 
+    @MainActor
     final class Coordinator: NSObject, NSTextFieldDelegate {
         var text: Binding<String>
-        var onSubmit: () -> Void
+        var onSubmit: () -> Bool
+        var onCancel: (() -> Void)?
+        var resignsOnSubmit: Bool
 
-        init(text: Binding<String>, onSubmit: @escaping () -> Void) {
+        init(
+            text: Binding<String>,
+            onSubmit: @escaping () -> Bool,
+            onCancel: (() -> Void)?,
+            resignsOnSubmit: Bool
+        ) {
             self.text = text
             self.onSubmit = onSubmit
+            self.onCancel = onCancel
+            self.resignsOnSubmit = resignsOnSubmit
         }
 
         func controlTextDidChange(_ obj: Notification) {
@@ -2359,10 +2409,29 @@ private struct ReplyTextField: NSViewRepresentable {
                 // Let AppKit handle Enter during IME composition (e.g. confirming
                 // a Chinese/Japanese candidate). Only submit when no marked text.
                 guard !textView.hasMarkedText() else { return false }
-                onSubmit()
+                if onSubmit(), resignsOnSubmit {
+                    restoreNotchKeyboardFocus(from: control)
+                }
+                return true
+            }
+            if commandSelector == #selector(NSResponder.cancelOperation(_:)) {
+                onCancel?()
+                restoreNotchKeyboardFocus(from: control)
                 return true
             }
             return false
+        }
+
+        private func restoreNotchKeyboardFocus(from control: NSControl) {
+            var view: NSView? = control
+            while let candidate = view {
+                if let restorer = candidate as? NotchKeyboardFocusRestoring {
+                    restorer.restoreNotchKeyboardFocus()
+                    return
+                }
+                view = candidate.superview
+            }
+            control.window?.makeFirstResponder(nil)
         }
     }
 }

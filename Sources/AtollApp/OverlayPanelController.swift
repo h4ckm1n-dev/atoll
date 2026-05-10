@@ -183,6 +183,7 @@ final class OverlayPanelController {
     private func presentPanel(_ panel: NSPanel, activates: Bool) {
         if activates {
             panel.makeKeyAndOrderFront(nil)
+            panel.makeFirstResponder(panel.contentView)
         } else {
             panel.orderFrontRegardless()
         }
@@ -725,11 +726,20 @@ private final class NotchPanel: NSPanel {
 
 // MARK: - NotchHostingView
 
-final class NotchHostingView<Content: View>: NSHostingView<Content> {
+@MainActor
+protocol NotchKeyboardFocusRestoring: AnyObject {
+    func restoreNotchKeyboardFocus()
+}
+
+final class NotchHostingView<Content: View>: NSHostingView<Content>, NotchKeyboardFocusRestoring {
     weak var notchController: OverlayPanelController?
 
     override var isOpaque: Bool {
         false
+    }
+
+    override var acceptsFirstResponder: Bool {
+        true
     }
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
@@ -742,7 +752,34 @@ final class NotchHostingView<Content: View>: NSHostingView<Content> {
         // SwiftUI Button may consume the first click for key acquisition
         // instead of firing its action.
         window?.makeKey()
+        window?.makeFirstResponder(self)
         super.mouseDown(with: event)
+    }
+
+    override func keyDown(with event: NSEvent) {
+        guard event.modifierFlags.intersection([.command, .option, .control]).isEmpty,
+              let model = notchController?.model,
+              model.notchStatus == .opened else {
+            super.keyDown(with: event)
+            return
+        }
+
+        switch event.keyCode {
+        case 123, 126:
+            model.selectAdjacentIslandSession(.previous)
+        case 124, 125:
+            model.selectAdjacentIslandSession(.next)
+        case 36, 76:
+            model.handleIslandKeyboardEnter()
+        case 53:
+            model.handleIslandKeyboardEscape()
+        default:
+            super.keyDown(with: event)
+        }
+    }
+
+    func restoreNotchKeyboardFocus() {
+        window?.makeFirstResponder(self)
     }
 
     required init(rootView: Content) {

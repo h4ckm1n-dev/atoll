@@ -34,6 +34,11 @@ public enum LiveCodingRedactor {
         )
         redacted = replace(
             in: redacted,
+            pattern: #"\b(?:ghp|gho|ghu|ghs|github_pat)_[A-Za-z0-9_]{20,}\b"#,
+            transform: { _ in "<secret>" }
+        )
+        redacted = replace(
+            in: redacted,
             pattern: #"\b[A-Fa-f0-9]{40,}\b"#,
             transform: { _ in "<secret>" }
         )
@@ -70,7 +75,7 @@ public enum LiveCodingRedactor {
         )
         redacted = replace(
             in: redacted,
-            pattern: #"(?<![:A-Za-z0-9_])/(?:[A-Za-z0-9._-]+/){1,}[A-Za-z0-9._-]+"#,
+            pattern: #"(?<![:/A-Za-z0-9_])/(?:[A-Za-z0-9._-]+/){1,}[A-Za-z0-9._-]+"#,
             transform: { match in summarizedPath(match.fullMatch, homeDirectory: normalizedHome) }
         )
         return redacted

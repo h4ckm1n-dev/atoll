@@ -2684,21 +2684,21 @@ struct MenuBarContentView: View {
 
             if let session = model.focusedSession {
                 Divider()
-                Text(session.title)
+                Text(streamSafe(session.title))
                     .font(.subheadline.weight(.semibold))
-                Text(session.spotlightPrimaryText)
+                Text(streamSafe(session.spotlightPrimaryText))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 if let currentTool = session.spotlightCurrentToolLabel {
-                    Text(model.lang.t("menu.liveTool", currentTool))
+                    Text(model.lang.t("menu.liveTool", streamSafe(currentTool)))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
 
                 if let trackingLabel = session.spotlightTrackingLabel {
-                    Text(model.lang.t("menu.tracking", trackingLabel))
+                    Text(model.lang.t("menu.tracking", streamSafe(trackingLabel)))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -2706,6 +2706,10 @@ struct MenuBarContentView: View {
         }
         .padding(16)
         .frame(width: 280)
+    }
+
+    private func streamSafe(_ text: String) -> String {
+        model.liveCodingModeEnabled ? LiveCodingRedactor.redact(text) : text
     }
 }
 

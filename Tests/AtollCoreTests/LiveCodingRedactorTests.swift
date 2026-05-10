@@ -28,11 +28,11 @@ struct LiveCodingRedactorTests {
 
     @Test
     func redactsCommonSecretShapes() {
-        let input = "OPENAI_API_KEY=sk-1234567890abcdefghijklmnop Authorization: Bearer abc.def.ghi"
+        let input = "OPENAI_API_KEY=sk-1234567890abcdefghijklmnop Authorization: Bearer abc.def.ghi ghp_abcdefghijklmnopqrstuvwxyz"
 
         let output = LiveCodingRedactor.redact(input)
 
-        #expect(output == "OPENAI_API_KEY=<redacted> Authorization: Bearer <redacted>")
+        #expect(output == "OPENAI_API_KEY=<redacted> Authorization: Bearer <redacted> <secret>")
     }
 
     @Test
@@ -46,7 +46,7 @@ struct LiveCodingRedactorTests {
 
     @Test
     func leavesOrdinaryStatusTextReadable() {
-        let input = "Patch applied. Running tests now."
+        let input = "Patch applied. Running tests now. See https://example.com/docs/path."
 
         let output = LiveCodingRedactor.redact(input)
 

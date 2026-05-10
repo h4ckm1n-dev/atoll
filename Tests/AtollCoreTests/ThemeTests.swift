@@ -129,12 +129,36 @@ struct ThemeTests {
     @Test
     func darkFlavorsHaveDarkBase() {
         // Inverse contract for the dark flavors — base must be dark.
-        for theme in [AppTheme.frappe, .macchiato, .mocha] {
+        for theme in [
+            AppTheme.frappe,
+            .macchiato,
+            .mocha,
+            .tokyoNight,
+            .dracula,
+            .gruvboxDark,
+            .nord,
+            .oneDark,
+            .solarizedDark,
+        ] {
             let p = theme.builtInPalette ?? .mocha
             let baseLuma = relativeLuminance(p.base)
             #expect(baseLuma < 0.20,
                     "\(theme).base luma (\(baseLuma)) must be < 0.20 — dark base")
         }
+    }
+
+    @Test
+    func builtInThemesIncludeCatppuccinAndClassicDarkPresets() {
+        #expect(AppTheme.builtIn.contains(.latte))
+        #expect(AppTheme.builtIn.contains(.frappe))
+        #expect(AppTheme.builtIn.contains(.macchiato))
+        #expect(AppTheme.builtIn.contains(.mocha))
+        #expect(AppTheme.builtIn.contains(.tokyoNight))
+        #expect(AppTheme.builtIn.contains(.dracula))
+        #expect(AppTheme.builtIn.contains(.gruvboxDark))
+        #expect(AppTheme.builtIn.contains(.nord))
+        #expect(AppTheme.builtIn.contains(.oneDark))
+        #expect(AppTheme.builtIn.contains(.solarizedDark))
     }
 
     // MARK: - Phase 3C: Hex validation + ProjectColor round-trip

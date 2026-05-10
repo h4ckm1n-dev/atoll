@@ -43,7 +43,7 @@ The name comes from the geometry: a thin ring of land around a calm lagoon — e
 - **Local-first.** No server. No telemetry. No account. Everything runs on your Mac.
 - **Native macOS.** SwiftUI + AppKit. Not an Electron wrapper. Not a Rust-cross-platform thing. Built like a Mac app.
 - **Eleven coding agents** out of the box, with the same surface for all of them. Drop a hook in, sessions show up.
-- **Five Catppuccin themes** + custom theme registry + in-app 26-picker editor with live preview. The whole panel retints, including the inline-diff syntax colors.
+- **Catppuccin + classic dark themes** + custom theme registry + in-app 26-picker editor with live preview. The whole panel retints, including the inline-diff syntax colors.
 - **Real diff previews** in approval cards. Plan-mode checklists. Frosted-glass panel option. Jump back to the exact terminal pane in one click.
 - **Open source, GPL v3.** Fork it, mod it, ship your own.
 
@@ -83,9 +83,9 @@ The name comes from the geometry: a thin ring of land around a calm lagoon — e
 
 ## Features
 
-### 🎨 Catppuccin theming, end-to-end
+### 🎨 Themes, end-to-end
 
-Five flavors out of the box (System, Latte, Frappé, Macchiato, Mocha — Mocha tinted toward deeper blue-teal than canonical Catppuccin). Switch live in **Settings → Appearance**: the panel surface, agent indicators, attention badges, plan checklists, prompt cards, Yes/No/Always Allow buttons, **and the inline-diff syntax-highlight colors** all retint instantly.
+Catppuccin stays available out of the box (System, Latte, Frappé, Macchiato, Mocha — Mocha tinted toward deeper blue-teal than canonical Catppuccin), alongside Tokyo Night, Dracula, Gruvbox Dark, Nord, One Dark, and Solarized Dark. Switch live in **Settings → Appearance**: the panel surface, agent indicators, attention badges, plan checklists, prompt cards, Yes/No/Always Allow buttons, **and the inline-diff syntax-highlight colors** all retint instantly.
 
 Want your own theme? Author the JSON in any text editor and import it. Or open the **in-app 26-picker editor** (Surfaces / Foregrounds / Accents disclosure groups), drag a color picker, and watch the actual island retint in real time. Save, export to JSON, share with friends.
 
@@ -174,7 +174,7 @@ Reply-from-notch into [cmux](https://github.com/saghul/cmux) sessions without a 
 | Notification sounds | Configurable system sounds, mute toggle |
 | Inline diff preview | Myers diff + lightweight syntax highlighting in approval cards |
 | Plan mode | Pre-approval review + post-approval interactive checklist |
-| Catppuccin themes | System / Latte / Frappé / Macchiato / Mocha (Mocha tinted blue-teal) |
+| Built-in themes | System / Catppuccin / Tokyo Night / Dracula / Gruvbox Dark / Nord / One Dark / Solarized Dark |
 | Custom themes | JSON import/export + 26-picker in-app editor with live preview |
 | Frosted panel | Three-way Solid / Frosted (thin) / Frosted (ultra-thin) picker |
 | Project colors | Hash-derived per-project tint with override picker |

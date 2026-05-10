@@ -6,6 +6,12 @@ public enum AppTheme: Sendable, Hashable {
     case frappe
     case macchiato
     case mocha
+    case tokyoNight
+    case dracula
+    case gruvboxDark
+    case nord
+    case oneDark
+    case solarizedDark
     /// Custom theme stored in `CustomThemeRegistry`. The `id` resolves
     /// to a `CustomTheme` whose palette is rendered. If the id is
     /// missing from the registry (file deleted out-of-band), the
@@ -14,7 +20,19 @@ public enum AppTheme: Sendable, Hashable {
 
     /// Built-in flavors that ship with the app. Custom themes are not
     /// listed here — they're enumerated separately via the registry.
-    public static let builtIn: [AppTheme] = [.system, .latte, .frappe, .macchiato, .mocha]
+    public static let builtIn: [AppTheme] = [
+        .system,
+        .latte,
+        .frappe,
+        .macchiato,
+        .mocha,
+        .tokyoNight,
+        .dracula,
+        .gruvboxDark,
+        .nord,
+        .oneDark,
+        .solarizedDark,
+    ]
 
     public var displayName: String {
         switch self {
@@ -23,6 +41,12 @@ public enum AppTheme: Sendable, Hashable {
         case .frappe:    return "Catppuccin Frappé"
         case .macchiato: return "Catppuccin Macchiato"
         case .mocha:     return "Catppuccin Mocha"
+        case .tokyoNight: return "Tokyo Night"
+        case .dracula: return "Dracula"
+        case .gruvboxDark: return "Gruvbox Dark"
+        case .nord: return "Nord"
+        case .oneDark: return "One Dark"
+        case .solarizedDark: return "Solarized Dark"
         case .custom:    return "Custom"  // overridden at the call site with the CustomTheme.displayName
         }
     }
@@ -36,6 +60,12 @@ public enum AppTheme: Sendable, Hashable {
         case .frappe:    return "frappe"
         case .macchiato: return "macchiato"
         case .mocha:     return "mocha"
+        case .tokyoNight: return "tokyoNight"
+        case .dracula: return "dracula"
+        case .gruvboxDark: return "gruvboxDark"
+        case .nord: return "nord"
+        case .oneDark: return "oneDark"
+        case .solarizedDark: return "solarizedDark"
         case .custom(let id): return "custom:\(id.uuidString)"
         }
     }
@@ -49,6 +79,12 @@ public enum AppTheme: Sendable, Hashable {
         case "frappe":    self = .frappe
         case "macchiato": self = .macchiato
         case "mocha":     self = .mocha
+        case "tokyoNight": self = .tokyoNight
+        case "dracula": self = .dracula
+        case "gruvboxDark": self = .gruvboxDark
+        case "nord": self = .nord
+        case "oneDark": self = .oneDark
+        case "solarizedDark": self = .solarizedDark
         // Backwards-compat with old persisted strings from before
         // the Atoll rebrand.
         case "catppuccinLatte":     self = .latte
@@ -87,6 +123,12 @@ extension AppTheme: Codable {
         case "frappe":    self = .frappe
         case "macchiato": self = .macchiato
         case "mocha":     self = .mocha
+        case "tokyoNight": self = .tokyoNight
+        case "dracula": self = .dracula
+        case "gruvboxDark": self = .gruvboxDark
+        case "nord": self = .nord
+        case "oneDark": self = .oneDark
+        case "solarizedDark": self = .solarizedDark
         case "custom":
             self = .custom(id: try c.decode(UUID.self, forKey: .id))
         default:
@@ -105,6 +147,12 @@ extension AppTheme: Codable {
         case .frappe:    try c.encode("frappe",    forKey: .kind)
         case .macchiato: try c.encode("macchiato", forKey: .kind)
         case .mocha:     try c.encode("mocha",     forKey: .kind)
+        case .tokyoNight: try c.encode("tokyoNight", forKey: .kind)
+        case .dracula: try c.encode("dracula", forKey: .kind)
+        case .gruvboxDark: try c.encode("gruvboxDark", forKey: .kind)
+        case .nord: try c.encode("nord", forKey: .kind)
+        case .oneDark: try c.encode("oneDark", forKey: .kind)
+        case .solarizedDark: try c.encode("solarizedDark", forKey: .kind)
         case .custom(let id):
             try c.encode("custom", forKey: .kind)
             try c.encode(id, forKey: .id)
@@ -194,6 +242,54 @@ public struct ThemePalette: Equatable, Sendable {
         "1e66f5", "7287fd",
     ], isLight: true)
 
+    public static let tokyoNight = ThemePalette.from(hex: [
+        "1a1b26", "16161e", "0f1018", "24283b", "414868", "565f89",
+        "c0caf5", "a9b1d6", "9aa5ce", "737aa2", "565f89", "414868",
+        "ff9e64", "f7768e", "bb9af7", "9d7cd8", "f7768e", "db4b4b",
+        "ff9e64", "e0af68", "9ece6a", "73daca", "7dcfff", "2ac3de",
+        "7aa2f7", "b4f9f8",
+    ], isLight: false)
+
+    public static let dracula = ThemePalette.from(hex: [
+        "282a36", "21222c", "191a21", "343746", "44475a", "6272a4",
+        "f8f8f2", "e9e9f4", "d6d6e0", "bfbfd0", "a5a5b8", "8b8b9e",
+        "f1fa8c", "ffb86c", "ff79c6", "bd93f9", "ff5555", "ff6e6e",
+        "ffb86c", "f1fa8c", "50fa7b", "8be9fd", "8be9fd", "6272a4",
+        "8be9fd", "bd93f9",
+    ], isLight: false)
+
+    public static let gruvboxDark = ThemePalette.from(hex: [
+        "282828", "1d2021", "141617", "3c3836", "504945", "665c54",
+        "ebdbb2", "d5c4a1", "bdae93", "a89984", "928374", "7c6f64",
+        "d3869b", "fb4934", "d3869b", "b16286", "fb4934", "cc241d",
+        "fe8019", "fabd2f", "b8bb26", "8ec07c", "83a598", "458588",
+        "83a598", "b16286",
+    ], isLight: false)
+
+    public static let nord = ThemePalette.from(hex: [
+        "2e3440", "242933", "191d26", "3b4252", "434c5e", "4c566a",
+        "eceff4", "e5e9f0", "d8dee9", "aeb7c5", "8f9bad", "6d7a8d",
+        "d8dee9", "ebc2c7", "b48ead", "b48ead", "bf616a", "d08770",
+        "d08770", "ebcb8b", "a3be8c", "8fbcbb", "88c0d0", "81a1c1",
+        "5e81ac", "b48ead",
+    ], isLight: false)
+
+    public static let oneDark = ThemePalette.from(hex: [
+        "282c34", "21252b", "1b1e23", "2c313a", "3a3f4b", "4b5263",
+        "abb2bf", "9aa3b5", "8b93a5", "7f8494", "6f7685", "5c6370",
+        "e5c07b", "e06c75", "c678dd", "c678dd", "e06c75", "be5046",
+        "d19a66", "e5c07b", "98c379", "56b6c2", "56b6c2", "61afef",
+        "61afef", "c678dd",
+    ], isLight: false)
+
+    public static let solarizedDark = ThemePalette.from(hex: [
+        "002b36", "073642", "001f27", "0b3a46", "174652", "28535f",
+        "839496", "93a1a1", "657b83", "586e75", "4f6268", "40555c",
+        "cb4b16", "dc322f", "d33682", "6c71c4", "dc322f", "cb4b16",
+        "cb4b16", "b58900", "859900", "2aa198", "268bd2", "268bd2",
+        "268bd2", "6c71c4",
+    ], isLight: false)
+
     /// Pre-theme look: rough approximation of the existing palette so
     /// users picking `.system` keep what they had before this rebrand.
     /// Built from the hex values that previously appeared in the views.
@@ -236,6 +332,12 @@ extension AppTheme {
         case .frappe:    return .frappe
         case .macchiato: return .macchiato
         case .mocha:     return .mocha
+        case .tokyoNight: return .tokyoNight
+        case .dracula: return .dracula
+        case .gruvboxDark: return .gruvboxDark
+        case .nord: return .nord
+        case .oneDark: return .oneDark
+        case .solarizedDark: return .solarizedDark
         case .custom:    return nil
         }
     }

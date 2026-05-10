@@ -21,6 +21,10 @@ public final class WatchNotificationRelay: @unchecked Sendable {
     /// Provider for looking up session by ID (needed to map requestID → sessionID).
     public var sessionLookup: (@Sendable (_ requestID: String) -> (sessionID: String, kind: PendingRequestKind)?)?
 
+    /// Presentation-only filter for text sent to companion notification surfaces.
+    /// Defaults to identity so stored events and local session state remain unchanged.
+    public var visibleTextRedactor: @Sendable (String) -> String = { $0 }
+
     public enum PendingRequestKind: Sendable {
         case permission
         case question
@@ -49,9 +53,9 @@ public final class WatchNotificationRelay: @unchecked Sendable {
             let sseEvent = WatchSSEEvent.permissionRequested(WatchPermissionEvent(
                 sessionID: payload.sessionID,
                 agentTool: session.tool.displayName,
-                title: payload.request.title,
-                summary: payload.request.summary,
-                workingDirectory: session.jumpTarget?.workingDirectory,
+                title: visibleTextRedactor(payload.request.title),
+                summary: visibleTextRedactor(payload.request.summary),
+                workingDirectory: session.jumpTarget?.workingDirectory.map(visibleTextRedactor),
                 primaryAction: payload.request.primaryActionTitle,
                 secondaryAction: payload.request.secondaryActionTitle,
                 requestID: requestID,
@@ -68,8 +72,8 @@ public final class WatchNotificationRelay: @unchecked Sendable {
             let sseEvent = WatchSSEEvent.questionAsked(WatchQuestionEvent(
                 sessionID: payload.sessionID,
                 agentTool: session.tool.displayName,
-                title: payload.prompt.title,
-                options: payload.prompt.options,
+                title: visibleTextRedactor(payload.prompt.title),
+                options: payload.prompt.options.map(visibleTextRedactor),
                 requestID: requestID,
                 challenge: WatchHTTPEndpoint.generateChallenge()
             ))
@@ -81,7 +85,7 @@ public final class WatchNotificationRelay: @unchecked Sendable {
             let sseEvent = WatchSSEEvent.sessionCompleted(WatchCompletionEvent(
                 sessionID: payload.sessionID,
                 agentTool: session.tool.displayName,
-                summary: payload.summary
+                summary: visibleTextRedactor(payload.summary)
             ))
             endpoint.pushEvent(sseEvent)
             Self.logger.debug("Pushed sessionCompleted for session \(payload.sessionID, privacy: .private)")

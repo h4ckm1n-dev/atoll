@@ -28,6 +28,7 @@
 "settings.general.suppressFrontmostNotifications" = "Suppress notifications for focused sessions";
 "settings.general.showCodexUsage" = "Show Codex usage";
 "settings.general.completionReply" = "Reply to sessions from the notch";
+"settings.general.liveCodingMode" = "Live Coding Mode";
 "settings.general.cliHooks" = "CLI Hooks";
 "settings.general.activated" = "Activated";
 "settings.general.install" = "Install";
@@ -173,6 +174,10 @@
 "completion.done" = "Done";
 "completion.replyPlaceholder" = "Reply to Claude…";
 
+/* Island Panel - Live Coding */
+"liveCoding.diffHidden" = "Diff hidden for Live Coding Mode";
+"liveCoding.diffSummary" = "%lld additions · %lld removals";
+
 /* Menu Bar */
 "menu.status" = "%lld live · %lld attention";
 "menu.settings" = "Settings…";
@@ -280,4 +285,3 @@
 "theme.editor.foregrounds" = "Foregrounds";
 "theme.editor.accents" = "Accents";
 "theme.editor.resetToBase" = "Reset to base";
-

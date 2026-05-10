@@ -535,7 +535,7 @@ struct IslandPanelView: View {
                         .overlay(
                             CentralActivityLabel(
                                 toolName: closedSpotlightSession?.currentToolName,
-                                preview: closedSpotlightSession?.currentCommandPreviewText,
+                                preview: streamSafeOptional(closedSpotlightSession?.currentCommandPreviewText),
                                 isVisible: isExternalDisplayPlacement && hasClosedPresence
                             )
                         )
@@ -789,6 +789,7 @@ struct IslandPanelView: View {
                         model.planModeRegistry.toggleCheck(sessionID: session.id, stepID: stepID)
                     },
                     themePalette: model.themeManager.palette,
+                    streamSafeTextEnabled: model.liveCodingModeEnabled,
                     onJump: { model.jumpToSession(session) }
                 )
 
@@ -819,11 +820,12 @@ struct IslandPanelView: View {
                         onReply: TerminalTextSender.canReply(to: session, enabled: model.completionReplyEnabled)
                             ? { model.replyToSession(session, text: $0) } : nil,
                         contextUsage: model.contextUsageRegistry.usage(for: session.id),
-                    planState: model.planModeRegistry.plan(for: session.id),
-                    onTogglePlanStep: { stepID in
-                        model.planModeRegistry.toggleCheck(sessionID: session.id, stepID: stepID)
-                    },
-                    themePalette: model.themeManager.palette,
+                        planState: model.planModeRegistry.plan(for: session.id),
+                        onTogglePlanStep: { stepID in
+                            model.planModeRegistry.toggleCheck(sessionID: session.id, stepID: stepID)
+                        },
+                        themePalette: model.themeManager.palette,
+                        streamSafeTextEnabled: model.liveCodingModeEnabled,
                         onJump: { model.jumpToSession(session) },
                         onDismiss: session.isRemote ? { model.dismissSession(session.id) } : nil
                     )
@@ -840,6 +842,11 @@ struct IslandPanelView: View {
 
     private func phaseColor(_ phase: SessionPhase) -> Color {
         model.statusColor(for: phase)
+    }
+
+    private func streamSafeOptional(_ text: String?) -> String? {
+        guard let text else { return nil }
+        return model.liveCodingModeEnabled ? LiveCodingRedactor.redact(text) : text
     }
 
     @ViewBuilder
@@ -1248,6 +1255,7 @@ private struct IslandSessionRow: View {
     var planState: PlanState? = nil
     var onTogglePlanStep: ((String) -> Void)? = nil
     var themePalette: ThemePalette = .mocha
+    var streamSafeTextEnabled: Bool = false
     @State private var planExpanded: Bool = false
     let onJump: () -> Void
     var onDismiss: (() -> Void)?
@@ -1270,7 +1278,7 @@ private struct IslandSessionRow: View {
 
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top, spacing: 12) {
-                        Text(session.spotlightHeadlineText)
+                        Text(streamSafe(session.spotlightHeadlineText))
                             .font(.system(size: isActionable ? 15 : 14, weight: .semibold))
                             .foregroundStyle(headlineColor(for: presence))
                             .lineLimit(1)
@@ -1299,7 +1307,7 @@ private struct IslandSessionRow: View {
 
                     if showsExpandedContent || isActionable,
                        let promptLine = session.spotlightPromptLineText ?? expandedPromptLineText {
-                        Text(promptLine)
+                        Text(streamSafe(promptLine))
                             .font(.system(size: 11.5, weight: .medium))
                             .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.62))
                             .lineLimit(1)
@@ -1307,14 +1315,14 @@ private struct IslandSessionRow: View {
 
                     if showsExpandedContent || isActionable,
                        let activityLine = session.spotlightActivityLineText ?? expandedActivityLineText {
-                        Text(activityLine)
+                        Text(streamSafe(activityLine))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(activityColor(for: presence).opacity(0.94))
                             .lineLimit(1)
                     }
 
                     if let planState, session.phase != .waitingForApproval {
-                        planDisclosure(state: planState)
+                        planDisclosure(state: streamSafe(planState))
                     }
 
                     if showsExpandedContent,
@@ -1336,12 +1344,12 @@ private struct IslandSessionRow: View {
                                             ? themePalette.green.swiftUIColor
                                             : themePalette.blue.swiftUIColor)
                                         .frame(width: 6, height: 6)
-                                    Text(sub.agentType ?? sub.agentID)
+                                    Text(streamSafe(sub.agentType ?? sub.agentID))
                                         .font(.system(size: 11, weight: .medium))
                                         .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.8))
                                         .lineLimit(1)
                                     if let desc = sub.taskDescription {
-                                        Text("(\(desc))")
+                                        Text("(\(streamSafe(desc)))")
                                             .font(.system(size: 10.5))
                                             .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.5))
                                             .lineLimit(1)
@@ -1373,7 +1381,7 @@ private struct IslandSessionRow: View {
                             ForEach(tasks) { task in
                                 HStack(spacing: 5) {
                                     taskStatusIcon(task.status)
-                                    Text(task.title)
+                                    Text(streamSafe(task.title))
                                         .font(.system(size: 10.5, weight: .medium))
                                         .foregroundStyle(task.status == .completed
                                             ? themePalette.text.swiftUIColor.opacity(0.4)
@@ -1578,19 +1586,23 @@ private struct IslandSessionRow: View {
             }
 
             if let planState = approvalPlanState {
-                planApprovalBody(planState)
+                planApprovalBody(streamSafe(planState))
             } else if let toolDiff = approvalToolDiff {
-                InlineDiffView(diff: toolDiff, palette: themePalette)
+                if streamSafeTextEnabled {
+                    LiveCodingDiffSummaryView(diff: streamSafe(toolDiff), palette: themePalette, lang: lang)
+                } else {
+                    InlineDiffView(diff: toolDiff, palette: themePalette)
+                }
             } else {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(commandPreviewText)
+                    Text(streamSafe(commandPreviewText))
                         .font(.system(size: 13, weight: .semibold, design: .monospaced))
                         .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.9))
                         .fixedSize(horizontal: false, vertical: true)
 
                     if let path = session.permissionRequest?.affectedPath.trimmedForNotificationCard,
                        !path.isEmpty {
-                        Text(path)
+                        Text(streamSafe(path))
                             .font(.system(size: 11, weight: .medium))
                             .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.42))
                             .lineLimit(1)
@@ -1675,6 +1687,7 @@ private struct IslandSessionRow: View {
                 prompt: session.questionPrompt,
                 lang: lang,
                 palette: themePalette,
+                streamSafeTextEnabled: streamSafeTextEnabled,
                 onAnswer: { onAnswer?($0) }
             )
 
@@ -1715,7 +1728,7 @@ private struct IslandSessionRow: View {
     private var completionActionBody: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
-                Text(completionPromptLabel)
+                Text(streamSafe(completionPromptLabel))
                     .font(.system(size: 12.5, weight: .semibold))
                     .foregroundStyle(themePalette.text.swiftUIColor.opacity(0.8))
                     .lineLimit(2)
@@ -1735,7 +1748,7 @@ private struct IslandSessionRow: View {
                 .frame(height: 1)
 
             AutoHeightScrollView(maxHeight: 260) {
-                Markdown(completionMessageText)
+                Markdown(streamSafe(completionMessageText))
                     .markdownTheme(.completionCard(themePalette))
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                     .padding(.horizontal, 14)
@@ -1827,6 +1840,46 @@ private struct IslandSessionRow: View {
             return "$ \(preview)"
         }
         return session.permissionRequest?.summary.trimmedForNotificationCard ?? session.summary.trimmedForNotificationCard
+    }
+
+    private func streamSafe(_ text: String) -> String {
+        streamSafeTextEnabled ? LiveCodingRedactor.redact(text) : text
+    }
+
+    private func streamSafe(_ diff: ToolDiff) -> ToolDiff {
+        guard streamSafeTextEnabled else { return diff }
+        return ToolDiff(
+            filePath: LiveCodingRedactor.redact(diff.filePath),
+            lines: diff.lines.map { line in
+                switch line {
+                case let .context(text):
+                    return .context(LiveCodingRedactor.redact(text))
+                case let .add(text):
+                    return .add(LiveCodingRedactor.redact(text))
+                case let .remove(text):
+                    return .remove(LiveCodingRedactor.redact(text))
+                }
+            },
+            additionCount: diff.additionCount,
+            removalCount: diff.removalCount,
+            truncated: diff.truncated
+        )
+    }
+
+    private func streamSafe(_ state: PlanState) -> PlanState {
+        guard streamSafeTextEnabled else { return state }
+        return PlanState(
+            steps: state.steps.map { step in
+                PlanStep(
+                    id: step.id,
+                    title: LiveCodingRedactor.redact(step.title),
+                    depth: step.depth
+                )
+            },
+            checkedIDs: state.checkedIDs,
+            capturedAt: state.capturedAt,
+            rawMarkdown: LiveCodingRedactor.redact(state.rawMarkdown)
+        )
     }
 
 
@@ -1959,10 +2012,50 @@ private struct IslandSessionRow: View {
     }
 }
 
+private struct LiveCodingDiffSummaryView: View {
+    let diff: ToolDiff
+    var palette: ThemePalette
+    var lang: LanguageManager = .shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "eye.slash.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(palette.role(.attention).swiftUIColor)
+                Text(lang.t("liveCoding.diffHidden"))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.86))
+            }
+
+            Text(diff.filePath)
+                .font(.system(size: 11.5, weight: .medium, design: .monospaced))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.6))
+                .lineLimit(1)
+
+            Text(lang.t("liveCoding.diffSummary", diff.additionCount, diff.removalCount))
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(0.62))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(palette.surface0.swiftUIColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(palette.role(.attention).swiftUIColor.opacity(0.18))
+        )
+    }
+}
+
 private struct StructuredQuestionPromptView: View {
     let prompt: QuestionPrompt?
     var lang: LanguageManager = .shared
     var palette: ThemePalette? = nil
+    var streamSafeTextEnabled: Bool = false
     let onAnswer: (QuestionPromptResponse) -> Void
 
     @State private var selections: [String: Set<String>] = [:]
@@ -1971,7 +2064,7 @@ private struct StructuredQuestionPromptView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if showsPromptTitle {
-                Text(promptTitle)
+                Text(streamSafe(promptTitle))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle((palette ?? .mocha).role(.question).swiftUIColor.opacity(0.96))
                     .fixedSize(horizontal: false, vertical: true)
@@ -2011,12 +2104,12 @@ private struct StructuredQuestionPromptView: View {
     private func questionRow(_ question: QuestionPromptItem) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             if structuredQuestions.count > 1 {
-                Text(question.header)
+                Text(streamSafe(question.header))
                     .font(.system(size: 10, weight: .bold))
                     .foregroundStyle((palette ?? .mocha).text.swiftUIColor.opacity(0.5))
             }
 
-            Text(question.question)
+            Text(streamSafe(question.question))
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle((palette ?? .mocha).text.swiftUIColor.opacity(0.88))
                 .fixedSize(horizontal: false, vertical: true)
@@ -2046,12 +2139,12 @@ private struct StructuredQuestionPromptView: View {
                         .foregroundStyle(isSelected ? (palette ?? .mocha).role(.question).swiftUIColor : (palette ?? .mocha).text.swiftUIColor.opacity(0.35))
 
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(option.label)
+                        Text(streamSafe(option.label))
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle((palette ?? .mocha).text.swiftUIColor.opacity(isSelected ? 1 : 0.78))
 
                         if !option.description.isEmpty {
-                            Text(option.description)
+                            Text(streamSafe(option.description))
                                 .font(.system(size: 10.5))
                                 .foregroundStyle((palette ?? .mocha).text.swiftUIColor.opacity(0.4))
                                 .lineLimit(1)
@@ -2199,6 +2292,10 @@ private struct StructuredQuestionPromptView: View {
         }
 
         selections[question.question] = selected
+    }
+
+    private func streamSafe(_ text: String) -> String {
+        streamSafeTextEnabled ? LiveCodingRedactor.redact(text) : text
     }
 }
 

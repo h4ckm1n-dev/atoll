@@ -24,6 +24,7 @@ final class AppModel {
     private static let islandStatusColorsDefaultsKey = "appearance.island.statusColors"
     private static let showCodexUsageDefaultsKey = "app.showCodexUsage"
     private static let completionReplyEnabledDefaultsKey = "feature.completionReply.enabled"
+    private static let liveCodingModeEnabledDefaultsKey = "feature.liveCodingMode.enabled"
     private static let suppressFrontmostNotificationsDefaultsKey = "app.suppressFrontmostNotifications"
     private static let celebrationsEnabledDefaultsKey = "appearance.celebrations.enabled"
 
@@ -262,6 +263,14 @@ final class AppModel {
         didSet {
             guard hasFinishedInit, completionReplyEnabled != oldValue else { return }
             UserDefaults.standard.set(completionReplyEnabled, forKey: Self.completionReplyEnabledDefaultsKey)
+            refreshOverlayPlacementIfVisible()
+        }
+    }
+    var liveCodingModeEnabled: Bool = false {
+        didSet {
+            guard hasFinishedInit, liveCodingModeEnabled != oldValue else { return }
+            UserDefaults.standard.set(liveCodingModeEnabled, forKey: Self.liveCodingModeEnabledDefaultsKey)
+            updateWatchRelayRedactor()
             refreshOverlayPlacementIfVisible()
         }
     }
@@ -548,6 +557,7 @@ final class AppModel {
         guard watchRelay == nil else { return }
         let relay = WatchNotificationRelay()
         setupWatchRelayCallbacks(relay)
+        configureWatchRelayRedactor(relay)
         relay.start()
         self.watchRelay = relay
     }
@@ -581,6 +591,19 @@ final class AppModel {
     private func stopWatchRelay() {
         watchRelay?.stop()
         watchRelay = nil
+    }
+
+    private func updateWatchRelayRedactor() {
+        guard let watchRelay else { return }
+        configureWatchRelayRedactor(watchRelay)
+    }
+
+    private func configureWatchRelayRedactor(_ relay: WatchNotificationRelay) {
+        if liveCodingModeEnabled {
+            relay.visibleTextRedactor = { text in LiveCodingRedactor.redact(text) }
+        } else {
+            relay.visibleTextRedactor = { text in text }
+        }
     }
 
     var ignoresPointerExitDuringHarness = false
@@ -632,6 +655,7 @@ final class AppModel {
             Self.showDockIconDefaultsKey: true,
             Self.hapticFeedbackEnabledDefaultsKey: false,
             Self.completionReplyEnabledDefaultsKey: false,
+            Self.liveCodingModeEnabledDefaultsKey: false,
             Self.suppressFrontmostNotificationsDefaultsKey: true,
             Self.celebrationsEnabledDefaultsKey: true,
         ])
@@ -648,6 +672,7 @@ final class AppModel {
             )
         }
         completionReplyEnabled = UserDefaults.standard.bool(forKey: Self.completionReplyEnabledDefaultsKey)
+        liveCodingModeEnabled = UserDefaults.standard.bool(forKey: Self.liveCodingModeEnabledDefaultsKey)
         launchAtLoginEnabled = LaunchAtLoginService.shared.isEnabled
         islandClosedDisplayStyle = IslandClosedDisplayStyle(
             rawValue: UserDefaults.standard.string(forKey: Self.islandClosedDisplayStyleDefaultsKey) ?? ""

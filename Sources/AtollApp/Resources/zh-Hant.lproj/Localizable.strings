@@ -28,6 +28,7 @@
 "settings.general.suppressFrontmostNotifications" = "前台工作階段不彈出通知";
 "settings.general.showCodexUsage" = "顯示 Codex 用量";
 "settings.general.completionReply" = "在通知島中回覆工作階段";
+"settings.general.liveCodingMode" = "直播程式模式";
 "settings.general.cliHooks" = "CLI Hooks";
 "settings.general.activated" = "已啟用";
 "settings.general.install" = "安裝";
@@ -172,6 +173,10 @@
 "completion.done" = "完成";
 "completion.replyPlaceholder" = "回覆 Claude…";
 
+/* Island Panel - Live Coding */
+"liveCoding.diffHidden" = "直播程式模式已隱藏差異內容";
+"liveCoding.diffSummary" = "%lld 處新增 · %lld 處刪除";
+
 /* Menu Bar */
 "menu.status" = "%lld 活躍 · %lld 待處理";
 "menu.settings" = "設定…";
@@ -282,4 +287,3 @@
 "theme.editor.foregrounds" = "前景色";
 "theme.editor.accents" = "強調色";
 "theme.editor.resetToBase" = "還原基礎色";
-

@@ -19,7 +19,7 @@ jobs:
     runs-on: macos-26
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Show Swift Version
         run: swift --version
@@ -35,7 +35,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           # Full history so package-app.sh's `git rev-list --count HEAD`
           # build number is stable across CI runs.
@@ -60,7 +60,7 @@ jobs:
         run: ls -lh output/package/
 
       - name: Upload Atoll.dmg artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Atoll-${{ github.sha }}-dmg
           path: output/package/Atoll.dmg
@@ -68,7 +68,7 @@ jobs:
           if-no-files-found: error
 
       - name: Upload Atoll.zip artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Atoll-${{ github.sha }}-zip
           path: output/package/Atoll.zip

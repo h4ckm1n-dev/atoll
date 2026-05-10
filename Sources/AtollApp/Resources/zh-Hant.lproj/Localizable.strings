@@ -197,6 +197,17 @@
 "menu.liveTool" = "目前工具: %@";
 "menu.tracking" = "追蹤: %@";
 
+/* Approval Cockpit */
+"cockpit.title" = "核准駕駛艙";
+"cockpit.pending" = "%lld 個待處理";
+"cockpit.empty" = "沒有待處理操作";
+"cockpit.more" = "+%lld 個更多";
+"cockpit.open" = "開啟";
+"cockpit.jump" = "跳轉";
+"cockpit.allow" = "允許";
+"cockpit.deny" = "拒絕";
+"cockpit.alwaysAllow" = "一律允許";
+
 /* Debug Panel */
 "debug.title" = "Atoll 除錯";
 "debug.description" = "基於 Mock 的 Notch 介面測試工具，用於驗證工作階段清單、核准、問答和完成卡片。";

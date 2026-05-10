@@ -43,6 +43,8 @@ struct ControlCenterView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
+                ApprovalCockpitView(model: model)
+
                 VStack(alignment: .leading, spacing: 10) {
                     Text(lang.t("debug.scenarios"))
                         .font(.system(size: 12, weight: .semibold))

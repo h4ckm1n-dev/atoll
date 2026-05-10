@@ -360,6 +360,49 @@ struct SessionStateTests {
     }
 
     @Test
+    func actionableSessionsOnlyIncludeVisibleAttentionSessionsInDisplayOrder() {
+        let now = Date(timeIntervalSince1970: 4_000)
+        let olderApproval = AgentSession(
+            id: "older-approval",
+            title: "Older approval",
+            tool: .claudeCode,
+            attachmentState: .attached,
+            phase: .waitingForApproval,
+            summary: "Needs approval",
+            updatedAt: now,
+            permissionRequest: PermissionRequest(
+                title: "Edit",
+                summary: "Edit Package.swift",
+                affectedPath: "Package.swift"
+            )
+        )
+        let newerQuestion = AgentSession(
+            id: "newer-question",
+            title: "Newer question",
+            tool: .codex,
+            attachmentState: .attached,
+            phase: .waitingForAnswer,
+            summary: "Which target?",
+            updatedAt: now.addingTimeInterval(10),
+            questionPrompt: QuestionPrompt(title: "Which target?", options: ["App", "Tests"])
+        )
+        var detachedRunning = AgentSession(
+            id: "detached-running",
+            title: "Detached running",
+            tool: .codex,
+            attachmentState: .detached,
+            phase: .running,
+            summary: "Old run",
+            updatedAt: now.addingTimeInterval(20)
+        )
+        detachedRunning.isProcessAlive = false
+
+        let state = SessionState(sessions: [olderApproval, detachedRunning, newerQuestion])
+
+        #expect(state.actionableSessions.map(\.id) == ["newer-question", "older-approval"])
+    }
+
+    @Test
     func bridgeEnvelopeRoundTripsThroughLineCodec() throws {
         let envelope = BridgeEnvelope.event(
             .permissionRequested(

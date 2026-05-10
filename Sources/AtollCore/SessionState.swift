@@ -21,6 +21,10 @@ public struct SessionState: Equatable, Sendable {
         sessions.first(where: { $0.phase.requiresAttention })
     }
 
+    public var actionableSessions: [AgentSession] {
+        sessions.filter { $0.isVisibleInIsland && $0.phase.requiresAttention }
+    }
+
     public var runningCount: Int {
         sessionsByID.values.filter { $0.phase == .running }.count
     }

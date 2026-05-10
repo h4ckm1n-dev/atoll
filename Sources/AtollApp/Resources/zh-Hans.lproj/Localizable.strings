@@ -198,6 +198,17 @@
 "menu.liveTool" = "当前工具: %@";
 "menu.tracking" = "跟踪: %@";
 
+/* Approval Cockpit */
+"cockpit.title" = "审批驾驶舱";
+"cockpit.pending" = "%lld 个待处理";
+"cockpit.empty" = "没有待处理操作";
+"cockpit.more" = "+%lld 个更多";
+"cockpit.open" = "打开";
+"cockpit.jump" = "跳转";
+"cockpit.allow" = "允许";
+"cockpit.deny" = "拒绝";
+"cockpit.alwaysAllow" = "总是允许";
+
 /* Debug Panel */
 "debug.title" = "Atoll 调试";
 "debug.description" = "基于 Mock 的 Notch 界面测试工具，用于验证会话列表、审批、问答和完成卡片。";

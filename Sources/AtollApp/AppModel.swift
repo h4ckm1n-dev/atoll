@@ -878,6 +878,10 @@ final class AppModel {
         surfacedSessions.filter { $0.phase.requiresAttention }.count
     }
 
+    var approvalCockpitSessions: [AgentSession] {
+        state.actionableSessions
+    }
+
     var liveRunningCount: Int {
         surfacedSessions.filter { $0.phase == .running }.count
     }
@@ -1129,6 +1133,11 @@ final class AppModel {
 
     func select(sessionID: String) {
         selectedSessionID = sessionID
+    }
+
+    func openActionableSession(_ sessionID: String) {
+        selectedSessionID = sessionID
+        notchOpen(reason: .click, surface: .sessionList(actionableSessionID: sessionID))
     }
 
     // MARK: - Overlay forwarding

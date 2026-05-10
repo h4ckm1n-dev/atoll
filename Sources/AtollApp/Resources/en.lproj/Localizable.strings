@@ -198,6 +198,17 @@
 "menu.liveTool" = "Live tool: %@";
 "menu.tracking" = "Tracking: %@";
 
+/* Approval Cockpit */
+"cockpit.title" = "Approval Cockpit";
+"cockpit.pending" = "%lld waiting";
+"cockpit.empty" = "No pending actions";
+"cockpit.more" = "+%lld more";
+"cockpit.open" = "Open";
+"cockpit.jump" = "Jump";
+"cockpit.allow" = "Allow";
+"cockpit.deny" = "Deny";
+"cockpit.alwaysAllow" = "Always";
+
 /* Debug Panel */
 "debug.title" = "Atoll Debug";
 "debug.description" = "Mock-driven notch surface harness for validating session list, approval, question, and completion cards.";

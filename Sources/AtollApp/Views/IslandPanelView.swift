@@ -790,6 +790,7 @@ struct IslandPanelView: View {
                     },
                     themePalette: model.themeManager.palette,
                     streamSafeTextEnabled: model.liveCodingModeEnabled,
+                    onHoverHaptic: { model.performSessionHoverHapticFeedback() },
                     onJump: { model.jumpToSession(session) }
                 )
 
@@ -826,6 +827,7 @@ struct IslandPanelView: View {
                         },
                         themePalette: model.themeManager.palette,
                         streamSafeTextEnabled: model.liveCodingModeEnabled,
+                        onHoverHaptic: { model.performSessionHoverHapticFeedback() },
                         onJump: { model.jumpToSession(session) },
                         onDismiss: session.isRemote ? { model.dismissSession(session.id) } : nil
                     )
@@ -1256,6 +1258,7 @@ private struct IslandSessionRow: View {
     var onTogglePlanStep: ((String) -> Void)? = nil
     var themePalette: ThemePalette = .mocha
     var streamSafeTextEnabled: Bool = false
+    var onHoverHaptic: (() -> Void)?
     @State private var planExpanded: Bool = false
     let onJump: () -> Void
     var onDismiss: (() -> Void)?
@@ -1429,6 +1432,9 @@ private struct IslandSessionRow: View {
         .onTapGesture(perform: handlePrimaryTap)
         .onHover { hovering in
             guard isInteractive else { return }
+            if hovering && !isHighlighted {
+                onHoverHaptic?()
+            }
             isHighlighted = hovering
         }
         .onChange(of: isInteractive) { _, interactive in

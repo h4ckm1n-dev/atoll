@@ -688,6 +688,13 @@ final class AppModel {
     @ObservationIgnored
     var harnessRuntimeMonitor: HarnessRuntimeMonitor?
 
+    @ObservationIgnored
+    var hapticFeedbackPerformer: () -> Void = {
+        NSHapticFeedbackManager.defaultPerformer.perform(
+            NSHapticFeedbackManager.FeedbackPattern.alignment,
+            performanceTime: .now
+        )
+    }
 
     @ObservationIgnored
     private var jumpTask: Task<Void, Never>?
@@ -1338,6 +1345,14 @@ final class AppModel {
 
     func toggleSoundMuted() {
         isSoundMuted.toggle()
+    }
+
+    func performSessionHoverHapticFeedback() {
+        guard hapticFeedbackEnabled else {
+            return
+        }
+
+        hapticFeedbackPerformer()
     }
 
     func approveFocusedPermission(_ approved: Bool) {

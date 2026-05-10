@@ -430,6 +430,28 @@ struct AppModelSessionListTests {
     }
 
     @Test
+    func sessionHoverHapticFeedbackHonorsUserSetting() {
+        let model = AppModel()
+        let previousHaptic = model.hapticFeedbackEnabled
+        defer {
+            model.hapticFeedbackEnabled = previousHaptic
+        }
+
+        var hapticCount = 0
+        model.hapticFeedbackPerformer = {
+            hapticCount += 1
+        }
+
+        model.hapticFeedbackEnabled = false
+        model.performSessionHoverHapticFeedback()
+        #expect(hapticCount == 0)
+
+        model.hapticFeedbackEnabled = true
+        model.performSessionHoverHapticFeedback()
+        #expect(hapticCount == 1)
+    }
+
+    @Test
     func rolloutCompletionDoesNotPresentNotificationDuringColdStart() {
         let now = Date(timeIntervalSince1970: 2_000)
         let model = AppModel()

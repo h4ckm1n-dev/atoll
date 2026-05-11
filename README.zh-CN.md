@@ -49,6 +49,42 @@
 
 ---
 
+## 界面截图
+
+<p align="center">
+  <img src="docs/images/screenshots/approval-card-with-diff.png" alt="权限审批卡片与内联 Diff" width="640">
+</p>
+
+<p align="center">
+  <em>权限审批卡片与内联 Diff —— Myers 算法实现的 Swift 代码修改预览，随主题变化的语法高亮，桃色提醒边框。在点击“允许”前，清楚看到即将发生的改变。</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/screenshots/question-card.png" alt="问题卡片" width="640">
+</p>
+
+<p align="center">
+  <em>问题卡片 —— Agent 转发的结构化多选提示。无需离开刘海即可提交答案。</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/screenshots/long-completion-card.png" alt="完成卡片" width="640">
+</p>
+
+<p align="center">
+  <em>完成卡片 —— Agent 最终回复的主题化 Markdown 渲染。支持内联回复；Atoll 会将其自动键入你的终端。</em>
+</p>
+
+<p align="center">
+  <img src="docs/images/screenshots/completion-card.png" alt="简要完成通知" width="640">
+</p>
+
+<p align="center">
+  <em>简要完成通知 —— 当 Agent 任务结束时从刘海弹出，随后自动消失。</em>
+</p>
+
+---
+
 ## 核心功能
 
 ### 🎨 主题定制与个性化

@@ -66,6 +66,14 @@
 "settings.appearance.pixelShape.bars" = "Cat";
 "settings.appearance.pixelShape.steps" = "Steps";
 "settings.appearance.pixelShape.blocks" = "Blocks";
+"settings.appearance.pixelShape.matrix" = "Matrix";
+"settings.appearance.pixelShape.glitch" = "Glitch";
+"settings.appearance.pixelShape.visor" = "Neon Visor";
+"settings.appearance.pixelShape.terminal" = "Terminal";
+"settings.appearance.pixelShape.manga" = "Manga Burst";
+"settings.appearance.pixelShape.blade" = "Blade";
+"settings.appearance.pixelShape.cyber" = "Cyber Grid";
+"settings.appearance.pixelShape.waveform" = "Waveform";
 "settings.appearance.pixelShape.custom" = "Custom";
 "settings.appearance.avatar.upload" = "Upload Image";
 "settings.appearance.avatar.remove" = "Remove";

@@ -33,7 +33,26 @@ enum IslandPixelShapeStyle: String, CaseIterable, Identifiable {
     case bars
     case steps
     case blocks
+    case matrix
+    case glitch
+    case visor
+    case terminal
+    case manga
+    case blade
+    case cyber
+    case waveform
     case custom
 
     var id: String { rawValue }
+
+    static let basicCases: [IslandPixelShapeStyle] = [
+        .bars,
+        .steps,
+        .blocks,
+        .custom,
+    ]
+
+    var isAdvanced: Bool {
+        !Self.basicCases.contains(self)
+    }
 }

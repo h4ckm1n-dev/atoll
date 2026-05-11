@@ -66,6 +66,14 @@
 "settings.appearance.pixelShape.bars" = "猫咪";
 "settings.appearance.pixelShape.steps" = "阶梯";
 "settings.appearance.pixelShape.blocks" = "方块";
+"settings.appearance.pixelShape.matrix" = "矩阵";
+"settings.appearance.pixelShape.glitch" = "故障";
+"settings.appearance.pixelShape.visor" = "霓虹面罩";
+"settings.appearance.pixelShape.terminal" = "终端";
+"settings.appearance.pixelShape.manga" = "漫画爆闪";
+"settings.appearance.pixelShape.blade" = "刀锋";
+"settings.appearance.pixelShape.cyber" = "赛博网格";
+"settings.appearance.pixelShape.waveform" = "波形";
 "settings.appearance.pixelShape.custom" = "自定义";
 "settings.appearance.avatar.upload" = "上传图片";
 "settings.appearance.avatar.remove" = "移除";

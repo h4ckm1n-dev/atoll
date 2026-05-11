@@ -187,8 +187,11 @@ struct AppearanceSettingsPane: View {
             }
 
             Section(lang.t("settings.appearance.pixelShape")) {
-                HStack(spacing: 12) {
-                    ForEach(IslandPixelShapeStyle.allCases) { style in
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4),
+                    spacing: 10
+                ) {
+                    ForEach(pixelShapeChoices) { style in
                         pixelShapeCard(style)
                     }
                 }
@@ -419,7 +422,7 @@ struct AppearanceSettingsPane: View {
         return AnyView(HStack(spacing: 8) {
             IslandPixelGlyph(
                 tint: tint,
-                style: model.islandPixelShapeStyle,
+                style: displayedPixelShapeStyle,
                 isAnimating: previewPhase != .completed,
                 customAvatarImage: model.customAvatarImage
             )
@@ -526,6 +529,15 @@ struct AppearanceSettingsPane: View {
 
     // MARK: - Pixel shape card
 
+    private var pixelShapeChoices: [IslandPixelShapeStyle] {
+        model.advancedAvatarsEnabled ? IslandPixelShapeStyle.allCases : IslandPixelShapeStyle.basicCases
+    }
+
+    private var displayedPixelShapeStyle: IslandPixelShapeStyle {
+        let style = model.islandPixelShapeStyle
+        return model.advancedAvatarsEnabled || !style.isAdvanced ? style : .bars
+    }
+
     private func pixelShapeCard(_ style: IslandPixelShapeStyle) -> some View {
         let selected = model.islandPixelShapeStyle == style
         return Button {
@@ -601,6 +613,14 @@ struct AppearanceSettingsPane: View {
         case .bars:   lang.t("settings.appearance.pixelShape.bars")
         case .steps:  lang.t("settings.appearance.pixelShape.steps")
         case .blocks: lang.t("settings.appearance.pixelShape.blocks")
+        case .matrix: lang.t("settings.appearance.pixelShape.matrix")
+        case .glitch: lang.t("settings.appearance.pixelShape.glitch")
+        case .visor: lang.t("settings.appearance.pixelShape.visor")
+        case .terminal: lang.t("settings.appearance.pixelShape.terminal")
+        case .manga: lang.t("settings.appearance.pixelShape.manga")
+        case .blade: lang.t("settings.appearance.pixelShape.blade")
+        case .cyber: lang.t("settings.appearance.pixelShape.cyber")
+        case .waveform: lang.t("settings.appearance.pixelShape.waveform")
         case .custom: lang.t("settings.appearance.pixelShape.custom")
         }
     }

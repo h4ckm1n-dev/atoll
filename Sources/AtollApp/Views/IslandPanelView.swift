@@ -219,6 +219,11 @@ struct IslandPanelView: View {
         return palette.text.swiftUIColor.opacity(0.4) // gray
     }
 
+    private var displayedPixelShapeStyle: IslandPixelShapeStyle {
+        let style = model.islandPixelShapeStyle
+        return model.advancedAvatarsEnabled || !style.isAdvanced ? style : .bars
+    }
+
     private var countBadgeWidth: CGFloat {
         let digits = max(1, "\(model.liveSessionCount)".count)
         return CGFloat(26 + max(0, digits - 1) * 8)
@@ -488,7 +493,7 @@ struct IslandPanelView: View {
                         ZStack(alignment: .bottomTrailing) {
                             IslandPixelGlyph(
                                 tint: scoutTint,
-                                style: model.islandPixelShapeStyle,
+                                style: displayedPixelShapeStyle,
                                 isAnimating: hasClosedActivity,
                                 customAvatarImage: model.customAvatarImage
                             )

@@ -66,6 +66,14 @@
 "settings.appearance.pixelShape.bars" = "貓咪";
 "settings.appearance.pixelShape.steps" = "階梯";
 "settings.appearance.pixelShape.blocks" = "方塊";
+"settings.appearance.pixelShape.matrix" = "矩陣";
+"settings.appearance.pixelShape.glitch" = "故障";
+"settings.appearance.pixelShape.visor" = "霓虹面罩";
+"settings.appearance.pixelShape.terminal" = "終端";
+"settings.appearance.pixelShape.manga" = "漫畫爆閃";
+"settings.appearance.pixelShape.blade" = "刀鋒";
+"settings.appearance.pixelShape.cyber" = "賽博網格";
+"settings.appearance.pixelShape.waveform" = "波形";
 "settings.appearance.pixelShape.custom" = "自訂";
 "settings.appearance.avatar.upload" = "上傳圖片";
 "settings.appearance.avatar.remove" = "移除";

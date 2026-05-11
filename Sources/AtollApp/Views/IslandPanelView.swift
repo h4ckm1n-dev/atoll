@@ -771,6 +771,9 @@ struct IslandPanelView: View {
                         ? { model.submitIslandKeyboardReply(for: session, text: $0) } : nil,
                     onCancelReply: { model.cancelIslandKeyboardReply() },
                     contextUsage: model.contextUsageRegistry.usage(for: session.id),
+                    gitSnapshot: model.sessionGitBadgesEnabled
+                        ? model.gitWorkspaceStatusRegistry.snapshot(for: session.jumpTarget?.workingDirectory)
+                        : nil,
                     planState: model.planModeRegistry.plan(for: session.id),
                     onTogglePlanStep: { stepID in
                         model.planModeRegistry.toggleCheck(sessionID: session.id, stepID: stepID)
@@ -810,6 +813,9 @@ struct IslandPanelView: View {
                             ? { model.submitIslandKeyboardReply(for: session, text: $0) } : nil,
                         onCancelReply: { model.cancelIslandKeyboardReply() },
                         contextUsage: model.contextUsageRegistry.usage(for: session.id),
+                        gitSnapshot: model.sessionGitBadgesEnabled
+                            ? model.gitWorkspaceStatusRegistry.snapshot(for: session.jumpTarget?.workingDirectory)
+                            : nil,
                         planState: model.planModeRegistry.plan(for: session.id),
                         onTogglePlanStep: { stepID in
                             model.planModeRegistry.toggleCheck(sessionID: session.id, stepID: stepID)
@@ -1393,6 +1399,7 @@ private struct IslandSessionRow: View {
     var onReply: ((String) -> Void)?
     var onCancelReply: (() -> Void)?
     var contextUsage: ContextUsage? = nil
+    var gitSnapshot: GitWorkspaceSnapshot? = nil
     var planState: PlanState? = nil
     var onTogglePlanStep: ((String) -> Void)? = nil
     var themePalette: ThemePalette = .mocha
@@ -1435,6 +1442,10 @@ private struct IslandSessionRow: View {
                             if let terminalBadge = session.spotlightTerminalBadge {
                                 compactBadge(terminalBadge, presence: presence,
                                              tint: BadgeColors.terminal(terminalBadge, palette: themePalette).opacity(presence == .inactive ? 0.4 : 1.0))
+                            }
+                            if let gitSnapshot {
+                                gitBranchBadge(gitSnapshot, presence: presence)
+                                gitDiffBadge(gitSnapshot, presence: presence)
                             }
                             if presence != .inactive, let usage = contextUsage {
                                 ContextLeftBadge(usage: usage, palette: themePalette)
@@ -2126,6 +2137,39 @@ private struct IslandSessionRow: View {
         .padding(.horizontal, 7)
         .padding(.vertical, 3.5)
         .background(themePalette.surface0.swiftUIColor, in: Capsule())
+    }
+
+    private func gitBranchBadge(
+        _ snapshot: GitWorkspaceSnapshot,
+        presence: IslandSessionPresence
+    ) -> some View {
+        compactBadge(
+            shortBranchName(snapshot.branchName),
+            presence: presence,
+            icon: "arrow.triangle.branch",
+            tint: themePalette.mauve.swiftUIColor.opacity(presence == .inactive ? 0.42 : 0.88)
+        )
+    }
+
+    private func gitDiffBadge(
+        _ snapshot: GitWorkspaceSnapshot,
+        presence: IslandSessionPresence
+    ) -> some View {
+        let tint = snapshot.isDirty
+            ? themePalette.green.swiftUIColor.opacity(presence == .inactive ? 0.42 : 0.9)
+            : themePalette.text.swiftUIColor.opacity(presence == .inactive ? 0.34 : 0.45)
+        return compactBadge(
+            snapshot.diffSummary,
+            presence: presence,
+            icon: snapshot.isDirty ? "plus.forwardslash.minus" : "checkmark",
+            tint: tint
+        )
+    }
+
+    private func shortBranchName(_ branchName: String) -> String {
+        let trimmed = branchName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > 18 else { return trimmed }
+        return "\(trimmed.prefix(15))..."
     }
 
     private func headlineColor(for presence: IslandSessionPresence) -> Color {

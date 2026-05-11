@@ -74,6 +74,7 @@ final class AppModel {
             bridgeServer.updateStateSnapshot(state)
             refreshContextUsageRegistry()
             refreshStreamOverlaySnapshot()
+            refreshGitWorkspaceStatuses()
         }
     }
     @ObservationIgnored private var _cachedSessionBuckets: (primary: [AgentSession], overflow: [AgentSession])?
@@ -411,6 +412,11 @@ final class AppModel {
         didSet {
             guard sessionGitBadgesEnabled != oldValue else { return }
             UserDefaults.standard.set(sessionGitBadgesEnabled, forKey: Self.sessionGitBadgesEnabledDefaultsKey)
+            if sessionGitBadgesEnabled {
+                refreshGitWorkspaceStatuses()
+            } else {
+                gitWorkspaceStatusRegistry.clear()
+            }
         }
     }
     var advancedAvatarsEnabled: Bool = true {
@@ -427,6 +433,7 @@ final class AppModel {
     let contextUsageRegistry = ContextUsageRegistry()
     let planModeRegistry = PlanModeRegistry()
     let mediaPlaybackController = MediaPlaybackController()
+    let gitWorkspaceStatusRegistry = GitWorkspaceStatusRegistry()
     let themeManager = ThemeManager()
     private var _cachedStatusColors: [SessionPhase: Color] = [:]
 
@@ -527,6 +534,14 @@ final class AppModel {
         } else {
             mediaPlaybackController.stop()
         }
+    }
+
+    private func refreshGitWorkspaceStatuses() {
+        guard sessionGitBadgesEnabled else { return }
+        let paths = state.sessions.compactMap { session in
+            session.jumpTarget?.workingDirectory
+        }
+        gitWorkspaceStatusRegistry.refresh(paths: paths)
     }
 
     func statusColor(for phase: SessionPhase) -> Color {
@@ -890,6 +905,7 @@ final class AppModel {
         hasFinishedInit = true
         refreshStreamOverlaySnapshot()
         syncMediaPlaybackController()
+        refreshGitWorkspaceStatuses()
         if streamOverlayEnabled {
             startStreamOverlay()
         }

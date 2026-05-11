@@ -374,6 +374,18 @@ struct IslandPanelView: View {
                 .padding(.horizontal, horizontalInset)
                 .padding(.bottom, bottomInset)
                 .clipShape(surfaceShape)
+                .overlay(alignment: .bottom) {
+                    if usesOpenedVisualState, model.mediaControlsEnabled {
+                        MediaControlDock(
+                            snapshot: model.mediaPlaybackController.snapshot,
+                            palette: model.themeManager.palette,
+                            onPrevious: { model.mediaPlaybackController.previousTrack() },
+                            onPlayPause: { model.mediaPlaybackController.togglePlayPause() },
+                            onNext: { model.mediaPlaybackController.nextTrack() }
+                        )
+                        .padding(.bottom, 8)
+                    }
+                }
                 .overlay(alignment: .top) {
                     // Black strip to blend with physical notch at the very top
                     Rectangle()
@@ -586,18 +598,6 @@ struct IslandPanelView: View {
                 installHooksHint
             }
 
-            if model.mediaControlsEnabled {
-                MediaControlStrip(
-                    snapshot: model.mediaPlaybackController.snapshot,
-                    isAvailable: model.mediaPlaybackController.isAvailable,
-                    showsArtwork: model.mediaArtworkEnabled,
-                    palette: model.themeManager.palette,
-                    onPrevious: { model.mediaPlaybackController.previousTrack() },
-                    onPlayPause: { model.mediaPlaybackController.togglePlayPause() },
-                    onNext: { model.mediaPlaybackController.nextTrack() }
-                )
-            }
-
             if model.shouldShowSessionBootstrapPlaceholder {
                 sessionBootstrapPlaceholder
             } else if model.islandListSessions.isEmpty {
@@ -608,7 +608,7 @@ struct IslandPanelView: View {
         }
         .padding(.horizontal, 18)
         .padding(.top, 8)
-        .padding(.bottom, 0)
+        .padding(.bottom, model.mediaControlsEnabled ? 36 : 0)
     }
 
     /// Persistent hint at the top of the expanded island while no agent
@@ -1139,101 +1139,27 @@ struct IslandPanelView: View {
     }
 }
 
-private struct MediaControlStrip: View {
+private struct MediaControlDock: View {
     let snapshot: MediaPlaybackSnapshot
-    let isAvailable: Bool
-    let showsArtwork: Bool
     let palette: ThemePalette
     let onPrevious: () -> Void
     let onPlayPause: () -> Void
     let onNext: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            artworkView
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(displayTitle)
-                    .font(.system(size: 12.5, weight: .semibold))
-                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.9))
-                    .lineLimit(1)
-
-                Text(displaySubtitle)
-                    .font(.system(size: 10.5, weight: .medium))
-                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.42))
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 8)
-
-            HStack(spacing: 6) {
-                mediaButton(systemName: "backward.fill", label: "Previous", action: onPrevious)
-                mediaButton(
-                    systemName: snapshot.isPlaying ? "pause.fill" : "play.fill",
-                    label: snapshot.isPlaying ? "Pause" : "Play",
-                    action: onPlayPause,
-                    isPrimary: true
-                )
-                mediaButton(systemName: "forward.fill", label: "Next", action: onNext)
-            }
+        HStack(spacing: 4) {
+            mediaButton(systemName: "backward.fill", label: "Previous", action: onPrevious)
+            mediaButton(
+                systemName: snapshot.isPlaying ? "pause.fill" : "play.fill",
+                label: snapshot.isPlaying ? "Pause" : "Play",
+                action: onPlayPause,
+                isPrimary: true
+            )
+            mediaButton(systemName: "forward.fill", label: "Next", action: onNext)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(palette.crust.swiftUIColor.opacity(0.96))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .strokeBorder(palette.text.swiftUIColor.opacity(0.07))
-        )
-    }
-
-    @ViewBuilder
-    private var artworkView: some View {
-        if showsArtwork, let artwork = snapshot.artwork {
-            Image(nsImage: artwork)
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: 34, height: 34)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .strokeBorder(.white.opacity(0.08))
-                )
-        } else {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(palette.surface0.swiftUIColor)
-                Image(systemName: "music.note")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.64))
-            }
-            .frame(width: 34, height: 34)
-        }
-    }
-
-    private var displayTitle: String {
-        let trimmed = snapshot.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !isAvailable {
-            return "Media unavailable"
-        }
-        if trimmed.isEmpty, !snapshot.hasContent {
-            return "Media Controls"
-        }
-        return trimmed.isEmpty ? "Now Playing" : trimmed
-    }
-
-    private var displaySubtitle: String {
-        if !isAvailable {
-            return "macOS media bridge unavailable"
-        }
-        if !snapshot.hasContent {
-            return "Waiting for Music, Spotify, YouTube..."
-        }
-        let subtitle = snapshot.subtitle
-        return subtitle.isEmpty ? (snapshot.isPlaying ? "Playing" : "Paused") : subtitle
+        .fixedSize()
+        .opacity(0.82)
+        .help(helpText)
     }
 
     private func mediaButton(
@@ -1244,16 +1170,24 @@ private struct MediaControlStrip: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: isPrimary ? 10 : 9, weight: .bold))
-                .foregroundStyle(isPrimary ? palette.crust.swiftUIColor : palette.text.swiftUIColor.opacity(0.78))
-                .frame(width: isPrimary ? 28 : 24, height: isPrimary ? 28 : 24)
+                .font(.system(size: isPrimary ? 10.5 : 9, weight: .bold))
+                .foregroundStyle(palette.text.swiftUIColor.opacity(isPrimary ? 0.9 : 0.62))
+                .frame(width: isPrimary ? 28 : 24, height: isPrimary ? 24 : 22)
                 .background(
                     Circle()
-                        .fill(isPrimary ? palette.text.swiftUIColor.opacity(0.9) : palette.surface0.swiftUIColor)
+                        .fill(Color.white.opacity(isPrimary ? 0.075 : 0.035))
                 )
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
+    }
+
+    private var helpText: String {
+        if snapshot.hasContent {
+            let title = snapshot.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            return title.isEmpty ? "Media controls" : title
+        }
+        return "Media controls"
     }
 }
 

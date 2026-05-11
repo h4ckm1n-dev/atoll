@@ -73,6 +73,14 @@ private struct MediaPlaybackPayload: Equatable, Sendable {
     )
 }
 
+private enum MediaRemoteCommand: Int {
+    case playPause = 2
+    case next = 4
+    case previous = 5
+}
+
+private typealias MediaRemoteSendCommandFunction = @convention(c) (Int, AnyObject?) -> Void
+
 @MainActor
 @Observable
 final class MediaPlaybackController {
@@ -152,17 +160,23 @@ final class MediaPlaybackController {
     }
 
     func togglePlayPause() {
-        MediaKeySender.post(.playPause)
+        if !client.sendCommand(.playPause) {
+            MediaKeySender.post(.playPause)
+        }
         scheduleQuickRefresh()
     }
 
     func nextTrack() {
-        MediaKeySender.post(.next)
+        if !client.sendCommand(.next) {
+            MediaKeySender.post(.next)
+        }
         scheduleQuickRefresh()
     }
 
     func previousTrack() {
-        MediaKeySender.post(.previous)
+        if !client.sendCommand(.previous) {
+            MediaKeySender.post(.previous)
+        }
         scheduleQuickRefresh()
     }
 
@@ -184,9 +198,10 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
     private let handle: UnsafeMutableRawPointer?
     private let getNowPlayingInfo: GetNowPlayingInfo?
     private let getIsPlaying: GetIsPlaying?
+    private let commandSender: MediaRemoteCommandSender?
 
     var isAvailable: Bool {
-        getNowPlayingInfo != nil
+        getNowPlayingInfo != nil || commandSender != nil
     }
 
     init() {
@@ -204,6 +219,21 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
         } else {
             getIsPlaying = nil
         }
+
+        if let symbol = handle.flatMap({ dlsym($0, "MRMediaRemoteSendCommand") }) {
+            let function = unsafeBitCast(symbol, to: MediaRemoteSendCommandFunction.self)
+            commandSender = MediaRemoteCommandSender(function)
+        } else {
+            commandSender = nil
+        }
+    }
+
+    func sendCommand(_ command: MediaRemoteCommand) -> Bool {
+        guard let commandSender else { return false }
+        queue.async {
+            commandSender.send(command)
+        }
+        return true
     }
 
     func fetchPayload(
@@ -280,6 +310,18 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
             return data as Data
         }
         return nil
+    }
+}
+
+private final class MediaRemoteCommandSender: @unchecked Sendable {
+    private let function: MediaRemoteSendCommandFunction
+
+    init(_ function: @escaping MediaRemoteSendCommandFunction) {
+        self.function = function
+    }
+
+    func send(_ command: MediaRemoteCommand) {
+        function(command.rawValue, nil)
     }
 }
 

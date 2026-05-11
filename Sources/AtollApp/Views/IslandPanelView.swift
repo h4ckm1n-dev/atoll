@@ -379,6 +379,7 @@ struct IslandPanelView: View {
                         MediaControlDock(
                             snapshot: model.mediaPlaybackController.snapshot,
                             palette: model.themeManager.palette,
+                            showsArtwork: model.mediaArtworkEnabled,
                             onPrevious: { model.mediaPlaybackController.previousTrack() },
                             onPlayPause: { model.mediaPlaybackController.togglePlayPause() },
                             onNext: { model.mediaPlaybackController.nextTrack() }
@@ -1142,12 +1143,27 @@ struct IslandPanelView: View {
 private struct MediaControlDock: View {
     let snapshot: MediaPlaybackSnapshot
     let palette: ThemePalette
+    let showsArtwork: Bool
     let onPrevious: () -> Void
     let onPlayPause: () -> Void
     let onNext: () -> Void
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 5) {
+            if showsArtwork, let artwork = snapshot.artwork {
+                Image(nsImage: artwork)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 22, height: 22)
+                    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .strokeBorder(palette.text.swiftUIColor.opacity(0.12), lineWidth: 0.5)
+                    )
+                    .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+                    .accessibilityHidden(true)
+            }
+
             mediaButton(systemName: "backward.fill", label: "Previous", action: onPrevious)
             mediaButton(
                 systemName: snapshot.isPlaying ? "pause.fill" : "play.fill",

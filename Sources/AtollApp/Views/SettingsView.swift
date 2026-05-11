@@ -151,7 +151,7 @@ struct SettingsView: View {
             case .shortcuts:
                 ShortcutsSettingsPane(model: model)
             case .lab:
-                PlaceholderSettingsPane(model: model, titleKey: "settings.tab.lab", subtitleKey: "settings.lab.comingSoon")
+                LabSettingsPane(model: model)
             case .about:
                 AboutSettingsPane(model: model)
             }
@@ -164,6 +164,65 @@ struct SettingsView: View {
                 .padding(.trailing, 16)
             }
         }
+    }
+}
+
+// MARK: - Lab
+
+struct LabSettingsPane: View {
+    var model: AppModel
+
+    private var lang: LanguageManager { model.lang }
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle(lang.t("settings.lab.mediaControls"), isOn: Binding(
+                    get: { model.mediaControlsEnabled },
+                    set: { model.mediaControlsEnabled = $0 }
+                ))
+
+                Toggle(lang.t("settings.lab.mediaArtwork"), isOn: Binding(
+                    get: { model.mediaArtworkEnabled },
+                    set: { model.mediaArtworkEnabled = $0 }
+                ))
+                .disabled(!model.mediaControlsEnabled)
+
+                Text(lang.t("settings.lab.mediaHelp"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text(lang.t("settings.lab.section.media"))
+            }
+
+            Section {
+                Toggle(lang.t("settings.lab.gitBadges"), isOn: Binding(
+                    get: { model.sessionGitBadgesEnabled },
+                    set: { model.sessionGitBadgesEnabled = $0 }
+                ))
+
+                Text(lang.t("settings.lab.gitHelp"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text(lang.t("settings.lab.section.sessions"))
+            }
+
+            Section {
+                Toggle(lang.t("settings.lab.advancedAvatars"), isOn: Binding(
+                    get: { model.advancedAvatarsEnabled },
+                    set: { model.advancedAvatarsEnabled = $0 }
+                ))
+
+                Text(lang.t("settings.lab.avatarHelp"))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text(lang.t("settings.lab.section.avatar"))
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle(lang.t("settings.tab.lab"))
     }
 }
 

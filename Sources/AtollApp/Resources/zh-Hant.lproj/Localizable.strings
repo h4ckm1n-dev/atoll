@@ -142,6 +142,16 @@
 
 /* Settings - Placeholder */
 "settings.lab.comingSoon" = "實驗性功能即將推出。";
+"settings.lab.section.media" = "媒體";
+"settings.lab.mediaControls" = "在通知島中顯示媒體控制";
+"settings.lab.mediaArtwork" = "顯示目前曲目封面";
+"settings.lab.mediaHelp" = "讀取系統 Now Playing 工作階段；當 macOS 暴露瀏覽器媒體時，也包含 YouTube。";
+"settings.lab.section.sessions" = "工作階段卡片";
+"settings.lab.gitBadges" = "顯示 Git 分支與差異徽章";
+"settings.lab.gitHelp" = "在本機查詢每個工作階段的工作區，並顯示精簡的分支與變更數量徽章。";
+"settings.lab.section.avatar" = "即時頭像";
+"settings.lab.advancedAvatars" = "啟用進階頭像動畫";
+"settings.lab.avatarHelp" = "解鎖更有動態感的賽博龐克、駭客與漫畫風格像素圖形。";
 
 /* Settings - Shortcuts */
 "settings.shortcuts.section.actions" = "操作";

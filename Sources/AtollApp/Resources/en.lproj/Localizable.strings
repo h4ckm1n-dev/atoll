@@ -142,6 +142,16 @@
 
 /* Settings - Placeholder */
 "settings.lab.comingSoon" = "Experimental features coming soon.";
+"settings.lab.section.media" = "Media";
+"settings.lab.mediaControls" = "Show media controls in the notch";
+"settings.lab.mediaArtwork" = "Show current track artwork";
+"settings.lab.mediaHelp" = "Reads the system Now Playing session, including browser media such as YouTube when macOS exposes it.";
+"settings.lab.section.sessions" = "Session Cards";
+"settings.lab.gitBadges" = "Show Git branch and diff badges";
+"settings.lab.gitHelp" = "Looks up each session workspace locally and displays a compact branch and change count badge.";
+"settings.lab.section.avatar" = "Live Avatar";
+"settings.lab.advancedAvatars" = "Enable advanced avatar animations";
+"settings.lab.avatarHelp" = "Unlocks the more animated cyberpunk, hacker, and manga glyph styles.";
 
 /* Settings - Shortcuts */
 "settings.shortcuts.section.actions" = "Actions";

@@ -31,6 +31,10 @@ final class AppModel {
     private static let completionReplyEnabledDefaultsKey = "feature.completionReply.enabled"
     private static let liveCodingModeEnabledDefaultsKey = "feature.liveCodingMode.enabled"
     private static let streamOverlayEnabledDefaultsKey = "feature.streamOverlay.enabled"
+    private static let mediaControlsEnabledDefaultsKey = "feature.mediaControls.enabled"
+    private static let mediaArtworkEnabledDefaultsKey = "feature.mediaControls.artworkEnabled"
+    private static let sessionGitBadgesEnabledDefaultsKey = "feature.sessionGitBadges.enabled"
+    private static let advancedAvatarsEnabledDefaultsKey = "feature.advancedAvatars.enabled"
     private static let suppressFrontmostNotificationsDefaultsKey = "app.suppressFrontmostNotifications"
     private static let celebrationsEnabledDefaultsKey = "appearance.celebrations.enabled"
 
@@ -390,6 +394,30 @@ final class AppModel {
             UserDefaults.standard.set(celebrationsEnabled, forKey: Self.celebrationsEnabledDefaultsKey)
         }
     }
+    var mediaControlsEnabled: Bool = false {
+        didSet {
+            guard mediaControlsEnabled != oldValue else { return }
+            UserDefaults.standard.set(mediaControlsEnabled, forKey: Self.mediaControlsEnabledDefaultsKey)
+        }
+    }
+    var mediaArtworkEnabled: Bool = false {
+        didSet {
+            guard mediaArtworkEnabled != oldValue else { return }
+            UserDefaults.standard.set(mediaArtworkEnabled, forKey: Self.mediaArtworkEnabledDefaultsKey)
+        }
+    }
+    var sessionGitBadgesEnabled: Bool = true {
+        didSet {
+            guard sessionGitBadgesEnabled != oldValue else { return }
+            UserDefaults.standard.set(sessionGitBadgesEnabled, forKey: Self.sessionGitBadgesEnabledDefaultsKey)
+        }
+    }
+    var advancedAvatarsEnabled: Bool = true {
+        didSet {
+            guard advancedAvatarsEnabled != oldValue else { return }
+            UserDefaults.standard.set(advancedAvatarsEnabled, forKey: Self.advancedAvatarsEnabledDefaultsKey)
+        }
+    }
     let projectColorRegistry: ProjectColorRegistry = {
         let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
             .first!.appendingPathComponent("OpenIsland", isDirectory: true)
@@ -724,6 +752,10 @@ final class AppModel {
             Self.completionReplyEnabledDefaultsKey: false,
             Self.liveCodingModeEnabledDefaultsKey: false,
             Self.streamOverlayEnabledDefaultsKey: false,
+            Self.mediaControlsEnabledDefaultsKey: false,
+            Self.mediaArtworkEnabledDefaultsKey: false,
+            Self.sessionGitBadgesEnabledDefaultsKey: true,
+            Self.advancedAvatarsEnabledDefaultsKey: true,
             Self.suppressFrontmostNotificationsDefaultsKey: true,
             Self.celebrationsEnabledDefaultsKey: true,
         ])
@@ -742,6 +774,10 @@ final class AppModel {
         completionReplyEnabled = UserDefaults.standard.bool(forKey: Self.completionReplyEnabledDefaultsKey)
         liveCodingModeEnabled = UserDefaults.standard.bool(forKey: Self.liveCodingModeEnabledDefaultsKey)
         streamOverlayEnabled = UserDefaults.standard.bool(forKey: Self.streamOverlayEnabledDefaultsKey)
+        mediaControlsEnabled = UserDefaults.standard.bool(forKey: Self.mediaControlsEnabledDefaultsKey)
+        mediaArtworkEnabled = UserDefaults.standard.bool(forKey: Self.mediaArtworkEnabledDefaultsKey)
+        sessionGitBadgesEnabled = UserDefaults.standard.bool(forKey: Self.sessionGitBadgesEnabledDefaultsKey)
+        advancedAvatarsEnabled = UserDefaults.standard.bool(forKey: Self.advancedAvatarsEnabledDefaultsKey)
         launchAtLoginEnabled = LaunchAtLoginService.shared.isEnabled
         islandClosedDisplayStyle = IslandClosedDisplayStyle(
             rawValue: UserDefaults.standard.string(forKey: Self.islandClosedDisplayStyleDefaultsKey) ?? ""

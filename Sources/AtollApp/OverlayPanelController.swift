@@ -5,12 +5,15 @@ import AtollCore
 
 @MainActor
 final class OverlayPanelController: NSObject {
-    private static let minimumOpenedPanelWidth: CGFloat = 680
-    private static let maximumOpenedPanelWidth: CGFloat = 740
+    private static let minimumOpenedPanelWidth: CGFloat = 700
+    private static let maximumOpenedPanelWidth: CGFloat = 760
     private static let openedPanelWidthFactor: CGFloat = 0.46
     private static let preferredNotificationPanelWidth: CGFloat = 620
     private static let openedContentWidthPadding: CGFloat = 28
     private static let openedContentBottomPadding: CGFloat = 0
+    /// Must match `IslandPanelView.mediaControlDockContentReserve`.
+    private static let mediaControlDockContentReserve: CGFloat = 46
+    private static let minimumSessionContentHeight: CGFloat = 176
     /// Must match `IslandPanelView.maxSessionListHeight` — the AutoHeightScrollView cap.
     private static let maxSessionListHeight: CGFloat = 560
     private static let maxVisibleSessionRows: Int = 6
@@ -612,9 +615,10 @@ final class OverlayPanelController: NSObject {
         let visibleSessions = openedVisibleSessions(
             sessions: model.islandListSessions
         )
+        let mediaReserve = model.mediaControlsEnabled ? Self.mediaControlDockContentReserve : 0
 
         if visibleSessions.isEmpty {
-            return Self.openedEmptyStateHeight
+            return Self.openedEmptyStateHeight + mediaReserve
         }
 
         let actionableID = model.islandSurface.sessionID
@@ -623,7 +627,7 @@ final class OverlayPanelController: NSObject {
         if isNotificationMode {
             // Use SwiftUI-measured height when available (accurate after first render).
             if model.measuredNotificationContentHeight > 0 {
-                return model.measuredNotificationContentHeight + 28
+                return model.measuredNotificationContentHeight + 28 + mediaReserve
             }
             // First render: estimate from the actionable session's content so the
             // initial window is close to the final size. This avoids a large blank
@@ -633,9 +637,9 @@ final class OverlayPanelController: NSObject {
                let session = model.state.session(id: actionableID) {
                 let rowHeight = session.estimatedIslandRowHeight(at: now)
                 let bodyHeight = actionableBodyHeight(for: session, model: model)
-                return rowHeight + bodyHeight + Self.openedContentVerticalInsets
+                return rowHeight + bodyHeight + Self.openedContentVerticalInsets + mediaReserve
             }
-            return 300
+            return 300 + mediaReserve
         }
 
         let rowHeights = visibleSessions.map { session -> CGFloat in
@@ -651,7 +655,8 @@ final class OverlayPanelController: NSObject {
         let listHeight = rowsHeight + spacingHeight
         // Cap to match AutoHeightScrollView's maxHeight in IslandPanelView.
         let cappedListHeight = min(listHeight, Self.maxSessionListHeight)
-        return cappedListHeight + Self.openedContentVerticalInsets
+        let contentHeight = cappedListHeight + Self.openedContentVerticalInsets + mediaReserve
+        return max(contentHeight, Self.minimumSessionContentHeight + mediaReserve)
     }
 
     /// Additional height for the actionable session's inline action area.

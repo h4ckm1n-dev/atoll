@@ -294,12 +294,21 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
             artist: string(info, "kMRMediaRemoteNowPlayingInfoArtist"),
             album: string(info, "kMRMediaRemoteNowPlayingInfoAlbum"),
             isPlaying: isPlaying,
-            artworkData: includeArtwork ? artworkData(info, "kMRMediaRemoteNowPlayingInfoArtworkData") : nil
+            artworkData: includeArtwork ? artworkData(info) : nil
         )
     }
 
     private static func string(_ info: [String: Any], _ key: String) -> String {
         info[key] as? String ?? ""
+    }
+
+    private static func artworkData(_ info: [String: Any]) -> Data? {
+        for key in ["kMRMediaRemoteNowPlayingInfoArtworkData", "artworkData"] {
+            if let data = artworkData(info, key) {
+                return data
+            }
+        }
+        return nil
     }
 
     private static func artworkData(_ info: [String: Any], _ key: String) -> Data? {
@@ -308,6 +317,12 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
         }
         if let data = info[key] as? NSData {
             return data as Data
+        }
+        if let base64 = info[key] as? String {
+            return Data(base64Encoded: base64.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+        if let image = info[key] as? NSImage {
+            return image.tiffRepresentation
         }
         return nil
     }

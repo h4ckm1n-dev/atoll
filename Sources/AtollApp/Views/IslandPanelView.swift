@@ -609,7 +609,7 @@ struct IslandPanelView: View {
         }
         .padding(.horizontal, 18)
         .padding(.top, 8)
-        .padding(.bottom, model.mediaControlsEnabled ? 36 : 0)
+        .padding(.bottom, model.mediaControlsEnabled ? Self.mediaControlDockContentReserve : 0)
     }
 
     /// Persistent hint at the top of the expanded island while no agent
@@ -723,6 +723,7 @@ struct IslandPanelView: View {
         model.notchOpenReason == .notification && actionableSessionID != nil
     }
 
+    private static let mediaControlDockContentReserve: CGFloat = 46
     private static let maxSessionListHeight: CGFloat = 560
 
     private var sessionList: some View {
@@ -744,6 +745,9 @@ struct IslandPanelView: View {
                             model.measuredNotificationContentHeight = height
                         }
                     }
+            } else if model.islandListSessions.count <= 1 {
+                sessionListContent(context: context)
+                    .padding(.vertical, 2)
             } else {
                 // List mode: scroll when content exceeds the panel's available space.
                 // The parent frame constraint (currentHeight - closedNotchHeight - 12)
@@ -1149,18 +1153,18 @@ private struct MediaControlDock: View {
     let onNext: () -> Void
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 6) {
             if showsArtwork, let artwork = snapshot.artwork {
                 Image(nsImage: artwork)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 22, height: 22)
-                    .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                    .frame(width: 34, height: 34)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .strokeBorder(palette.text.swiftUIColor.opacity(0.12), lineWidth: 0.5)
                     )
-                    .shadow(color: .black.opacity(0.18), radius: 4, y: 2)
+                    .shadow(color: .black.opacity(0.2), radius: 5, y: 2)
                     .accessibilityHidden(true)
             }
 

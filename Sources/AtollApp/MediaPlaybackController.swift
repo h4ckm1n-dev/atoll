@@ -224,20 +224,29 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
             state.finish(.empty)
         }
 
-        queue.async {
-            getNowPlayingInfo(queue) { info in
-                let partial = Self.payload(from: info, isPlaying: false, includeArtwork: includeArtwork)
-                guard let getIsPlaying else {
-                    state.finish(partial)
-                    return
-                }
-
-                getIsPlaying(queue) { isPlaying in
-                    var payload = partial
-                    payload.isPlaying = isPlaying
-                    state.finish(payload)
-                }
+        let nowPlayingCompletion: NowPlayingInfoCompletion = { info in
+            guard !state.finished else { return }
+            let partial = Self.payload(from: info, isPlaying: false, includeArtwork: includeArtwork)
+            guard let getIsPlaying else {
+                state.finish(partial)
+                return
             }
+
+            let isPlayingCompletion: IsPlayingCompletion = { isPlaying in
+                var payload = partial
+                payload.isPlaying = isPlaying
+                state.finish(payload)
+            }
+            let isPlayingBlock = MediaRemoteBlockBox(isPlayingCompletion)
+            state.retain(isPlayingBlock)
+            getIsPlaying(queue, isPlayingBlock.block)
+        }
+        let nowPlayingBlock = MediaRemoteBlockBox(nowPlayingCompletion)
+        state.retain(nowPlayingBlock)
+
+        queue.async {
+            guard !state.finished else { return }
+            getNowPlayingInfo(queue, nowPlayingBlock.block)
         }
     }
 
@@ -274,22 +283,46 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
     }
 }
 
+private final class MediaRemoteBlockBox<Block>: @unchecked Sendable {
+    let block: Block
+
+    init(_ block: Block) {
+        self.block = block
+    }
+}
+
 private final class MediaRemoteFetchState: @unchecked Sendable {
     private let lock = NSLock()
     private var isFinished = false
+    private var retainedBlocks: [Any] = []
     private let completion: (MediaPlaybackPayload) -> Void
+
+    var finished: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return isFinished
+    }
 
     init(completion: @escaping (MediaPlaybackPayload) -> Void) {
         self.completion = completion
     }
 
-    func finish(_ payload: MediaPlaybackPayload) {
+    func retain(_ block: Any) {
         lock.lock()
         defer { lock.unlock() }
+        guard !isFinished else { return }
+        retainedBlocks.append(block)
+    }
+
+    func finish(_ payload: MediaPlaybackPayload) {
+        lock.lock()
         guard !isFinished else {
+            lock.unlock()
             return
         }
         isFinished = true
+        retainedBlocks.removeAll()
+        lock.unlock()
         completion(payload)
     }
 }

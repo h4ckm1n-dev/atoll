@@ -12,8 +12,9 @@ final class OverlayPanelController: NSObject {
     private static let openedContentWidthPadding: CGFloat = 28
     private static let openedContentBottomPadding: CGFloat = 0
     /// Must match `IslandPanelView.mediaControlDockContentReserve`.
-    private static let mediaControlDockContentReserve: CGFloat = 46
-    private static let minimumSessionContentHeight: CGFloat = 176
+    private static let mediaControlDockContentReserve: CGFloat = 42
+    private static let measuredSingleCardDockGap: CGFloat = 8
+    private static let minimumSessionContentHeight: CGFloat = 132
     /// Must match `IslandPanelView.maxSessionListHeight` — the AutoHeightScrollView cap.
     private static let maxSessionListHeight: CGFloat = 560
     private static let maxVisibleSessionRows: Int = 6
@@ -627,7 +628,7 @@ final class OverlayPanelController: NSObject {
         if isNotificationMode {
             // Use SwiftUI-measured height when available (accurate after first render).
             if model.measuredNotificationContentHeight > 0 {
-                return model.measuredNotificationContentHeight + 28 + mediaReserve
+                return model.measuredNotificationContentHeight + Self.measuredSingleCardDockGap + mediaReserve
             }
             // First render: estimate from the actionable session's content so the
             // initial window is close to the final size. This avoids a large blank
@@ -656,6 +657,9 @@ final class OverlayPanelController: NSObject {
         // Cap to match AutoHeightScrollView's maxHeight in IslandPanelView.
         let cappedListHeight = min(listHeight, Self.maxSessionListHeight)
         let contentHeight = cappedListHeight + Self.openedContentVerticalInsets + mediaReserve
+        if visibleSessions.count <= 1 {
+            return contentHeight
+        }
         return max(contentHeight, Self.minimumSessionContentHeight + mediaReserve)
     }
 

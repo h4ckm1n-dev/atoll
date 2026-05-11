@@ -78,6 +78,14 @@
 "settings.appearance.avatar.upload" = "上傳圖片";
 "settings.appearance.avatar.remove" = "移除";
 "settings.appearance.avatar.help" = "支援 PNG、JPEG、HEIC、TIFF，最大 10 MB。";
+"settings.appearance.badges" = "工作階段徽章";
+"settings.appearance.badges.tool" = "AI 工具";
+"settings.appearance.badges.terminal" = "終端";
+"settings.appearance.badges.gitBranch" = "Git 分支";
+"settings.appearance.badges.gitDiff" = "Git 差異";
+"settings.appearance.badges.context" = "上下文用量";
+"settings.appearance.badges.age" = "時間";
+"settings.appearance.badges.help" = "選擇工作階段卡片上顯示哪些精簡徽章。";
 "settings.appearance.statusColors" = "狀態顏色";
 "settings.appearance.status.running" = "執行中";
 "settings.appearance.status.approval" = "等待核准";

@@ -723,7 +723,7 @@ struct IslandPanelView: View {
         model.notchOpenReason == .notification && actionableSessionID != nil
     }
 
-    private static let mediaControlDockContentReserve: CGFloat = 46
+    private static let mediaControlDockContentReserve: CGFloat = 42
     private static let maxSessionListHeight: CGFloat = 560
 
     private var sessionList: some View {
@@ -788,6 +788,12 @@ struct IslandPanelView: View {
                     onTogglePlanStep: { stepID in
                         model.planModeRegistry.toggleCheck(sessionID: session.id, stepID: stepID)
                     },
+                    showsToolBadge: model.sessionToolBadgeEnabled,
+                    showsTerminalBadge: model.sessionTerminalBadgeEnabled,
+                    showsGitBranchBadge: model.sessionGitBadgesEnabled && model.sessionGitBranchBadgeEnabled,
+                    showsGitDiffBadge: model.sessionGitBadgesEnabled && model.sessionGitDiffBadgeEnabled,
+                    showsContextBadge: model.sessionContextBadgeEnabled,
+                    showsAgeBadge: model.sessionAgeBadgeEnabled,
                     themePalette: model.themeManager.palette,
                     streamSafeTextEnabled: model.liveCodingModeEnabled,
                     onJump: { model.jumpToSession(session) }
@@ -830,6 +836,12 @@ struct IslandPanelView: View {
                         onTogglePlanStep: { stepID in
                             model.planModeRegistry.toggleCheck(sessionID: session.id, stepID: stepID)
                         },
+                        showsToolBadge: model.sessionToolBadgeEnabled,
+                        showsTerminalBadge: model.sessionTerminalBadgeEnabled,
+                        showsGitBranchBadge: model.sessionGitBadgesEnabled && model.sessionGitBranchBadgeEnabled,
+                        showsGitDiffBadge: model.sessionGitBadgesEnabled && model.sessionGitDiffBadgeEnabled,
+                        showsContextBadge: model.sessionContextBadgeEnabled,
+                        showsAgeBadge: model.sessionAgeBadgeEnabled,
                         themePalette: model.themeManager.palette,
                         streamSafeTextEnabled: model.liveCodingModeEnabled,
                         onJump: { model.jumpToSession(session) },
@@ -1043,9 +1055,7 @@ struct IslandPanelView: View {
         _ provider: UsageProviderPresentation,
         layout: UsageSummaryLayout
     ) -> some View {
-        HStack(spacing: 8) {
-            UsageProviderIcon(providerID: provider.id, size: layout.providerIconSize)
-
+        HStack(spacing: 6) {
             Text(layout.usesShortProviderTitle ? provider.shortTitle : provider.title)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(palette.text.swiftUIColor.opacity(0.9))
@@ -1260,6 +1270,39 @@ private struct UsageProviderIcon: View {
     }
 }
 
+private struct AgentToolMiniIcon: View {
+    let tool: AgentTool
+    let size: CGFloat
+
+    var body: some View {
+        ZStack {
+            switch tool {
+            case .claudeCode:
+                Text("A")
+                    .font(.system(size: size * 0.72, weight: .black, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.92))
+            case .codex:
+                ForEach(0..<6, id: \.self) { index in
+                    Capsule(style: .continuous)
+                        .fill(.white.opacity(0.86))
+                        .frame(width: size * 0.18, height: size * 0.44)
+                        .offset(y: -size * 0.18)
+                        .rotationEffect(.degrees(Double(index) * 60))
+                }
+                Circle()
+                    .fill(Color.black.opacity(0.42))
+                    .frame(width: size * 0.28, height: size * 0.28)
+            default:
+                Text(String(tool.displayName.prefix(1)))
+                    .font(.system(size: size * 0.68, weight: .black, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.86))
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityHidden(true)
+    }
+}
+
 private struct UsageWindowPresentation: Identifiable {
     let id: String
     let label: String
@@ -1374,6 +1417,12 @@ private struct IslandSessionRow: View {
     var gitSnapshot: GitWorkspaceSnapshot? = nil
     var planState: PlanState? = nil
     var onTogglePlanStep: ((String) -> Void)? = nil
+    var showsToolBadge: Bool = true
+    var showsTerminalBadge: Bool = true
+    var showsGitBranchBadge: Bool = true
+    var showsGitDiffBadge: Bool = true
+    var showsContextBadge: Bool = true
+    var showsAgeBadge: Bool = true
     var themePalette: ThemePalette = .mocha
     var streamSafeTextEnabled: Bool = false
     @State private var planExpanded: Bool = false
@@ -1406,23 +1455,30 @@ private struct IslandSessionRow: View {
                         Spacer(minLength: 8)
 
                         HStack(spacing: 6) {
-                            compactBadge(session.tool.displayName, presence: presence,
-                                         tint: BadgeColors.agent(session.tool, palette: themePalette).opacity(presence == .inactive ? 0.4 : 1.0))
-                            if session.isRemote {
+                            if showsToolBadge {
+                                toolBadge(session.tool, presence: presence)
+                            }
+                            if showsTerminalBadge, session.isRemote {
                                 compactBadge("SSH", presence: presence, icon: "network")
                             }
-                            if let terminalBadge = session.spotlightTerminalBadge {
+                            if showsTerminalBadge, let terminalBadge = session.spotlightTerminalBadge {
                                 compactBadge(terminalBadge, presence: presence,
                                              tint: BadgeColors.terminal(terminalBadge, palette: themePalette).opacity(presence == .inactive ? 0.4 : 1.0))
                             }
                             if let gitSnapshot {
-                                gitBranchBadge(gitSnapshot, presence: presence)
-                                gitDiffBadge(gitSnapshot, presence: presence)
+                                if showsGitBranchBadge {
+                                    gitBranchBadge(gitSnapshot, presence: presence)
+                                }
+                                if showsGitDiffBadge {
+                                    gitDiffBadge(gitSnapshot, presence: presence)
+                                }
                             }
-                            if presence != .inactive, let usage = contextUsage {
+                            if showsContextBadge, presence != .inactive, let usage = contextUsage {
                                 ContextLeftBadge(usage: usage, palette: themePalette)
                             }
-                            compactBadge(session.spotlightAgeBadge, presence: presence)
+                            if showsAgeBadge {
+                                compactBadge(session.spotlightAgeBadge, presence: presence)
+                            }
                             if let onDismiss {
                                 DismissButton(action: onDismiss)
                             }
@@ -2095,10 +2151,15 @@ private struct IslandSessionRow: View {
         _ title: String,
         presence: IslandSessionPresence,
         icon: String? = nil,
+        iconText: String? = nil,
         tint: Color? = nil
     ) -> some View {
         HStack(spacing: 3) {
-            if let icon {
+            if let iconText {
+                Text(iconText)
+                    .font(.system(size: 8, weight: .bold, design: .rounded))
+                    .baselineOffset(-0.5)
+            } else if let icon {
                 Image(systemName: icon)
                     .font(.system(size: 7.5, weight: .semibold))
             }
@@ -2111,6 +2172,21 @@ private struct IslandSessionRow: View {
         .background(themePalette.surface0.swiftUIColor, in: Capsule())
     }
 
+    private func toolBadge(
+        _ tool: AgentTool,
+        presence: IslandSessionPresence
+    ) -> some View {
+        HStack(spacing: 4) {
+            AgentToolMiniIcon(tool: tool, size: 10)
+            Text(tool.displayName)
+                .font(.system(size: 9, weight: .semibold))
+        }
+        .foregroundStyle(BadgeColors.agent(tool, palette: themePalette).opacity(presence == .inactive ? 0.4 : 1.0))
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3.5)
+        .background(themePalette.surface0.swiftUIColor, in: Capsule())
+    }
+
     private func gitBranchBadge(
         _ snapshot: GitWorkspaceSnapshot,
         presence: IslandSessionPresence
@@ -2118,7 +2194,7 @@ private struct IslandSessionRow: View {
         compactBadge(
             shortBranchName(snapshot.branchName),
             presence: presence,
-            icon: "arrow.triangle.branch",
+            iconText: "\u{EA84}",
             tint: themePalette.mauve.swiftUIColor.opacity(presence == .inactive ? 0.42 : 0.88)
         )
     }

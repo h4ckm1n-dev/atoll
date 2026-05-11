@@ -190,14 +190,11 @@ final class MediaPlaybackController {
 
 private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
     typealias NowPlayingInfoCompletion = @convention(block) (CFDictionary?) -> Void
-    typealias IsPlayingCompletion = @convention(block) (Bool) -> Void
     typealias GetNowPlayingInfo = @convention(c) (DispatchQueue, NowPlayingInfoCompletion) -> Void
-    typealias GetIsPlaying = @convention(c) (DispatchQueue, IsPlayingCompletion) -> Void
 
     private let queue = DispatchQueue(label: "app.atoll.media-remote", qos: .utility)
     private let handle: UnsafeMutableRawPointer?
     private let getNowPlayingInfo: GetNowPlayingInfo?
-    private let getIsPlaying: GetIsPlaying?
     private let commandSender: MediaRemoteCommandSender?
 
     var isAvailable: Bool {
@@ -212,12 +209,6 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
             getNowPlayingInfo = unsafeBitCast(symbol, to: GetNowPlayingInfo.self)
         } else {
             getNowPlayingInfo = nil
-        }
-
-        if let symbol = handle.flatMap({ dlsym($0, "MRMediaRemoteGetNowPlayingApplicationIsPlaying") }) {
-            getIsPlaying = unsafeBitCast(symbol, to: GetIsPlaying.self)
-        } else {
-            getIsPlaying = nil
         }
 
         if let symbol = handle.flatMap({ dlsym($0, "MRMediaRemoteSendCommand") }) {
@@ -247,7 +238,6 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
         }
 
         let queue = queue
-        let getIsPlaying = getIsPlaying
         let state = MediaRemoteFetchState(completion: completion)
 
         queue.asyncAfter(deadline: .now() + timeout) {
@@ -256,20 +246,7 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
 
         let nowPlayingCompletion: NowPlayingInfoCompletion = { info in
             guard !state.finished else { return }
-            let partial = Self.payload(from: info, isPlaying: false, includeArtwork: includeArtwork)
-            guard let getIsPlaying else {
-                state.finish(partial)
-                return
-            }
-
-            let isPlayingCompletion: IsPlayingCompletion = { isPlaying in
-                var payload = partial
-                payload.isPlaying = isPlaying
-                state.finish(payload)
-            }
-            let isPlayingBlock = MediaRemoteBlockBox(isPlayingCompletion)
-            state.retain(isPlayingBlock)
-            getIsPlaying(queue, isPlayingBlock.block)
+            state.finish(Self.payload(from: info, includeArtwork: includeArtwork))
         }
         let nowPlayingBlock = MediaRemoteBlockBox(nowPlayingCompletion)
         state.retain(nowPlayingBlock)
@@ -282,7 +259,6 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
 
     private static func payload(
         from info: CFDictionary?,
-        isPlaying: Bool,
         includeArtwork: Bool
     ) -> MediaPlaybackPayload {
         guard let info = info as? [String: Any] else {
@@ -293,13 +269,30 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
             title: string(info, "kMRMediaRemoteNowPlayingInfoTitle"),
             artist: string(info, "kMRMediaRemoteNowPlayingInfoArtist"),
             album: string(info, "kMRMediaRemoteNowPlayingInfoAlbum"),
-            isPlaying: isPlaying,
+            isPlaying: isPlaying(info),
             artworkData: includeArtwork ? artworkData(info) : nil
         )
     }
 
     private static func string(_ info: [String: Any], _ key: String) -> String {
         info[key] as? String ?? ""
+    }
+
+    private static func isPlaying(_ info: [String: Any]) -> Bool {
+        guard let playbackRate = double(info, "kMRMediaRemoteNowPlayingInfoPlaybackRate") else {
+            return false
+        }
+        return playbackRate > 0.01
+    }
+
+    private static func double(_ info: [String: Any], _ key: String) -> Double? {
+        if let value = info[key] as? Double {
+            return value
+        }
+        if let value = info[key] as? NSNumber {
+            return value.doubleValue
+        }
+        return nil
     }
 
     private static func artworkData(_ info: [String: Any]) -> Data? {

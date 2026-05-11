@@ -78,6 +78,14 @@
 "settings.appearance.avatar.upload" = "Upload Image";
 "settings.appearance.avatar.remove" = "Remove";
 "settings.appearance.avatar.help" = "Supports PNG, JPEG, HEIC, TIFF. Max 10 MB.";
+"settings.appearance.badges" = "Session Badges";
+"settings.appearance.badges.tool" = "AI tool";
+"settings.appearance.badges.terminal" = "Terminal";
+"settings.appearance.badges.gitBranch" = "Git branch";
+"settings.appearance.badges.gitDiff" = "Git diff";
+"settings.appearance.badges.context" = "Context usage";
+"settings.appearance.badges.age" = "Age";
+"settings.appearance.badges.help" = "Choose which compact badges appear on session cards.";
 "settings.appearance.statusColors" = "Status Colors";
 "settings.appearance.status.running" = "Running";
 "settings.appearance.status.approval" = "Approval";

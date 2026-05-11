@@ -78,6 +78,14 @@
 "settings.appearance.avatar.upload" = "上传图片";
 "settings.appearance.avatar.remove" = "移除";
 "settings.appearance.avatar.help" = "支持 PNG、JPEG、HEIC、TIFF，最大 10 MB。";
+"settings.appearance.badges" = "会话徽章";
+"settings.appearance.badges.tool" = "AI 工具";
+"settings.appearance.badges.terminal" = "终端";
+"settings.appearance.badges.gitBranch" = "Git 分支";
+"settings.appearance.badges.gitDiff" = "Git 差异";
+"settings.appearance.badges.context" = "上下文用量";
+"settings.appearance.badges.age" = "时间";
+"settings.appearance.badges.help" = "选择会话卡片上显示哪些紧凑徽章。";
 "settings.appearance.statusColors" = "状态颜色";
 "settings.appearance.status.running" = "运行中";
 "settings.appearance.status.approval" = "等待审批";

@@ -34,6 +34,12 @@ final class AppModel {
     private static let mediaControlsEnabledDefaultsKey = "feature.mediaControls.enabled"
     private static let mediaArtworkEnabledDefaultsKey = "feature.mediaControls.artworkEnabled"
     private static let sessionGitBadgesEnabledDefaultsKey = "feature.sessionGitBadges.enabled"
+    private static let sessionToolBadgeEnabledDefaultsKey = "appearance.sessionBadges.tool.enabled"
+    private static let sessionTerminalBadgeEnabledDefaultsKey = "appearance.sessionBadges.terminal.enabled"
+    private static let sessionGitBranchBadgeEnabledDefaultsKey = "appearance.sessionBadges.gitBranch.enabled"
+    private static let sessionGitDiffBadgeEnabledDefaultsKey = "appearance.sessionBadges.gitDiff.enabled"
+    private static let sessionContextBadgeEnabledDefaultsKey = "appearance.sessionBadges.context.enabled"
+    private static let sessionAgeBadgeEnabledDefaultsKey = "appearance.sessionBadges.age.enabled"
     private static let advancedAvatarsEnabledDefaultsKey = "feature.advancedAvatars.enabled"
     private static let suppressFrontmostNotificationsDefaultsKey = "app.suppressFrontmostNotifications"
     private static let celebrationsEnabledDefaultsKey = "appearance.celebrations.enabled"
@@ -420,6 +426,48 @@ final class AppModel {
             }
         }
     }
+    var sessionToolBadgeEnabled: Bool = true {
+        didSet {
+            guard sessionToolBadgeEnabled != oldValue else { return }
+            UserDefaults.standard.set(sessionToolBadgeEnabled, forKey: Self.sessionToolBadgeEnabledDefaultsKey)
+        }
+    }
+    var sessionTerminalBadgeEnabled: Bool = true {
+        didSet {
+            guard sessionTerminalBadgeEnabled != oldValue else { return }
+            UserDefaults.standard.set(sessionTerminalBadgeEnabled, forKey: Self.sessionTerminalBadgeEnabledDefaultsKey)
+        }
+    }
+    var sessionGitBranchBadgeEnabled: Bool = true {
+        didSet {
+            guard sessionGitBranchBadgeEnabled != oldValue else { return }
+            UserDefaults.standard.set(sessionGitBranchBadgeEnabled, forKey: Self.sessionGitBranchBadgeEnabledDefaultsKey)
+            if sessionGitBranchBadgeEnabled {
+                refreshGitWorkspaceStatuses()
+            }
+        }
+    }
+    var sessionGitDiffBadgeEnabled: Bool = true {
+        didSet {
+            guard sessionGitDiffBadgeEnabled != oldValue else { return }
+            UserDefaults.standard.set(sessionGitDiffBadgeEnabled, forKey: Self.sessionGitDiffBadgeEnabledDefaultsKey)
+            if sessionGitDiffBadgeEnabled {
+                refreshGitWorkspaceStatuses()
+            }
+        }
+    }
+    var sessionContextBadgeEnabled: Bool = true {
+        didSet {
+            guard sessionContextBadgeEnabled != oldValue else { return }
+            UserDefaults.standard.set(sessionContextBadgeEnabled, forKey: Self.sessionContextBadgeEnabledDefaultsKey)
+        }
+    }
+    var sessionAgeBadgeEnabled: Bool = true {
+        didSet {
+            guard sessionAgeBadgeEnabled != oldValue else { return }
+            UserDefaults.standard.set(sessionAgeBadgeEnabled, forKey: Self.sessionAgeBadgeEnabledDefaultsKey)
+        }
+    }
     var advancedAvatarsEnabled: Bool = true {
         didSet {
             guard advancedAvatarsEnabled != oldValue else { return }
@@ -782,6 +830,12 @@ final class AppModel {
             Self.mediaControlsEnabledDefaultsKey: false,
             Self.mediaArtworkEnabledDefaultsKey: false,
             Self.sessionGitBadgesEnabledDefaultsKey: true,
+            Self.sessionToolBadgeEnabledDefaultsKey: true,
+            Self.sessionTerminalBadgeEnabledDefaultsKey: true,
+            Self.sessionGitBranchBadgeEnabledDefaultsKey: true,
+            Self.sessionGitDiffBadgeEnabledDefaultsKey: true,
+            Self.sessionContextBadgeEnabledDefaultsKey: true,
+            Self.sessionAgeBadgeEnabledDefaultsKey: true,
             Self.advancedAvatarsEnabledDefaultsKey: true,
             Self.suppressFrontmostNotificationsDefaultsKey: true,
             Self.celebrationsEnabledDefaultsKey: true,
@@ -804,6 +858,12 @@ final class AppModel {
         mediaControlsEnabled = UserDefaults.standard.bool(forKey: Self.mediaControlsEnabledDefaultsKey)
         mediaArtworkEnabled = UserDefaults.standard.bool(forKey: Self.mediaArtworkEnabledDefaultsKey)
         sessionGitBadgesEnabled = UserDefaults.standard.bool(forKey: Self.sessionGitBadgesEnabledDefaultsKey)
+        sessionToolBadgeEnabled = UserDefaults.standard.bool(forKey: Self.sessionToolBadgeEnabledDefaultsKey)
+        sessionTerminalBadgeEnabled = UserDefaults.standard.bool(forKey: Self.sessionTerminalBadgeEnabledDefaultsKey)
+        sessionGitBranchBadgeEnabled = UserDefaults.standard.bool(forKey: Self.sessionGitBranchBadgeEnabledDefaultsKey)
+        sessionGitDiffBadgeEnabled = UserDefaults.standard.bool(forKey: Self.sessionGitDiffBadgeEnabledDefaultsKey)
+        sessionContextBadgeEnabled = UserDefaults.standard.bool(forKey: Self.sessionContextBadgeEnabledDefaultsKey)
+        sessionAgeBadgeEnabled = UserDefaults.standard.bool(forKey: Self.sessionAgeBadgeEnabledDefaultsKey)
         advancedAvatarsEnabled = UserDefaults.standard.bool(forKey: Self.advancedAvatarsEnabledDefaultsKey)
         launchAtLoginEnabled = LaunchAtLoginService.shared.isEnabled
         islandClosedDisplayStyle = IslandClosedDisplayStyle(

@@ -8,7 +8,10 @@ import Foundation
 /// Use `Bundle.appResources` instead of `Bundle.module` throughout the app.
 enum ResourceBundle {
     static let bundle: Bundle = {
-        let bundleName = "OpenIsland_OpenIslandApp"
+        let bundleNames = [
+            "Atoll_AtollApp",
+            "OpenIsland_OpenIslandApp",
+        ]
 
         let candidates = [
             // Signed .app: Contents/Resources/
@@ -18,10 +21,12 @@ enum ResourceBundle {
         ]
 
         for candidate in candidates {
-            if let url = candidate?.appendingPathComponent(bundleName + ".bundle"),
-               let bundle = Bundle(url: url)
-            {
-                return bundle
+            for bundleName in bundleNames {
+                if let url = candidate?.appendingPathComponent(bundleName + ".bundle"),
+                   let bundle = Bundle(url: url)
+                {
+                    return bundle
+                }
             }
         }
 

@@ -11,8 +11,9 @@ final class OverlayPanelController: NSObject {
     private static let preferredNotificationPanelWidth: CGFloat = 620
     private static let openedContentWidthPadding: CGFloat = 28
     private static let openedContentBottomPadding: CGFloat = 0
-    /// Must match `IslandPanelView.mediaControlDockContentReserve`.
-    private static let mediaControlDockContentReserve: CGFloat = 42
+    /// Must match `IslandPanelView` media dock reserves.
+    private static let mediaControlDockControlsReserve: CGFloat = 42
+    private static let mediaControlDockArtworkReserve: CGFloat = 112
     private static let measuredSingleCardDockGap: CGFloat = 8
     private static let minimumSessionContentHeight: CGFloat = 132
     /// Must match `IslandPanelView.maxSessionListHeight` — the AutoHeightScrollView cap.
@@ -616,7 +617,7 @@ final class OverlayPanelController: NSObject {
         let visibleSessions = openedVisibleSessions(
             sessions: model.islandListSessions
         )
-        let mediaReserve = model.mediaControlsEnabled ? Self.mediaControlDockContentReserve : 0
+        let mediaReserve = mediaControlDockReserve(for: model)
 
         if visibleSessions.isEmpty {
             return Self.openedEmptyStateHeight + mediaReserve
@@ -636,7 +637,10 @@ final class OverlayPanelController: NSObject {
             // a measurement→reposition cycle.
             if let actionableID,
                let session = model.state.session(id: actionableID) {
-                let rowHeight = session.estimatedIslandRowHeight(at: now)
+                let rowHeight = session.estimatedIslandRowHeight(
+                    at: now,
+                    isManuallyExpanded: model.expandedSessionCardIDs.contains(session.id)
+                )
                 let bodyHeight = actionableBodyHeight(for: session, model: model)
                 return rowHeight + bodyHeight + Self.openedContentVerticalInsets + mediaReserve
             }
@@ -644,11 +648,12 @@ final class OverlayPanelController: NSObject {
         }
 
         let rowHeights = visibleSessions.map { session -> CGFloat in
+            let isManuallyExpanded = model.expandedSessionCardIDs.contains(session.id)
             if session.id == actionableID {
-                return session.estimatedIslandRowHeight(at: now)
+                return session.estimatedIslandRowHeight(at: now, isManuallyExpanded: isManuallyExpanded)
                     + actionableBodyHeight(for: session, model: model)
             }
-            return session.estimatedIslandRowHeight(at: now)
+            return session.estimatedIslandRowHeight(at: now, isManuallyExpanded: isManuallyExpanded)
         }
 
         let rowsHeight = rowHeights.reduce(CGFloat.zero, +)
@@ -675,6 +680,13 @@ final class OverlayPanelController: NSObject {
         case .running:
             return 0
         }
+    }
+
+    private func mediaControlDockReserve(for model: AppModel) -> CGFloat {
+        guard model.mediaControlsEnabled else { return 0 }
+        return model.mediaArtworkEnabled
+            ? Self.mediaControlDockArtworkReserve
+            : Self.mediaControlDockControlsReserve
     }
 
     /// Height of the inline completion expansion area (not the old full-card height).

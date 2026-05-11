@@ -587,7 +587,10 @@ final class AppModel {
     }
 
     private func refreshGitWorkspaceStatuses() {
-        guard sessionGitBadgesEnabled else { return }
+        guard sessionGitBranchBadgeEnabled || sessionGitDiffBadgeEnabled else {
+            gitWorkspaceStatusRegistry.clear()
+            return
+        }
         let paths = state.sessions.compactMap { session in
             session.jumpTarget?.workingDirectory
         }
@@ -996,6 +999,22 @@ final class AppModel {
             if delta >= 2, measuredNotificationContentHeight > 0 {
                 overlay.refreshOverlayPlacementIfVisible()
             }
+        }
+    }
+
+    var expandedSessionCardIDs: Set<String> = [] {
+        didSet {
+            if expandedSessionCardIDs != oldValue {
+                overlay.refreshOverlayPlacementIfVisible()
+            }
+        }
+    }
+
+    func setSessionCardExpanded(_ sessionID: String, expanded: Bool) {
+        if expanded {
+            expandedSessionCardIDs.insert(sessionID)
+        } else {
+            expandedSessionCardIDs.remove(sessionID)
         }
     }
 

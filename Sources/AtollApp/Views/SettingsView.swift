@@ -196,16 +196,32 @@ struct LabSettingsPane: View {
             }
 
             Section {
-                Toggle(lang.t("settings.lab.gitBadges"), isOn: Binding(
-                    get: { model.sessionGitBadgesEnabled },
-                    set: { model.sessionGitBadgesEnabled = $0 }
+                Toggle(lang.t("settings.appearance.badges.tool"), isOn: Binding(
+                    get: { model.sessionToolBadgeEnabled },
+                    set: { model.sessionToolBadgeEnabled = $0 }
                 ))
-
-                Text(lang.t("settings.lab.gitHelp"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Toggle(lang.t("settings.appearance.badges.terminal"), isOn: Binding(
+                    get: { model.sessionTerminalBadgeEnabled },
+                    set: { model.sessionTerminalBadgeEnabled = $0 }
+                ))
+                Toggle(lang.t("settings.appearance.badges.gitBranch"), isOn: Binding(
+                    get: { model.sessionGitBranchBadgeEnabled },
+                    set: { model.sessionGitBranchBadgeEnabled = $0 }
+                ))
+                Toggle(lang.t("settings.appearance.badges.gitDiff"), isOn: Binding(
+                    get: { model.sessionGitDiffBadgeEnabled },
+                    set: { model.sessionGitDiffBadgeEnabled = $0 }
+                ))
+                Toggle(lang.t("settings.appearance.badges.context"), isOn: Binding(
+                    get: { model.sessionContextBadgeEnabled },
+                    set: { model.sessionContextBadgeEnabled = $0 }
+                ))
+                Toggle(lang.t("settings.appearance.badges.age"), isOn: Binding(
+                    get: { model.sessionAgeBadgeEnabled },
+                    set: { model.sessionAgeBadgeEnabled = $0 }
+                ))
             } header: {
-                Text(lang.t("settings.lab.section.sessions"))
+                Text(lang.t("settings.appearance.badges"))
             }
 
             Section {

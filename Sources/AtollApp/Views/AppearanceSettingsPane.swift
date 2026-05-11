@@ -186,39 +186,6 @@ struct AppearanceSettingsPane: View {
                     .listRowBackground(Color.clear)
             }
 
-            Section(lang.t("settings.appearance.badges")) {
-                Toggle(lang.t("settings.appearance.badges.tool"), isOn: Binding(
-                    get: { model.sessionToolBadgeEnabled },
-                    set: { model.sessionToolBadgeEnabled = $0 }
-                ))
-                Toggle(lang.t("settings.appearance.badges.terminal"), isOn: Binding(
-                    get: { model.sessionTerminalBadgeEnabled },
-                    set: { model.sessionTerminalBadgeEnabled = $0 }
-                ))
-                Toggle(lang.t("settings.appearance.badges.gitBranch"), isOn: Binding(
-                    get: { model.sessionGitBranchBadgeEnabled },
-                    set: { model.sessionGitBranchBadgeEnabled = $0 }
-                ))
-                .disabled(!model.sessionGitBadgesEnabled)
-                Toggle(lang.t("settings.appearance.badges.gitDiff"), isOn: Binding(
-                    get: { model.sessionGitDiffBadgeEnabled },
-                    set: { model.sessionGitDiffBadgeEnabled = $0 }
-                ))
-                .disabled(!model.sessionGitBadgesEnabled)
-                Toggle(lang.t("settings.appearance.badges.context"), isOn: Binding(
-                    get: { model.sessionContextBadgeEnabled },
-                    set: { model.sessionContextBadgeEnabled = $0 }
-                ))
-                Toggle(lang.t("settings.appearance.badges.age"), isOn: Binding(
-                    get: { model.sessionAgeBadgeEnabled },
-                    set: { model.sessionAgeBadgeEnabled = $0 }
-                ))
-
-                Text(lang.t("settings.appearance.badges.help"))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
             Section(lang.t("settings.appearance.pixelShape")) {
                 LazyVGrid(
                     columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4),

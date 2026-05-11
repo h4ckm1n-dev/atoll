@@ -52,13 +52,18 @@ struct AutoHeightScrollView<Content: View>: View {
 
 extension AgentSession {
     /// Estimated row height matching `IslandSessionRow` layout for viewport sizing.
-    func estimatedIslandRowHeight(at date: Date) -> CGFloat {
-        let presence = islandPresence(at: date)
+    func estimatedIslandRowHeight(at date: Date, isManuallyExpanded: Bool = false) -> CGFloat {
+        let rawPresence = islandPresence(at: date)
+        let presence = (rawPresence == .inactive && isManuallyExpanded) ? .active : rawPresence
         // Base: vertical padding (28) + headline (~18) + rounding (2)
         var height: CGFloat = 48
         guard presence != .inactive else { return height }
-        if spotlightPromptLineText != nil { height += 24 }   // spacing (8) + text (16)
-        if spotlightActivityLineText != nil { height += 22 }  // spacing (8) + text (14)
+        if spotlightPromptLineText != nil || (isManuallyExpanded && spotlightPromptText != nil) {
+            height += 24   // spacing (8) + text (16)
+        }
+        if spotlightActivityLineText != nil || isManuallyExpanded {
+            height += 22  // spacing (8) + text (14)
+        }
         if let subagents = claudeMetadata?.activeSubagents, !subagents.isEmpty {
             height += 22  // spacing (8) + header (14)
             height += CGFloat(subagents.count) * 18  // each subagent row (spacing 4 + text 14)
@@ -292,8 +297,8 @@ struct IslandPanelView: View {
                 lastCompletionTimestamp = Date()
             }
         }
-        .onChange(of: companionState) { _, newState in
-            guard newState == .celebrating else { return }
+        .onChange(of: lastCompletionTimestamp) { _, timestamp in
+            guard timestamp != nil else { return }
             guard model.celebrationsEnabled else { return }
             guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
             lastCelebrationTimestamp = Date()
@@ -461,22 +466,10 @@ struct IslandPanelView: View {
         return model.projectColorRegistry.color(for: key)
     }
 
-    private var companionState: CompanionState {
-        let recently = CompanionState.isWithinCelebratingWindow(
-            now: Date(),
-            lastCompletion: lastCompletionTimestamp
-        )
-        return CompanionState.derive(
-            spotlightPhase: closedSpotlightSession?.phase,
-            recentlyCompleted: recently
-        )
-    }
-
     /// Sleeps until the time window from the bound timestamp elapses, then
     /// nils it out. Driven by `.task(id:)` so each new timestamp cancels the
-    /// prior pending expiry. Without this, the celebration glyph and confetti
-    /// container would persist past their windows whenever no other observed
-    /// state changed in the meantime.
+    /// prior pending expiry. Without this, the confetti container would persist
+    /// past its window whenever no other observed state changed in the meantime.
     @MainActor
     private func expireTimestamp(
         _ binding: Binding<Date?>,
@@ -502,29 +495,14 @@ struct IslandPanelView: View {
         } else {
             HStack(spacing: 0) {
                 if hasClosedPresence {
-                    HStack(spacing: 4) {
-                        ZStack(alignment: .bottomTrailing) {
-                            IslandPixelGlyph(
-                                tint: scoutTint,
-                                style: displayedPixelShapeStyle,
-                                isAnimating: hasClosedActivity,
-                                customAvatarImage: model.customAvatarImage
-                            )
-                            .matchedGeometryEffect(id: "island-icon", in: notchNamespace, isSource: true)
-
-                            CompanionStateOverlay(state: companionState, palette: model.themeManager.palette)
-                                .offset(x: 2, y: 2)
-                        }
-
-                        if closedSpotlightSession?.phase.requiresAttention == true {
-                            AttentionIndicator(
-                                size: 14,
-                                color: phaseColor(closedSpotlightSession?.phase ?? .running)
-                            )
-                        }
-                    }
-                    .frame(width: sideWidth + 8
-                        + (closedSpotlightSession?.phase.requiresAttention == true ? 18 : 0))
+                    IslandPixelGlyph(
+                        tint: scoutTint,
+                        style: displayedPixelShapeStyle,
+                        isAnimating: hasClosedActivity,
+                        customAvatarImage: model.customAvatarImage
+                    )
+                    .matchedGeometryEffect(id: "island-icon", in: notchNamespace, isSource: true)
+                    .frame(width: sideWidth + 8)
                 }
 
                 if !hasClosedPresence {
@@ -545,8 +523,7 @@ struct IslandPanelView: View {
                 }
 
                 if hasClosedPresence {
-                    let attentionBalanceWidth: CGFloat = closedSpotlightSession?.phase.requiresAttention == true ? 18 : 0
-                    let slotWidth = max(sideWidth, countBadgeWidth) + attentionBalanceWidth
+                    let slotWidth = max(sideWidth, countBadgeWidth)
 
                     ClosedCountBadge(liveCount: model.liveSessionCount, tint: palette.text.swiftUIColor.opacity(0.85))
                         .matchedGeometryEffect(id: "right-indicator", in: notchNamespace, isSource: true)
@@ -609,7 +586,7 @@ struct IslandPanelView: View {
         }
         .padding(.horizontal, 18)
         .padding(.top, 8)
-        .padding(.bottom, model.mediaControlsEnabled ? Self.mediaControlDockContentReserve : 0)
+        .padding(.bottom, mediaControlDockContentReserve)
     }
 
     /// Persistent hint at the top of the expanded island while no agent
@@ -723,8 +700,16 @@ struct IslandPanelView: View {
         model.notchOpenReason == .notification && actionableSessionID != nil
     }
 
-    private static let mediaControlDockContentReserve: CGFloat = 42
+    private static let mediaControlDockControlsReserve: CGFloat = 42
+    private static let mediaControlDockArtworkReserve: CGFloat = 112
     private static let maxSessionListHeight: CGFloat = 560
+
+    private var mediaControlDockContentReserve: CGFloat {
+        guard model.mediaControlsEnabled else { return 0 }
+        return model.mediaArtworkEnabled
+            ? Self.mediaControlDockArtworkReserve
+            : Self.mediaControlDockControlsReserve
+    }
 
     private var sessionList: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
@@ -781,7 +766,7 @@ struct IslandPanelView: View {
                         ? { model.submitIslandKeyboardReply(for: session, text: $0) } : nil,
                     onCancelReply: { model.cancelIslandKeyboardReply() },
                     contextUsage: model.contextUsageRegistry.usage(for: session.id),
-                    gitSnapshot: model.sessionGitBadgesEnabled
+                    gitSnapshot: (model.sessionGitBranchBadgeEnabled || model.sessionGitDiffBadgeEnabled)
                         ? model.gitWorkspaceStatusRegistry.snapshot(for: session.jumpTarget?.workingDirectory)
                         : nil,
                     planState: model.planModeRegistry.plan(for: session.id),
@@ -790,12 +775,16 @@ struct IslandPanelView: View {
                     },
                     showsToolBadge: model.sessionToolBadgeEnabled,
                     showsTerminalBadge: model.sessionTerminalBadgeEnabled,
-                    showsGitBranchBadge: model.sessionGitBadgesEnabled && model.sessionGitBranchBadgeEnabled,
-                    showsGitDiffBadge: model.sessionGitBadgesEnabled && model.sessionGitDiffBadgeEnabled,
+                    showsGitBranchBadge: model.sessionGitBranchBadgeEnabled,
+                    showsGitDiffBadge: model.sessionGitDiffBadgeEnabled,
                     showsContextBadge: model.sessionContextBadgeEnabled,
                     showsAgeBadge: model.sessionAgeBadgeEnabled,
                     themePalette: model.themeManager.palette,
                     streamSafeTextEnabled: model.liveCodingModeEnabled,
+                    isManuallyExpanded: model.expandedSessionCardIDs.contains(session.id),
+                    onManualExpansionChange: { expanded in
+                        model.setSessionCardExpanded(session.id, expanded: expanded)
+                    },
                     onJump: { model.jumpToSession(session) }
                 )
 
@@ -829,7 +818,7 @@ struct IslandPanelView: View {
                             ? { model.submitIslandKeyboardReply(for: session, text: $0) } : nil,
                         onCancelReply: { model.cancelIslandKeyboardReply() },
                         contextUsage: model.contextUsageRegistry.usage(for: session.id),
-                        gitSnapshot: model.sessionGitBadgesEnabled
+                        gitSnapshot: (model.sessionGitBranchBadgeEnabled || model.sessionGitDiffBadgeEnabled)
                             ? model.gitWorkspaceStatusRegistry.snapshot(for: session.jumpTarget?.workingDirectory)
                             : nil,
                         planState: model.planModeRegistry.plan(for: session.id),
@@ -838,12 +827,16 @@ struct IslandPanelView: View {
                         },
                         showsToolBadge: model.sessionToolBadgeEnabled,
                         showsTerminalBadge: model.sessionTerminalBadgeEnabled,
-                        showsGitBranchBadge: model.sessionGitBadgesEnabled && model.sessionGitBranchBadgeEnabled,
-                        showsGitDiffBadge: model.sessionGitBadgesEnabled && model.sessionGitDiffBadgeEnabled,
+                        showsGitBranchBadge: model.sessionGitBranchBadgeEnabled,
+                        showsGitDiffBadge: model.sessionGitDiffBadgeEnabled,
                         showsContextBadge: model.sessionContextBadgeEnabled,
                         showsAgeBadge: model.sessionAgeBadgeEnabled,
                         themePalette: model.themeManager.palette,
                         streamSafeTextEnabled: model.liveCodingModeEnabled,
+                        isManuallyExpanded: model.expandedSessionCardIDs.contains(session.id),
+                        onManualExpansionChange: { expanded in
+                            model.setSessionCardExpanded(session.id, expanded: expanded)
+                        },
                         onJump: { model.jumpToSession(session) },
                         onDismiss: session.isRemote ? { model.dismissSession(session.id) } : nil
                     )
@@ -1056,6 +1049,8 @@ struct IslandPanelView: View {
         layout: UsageSummaryLayout
     ) -> some View {
         HStack(spacing: 6) {
+            UsageProviderIcon(providerID: provider.id, size: layout.providerIconSize)
+
             Text(layout.usesShortProviderTitle ? provider.shortTitle : provider.title)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(palette.text.swiftUIColor.opacity(0.9))
@@ -1163,29 +1158,31 @@ private struct MediaControlDock: View {
     let onNext: () -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
+        VStack(spacing: 7) {
             if showsArtwork, let artwork = snapshot.artwork {
                 Image(nsImage: artwork)
                     .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 34, height: 34)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .aspectRatio(16.0 / 9.0, contentMode: .fill)
+                    .frame(width: 116, height: 65)
+                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        RoundedRectangle(cornerRadius: 9, style: .continuous)
                             .strokeBorder(palette.text.swiftUIColor.opacity(0.12), lineWidth: 0.5)
                     )
                     .shadow(color: .black.opacity(0.2), radius: 5, y: 2)
                     .accessibilityHidden(true)
             }
 
-            mediaButton(systemName: "backward.fill", label: "Previous", action: onPrevious)
-            mediaButton(
-                systemName: snapshot.isPlaying ? "pause.fill" : "play.fill",
-                label: snapshot.isPlaying ? "Pause" : "Play",
-                action: onPlayPause,
-                isPrimary: true
-            )
-            mediaButton(systemName: "forward.fill", label: "Next", action: onNext)
+            HStack(spacing: 6) {
+                mediaButton(systemName: "backward.fill", label: "Previous", action: onPrevious)
+                mediaButton(
+                    systemName: snapshot.isPlaying ? "pause.fill" : "play.fill",
+                    label: snapshot.isPlaying ? "Pause" : "Play",
+                    action: onPlayPause,
+                    isPrimary: true
+                )
+                mediaButton(systemName: "forward.fill", label: "Next", action: onNext)
+            }
         }
         .fixedSize()
         .opacity(0.82)
@@ -1263,39 +1260,6 @@ private struct UsageProviderIcon: View {
             default:
                 Circle()
                     .strokeBorder(.white.opacity(0.82), lineWidth: max(1, size * 0.12))
-            }
-        }
-        .frame(width: size, height: size)
-        .accessibilityHidden(true)
-    }
-}
-
-private struct AgentToolMiniIcon: View {
-    let tool: AgentTool
-    let size: CGFloat
-
-    var body: some View {
-        ZStack {
-            switch tool {
-            case .claudeCode:
-                Text("A")
-                    .font(.system(size: size * 0.72, weight: .black, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.92))
-            case .codex:
-                ForEach(0..<6, id: \.self) { index in
-                    Capsule(style: .continuous)
-                        .fill(.white.opacity(0.86))
-                        .frame(width: size * 0.18, height: size * 0.44)
-                        .offset(y: -size * 0.18)
-                        .rotationEffect(.degrees(Double(index) * 60))
-                }
-                Circle()
-                    .fill(Color.black.opacity(0.42))
-                    .frame(width: size * 0.28, height: size * 0.28)
-            default:
-                Text(String(tool.displayName.prefix(1)))
-                    .font(.system(size: size * 0.68, weight: .black, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.86))
             }
         }
         .frame(width: size, height: size)
@@ -1425,12 +1389,13 @@ private struct IslandSessionRow: View {
     var showsAgeBadge: Bool = true
     var themePalette: ThemePalette = .mocha
     var streamSafeTextEnabled: Bool = false
+    var isManuallyExpanded: Bool = false
+    var onManualExpansionChange: ((Bool) -> Void)?
     @State private var planExpanded: Bool = false
     let onJump: () -> Void
     var onDismiss: (() -> Void)?
 
     @State private var isHighlighted = false
-    @State private var isManuallyExpanded = false
     @State private var replyText: String = ""
 
     var body: some View {
@@ -1442,9 +1407,7 @@ private struct IslandSessionRow: View {
         let presence = (rawPresence == .inactive && isManuallyExpanded) ? .active : rawPresence
         let showsExpandedContent = presence != .inactive
         return VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 14) {
-                statusDot(for: presence)
-
+            HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top, spacing: 12) {
                         Text(streamSafe(session.spotlightHeadlineText))
@@ -1456,10 +1419,11 @@ private struct IslandSessionRow: View {
 
                         HStack(spacing: 6) {
                             if showsToolBadge {
-                                toolBadge(session.tool, presence: presence)
+                                compactBadge(session.tool.displayName, presence: presence,
+                                             tint: BadgeColors.agent(session.tool, palette: themePalette).opacity(presence == .inactive ? 0.4 : 1.0))
                             }
                             if showsTerminalBadge, session.isRemote {
-                                compactBadge("SSH", presence: presence, icon: "network")
+                                compactBadge("SSH", presence: presence)
                             }
                             if showsTerminalBadge, let terminalBadge = session.spotlightTerminalBadge {
                                 compactBadge(terminalBadge, presence: presence,
@@ -1615,7 +1579,7 @@ private struct IslandSessionRow: View {
         }
         .onChange(of: isInteractive) { _, interactive in
             if !interactive {
-                isManuallyExpanded = false
+                onManualExpansionChange?(false)
             }
         }
     }
@@ -2112,13 +2076,6 @@ private struct IslandSessionRow: View {
         }
     }
 
-    private func statusDot(for presence: IslandSessionPresence) -> some View {
-        Circle()
-            .fill(statusTint(for: presence))
-            .frame(width: 9, height: 9)
-            .padding(.top, 6)
-    }
-
     /// Prompt line for manually expanded inactive rows (bypasses time-based filter).
     private var expandedPromptLineText: String? {
         guard isManuallyExpanded, let prompt = session.spotlightPromptText else { return nil }
@@ -2140,7 +2097,7 @@ private struct IslandSessionRow: View {
         let rawPresence = session.islandPresence(at: referenceDate)
         if rawPresence == .inactive && !isManuallyExpanded {
             withAnimation(.easeInOut(duration: 0.2)) {
-                isManuallyExpanded = true
+                onManualExpansionChange?(true)
             }
         } else {
             onJump()
@@ -2150,38 +2107,13 @@ private struct IslandSessionRow: View {
     private func compactBadge(
         _ title: String,
         presence: IslandSessionPresence,
-        icon: String? = nil,
-        iconText: String? = nil,
         tint: Color? = nil
     ) -> some View {
-        HStack(spacing: 3) {
-            if let iconText {
-                Text(iconText)
-                    .font(.system(size: 8, weight: .bold, design: .rounded))
-                    .baselineOffset(-0.5)
-            } else if let icon {
-                Image(systemName: icon)
-                    .font(.system(size: 7.5, weight: .semibold))
-            }
+        HStack(spacing: 0) {
             Text(title)
                 .font(.system(size: 9, weight: .semibold))
         }
         .foregroundStyle(tint ?? badgeTextColor(for: presence))
-        .padding(.horizontal, 7)
-        .padding(.vertical, 3.5)
-        .background(themePalette.surface0.swiftUIColor, in: Capsule())
-    }
-
-    private func toolBadge(
-        _ tool: AgentTool,
-        presence: IslandSessionPresence
-    ) -> some View {
-        HStack(spacing: 4) {
-            AgentToolMiniIcon(tool: tool, size: 10)
-            Text(tool.displayName)
-                .font(.system(size: 9, weight: .semibold))
-        }
-        .foregroundStyle(BadgeColors.agent(tool, palette: themePalette).opacity(presence == .inactive ? 0.4 : 1.0))
         .padding(.horizontal, 7)
         .padding(.vertical, 3.5)
         .background(themePalette.surface0.swiftUIColor, in: Capsule())
@@ -2194,24 +2126,38 @@ private struct IslandSessionRow: View {
         compactBadge(
             shortBranchName(snapshot.branchName),
             presence: presence,
-            iconText: "\u{EA84}",
             tint: themePalette.mauve.swiftUIColor.opacity(presence == .inactive ? 0.42 : 0.88)
         )
     }
 
+    @ViewBuilder
     private func gitDiffBadge(
         _ snapshot: GitWorkspaceSnapshot,
         presence: IslandSessionPresence
     ) -> some View {
-        let tint = snapshot.isDirty
-            ? themePalette.green.swiftUIColor.opacity(presence == .inactive ? 0.42 : 0.9)
-            : themePalette.text.swiftUIColor.opacity(presence == .inactive ? 0.34 : 0.45)
-        return compactBadge(
-            snapshot.diffSummary,
-            presence: presence,
-            icon: snapshot.isDirty ? "plus.forwardslash.minus" : "checkmark",
-            tint: tint
-        )
+        if snapshot.additions == 0, snapshot.removals == 0 {
+            compactBadge(
+                snapshot.isDirty ? "\(snapshot.changedFileCount)" : "clean",
+                presence: presence,
+                tint: themePalette.text.swiftUIColor.opacity(presence == .inactive ? 0.34 : 0.48)
+            )
+        } else {
+            let inactiveOpacity = presence == .inactive ? 0.48 : 0.95
+            HStack(spacing: 5) {
+                if snapshot.additions > 0 {
+                    Text("+\(snapshot.additions)")
+                        .foregroundStyle(themePalette.green.swiftUIColor.opacity(inactiveOpacity))
+                }
+                if snapshot.removals > 0 {
+                    Text("-\(snapshot.removals)")
+                        .foregroundStyle(themePalette.red.swiftUIColor.opacity(inactiveOpacity))
+                }
+            }
+            .font(.system(size: 9, weight: .semibold))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3.5)
+            .background(themePalette.surface0.swiftUIColor, in: Capsule())
+        }
     }
 
     private func shortBranchName(_ branchName: String) -> String {
@@ -2751,19 +2697,6 @@ private struct IslandWideButtonStyle: ButtonStyle {
         case .danger:
             return Color(red: 0.82, green: 0.22, blue: 0.22).opacity(pressedFactor)
         }
-    }
-}
-
-// MARK: - Attention indicator (permission/question dot)
-
-private struct AttentionIndicator: View {
-    let size: CGFloat
-    let color: Color
-
-    var body: some View {
-        Image(systemName: "exclamationmark.triangle.fill")
-            .font(.system(size: size * 0.75, weight: .bold))
-            .foregroundStyle(color)
     }
 }
 

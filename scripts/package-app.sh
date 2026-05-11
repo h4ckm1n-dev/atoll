@@ -22,6 +22,7 @@ notary_profile="${ATOLL_NOTARY_PROFILE:-}"
 brand_script="$repo_root/scripts/generate_brand_icons.py"
 dmg_bg_script="$repo_root/scripts/generate_dmg_background.py"
 entitlements_path="$repo_root/config/packaging/AtollApp.entitlements"
+media_remote_adapter_framework="$repo_root/ThirdParty/MediaRemoteAdapter/MediaRemoteAdapter.framework"
 
 cd "$repo_root"
 
@@ -63,6 +64,12 @@ if [[ -d "$sparkle_framework" ]]; then
     cp -R "$sparkle_framework" "$bundle_dir/Contents/Frameworks/"
 else
     echo "WARNING: Sparkle.framework not found at $sparkle_framework — run 'swift package resolve' first." >&2
+fi
+
+if [[ -d "$media_remote_adapter_framework" ]]; then
+    cp -R "$media_remote_adapter_framework" "$bundle_dir/Contents/Frameworks/"
+else
+    echo "WARNING: MediaRemoteAdapter.framework not found at $media_remote_adapter_framework — media artwork fallback will be unavailable." >&2
 fi
 
 # Copy SPM resource bundle into Contents/Resources/ so the .app root stays
@@ -190,9 +197,14 @@ else
 fi
 
 sparkle_fw="$bundle_dir/Contents/Frameworks/Sparkle.framework"
+media_remote_adapter_fw="$bundle_dir/Contents/Frameworks/MediaRemoteAdapter.framework"
 
 if [[ -n "$signing_identity" ]]; then
     # Sign nested code objects inside-out: Sparkle internals → helpers → app.
+
+    if [[ -d "$media_remote_adapter_fw" ]]; then
+        codesign --force --options runtime --timestamp --sign "$signing_identity" "$media_remote_adapter_fw"
+    fi
 
     if [[ -d "$sparkle_fw" ]]; then
         for xpc in "$sparkle_fw"/Versions/B/XPCServices/*.xpc; do

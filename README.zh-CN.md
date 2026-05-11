@@ -1,360 +1,137 @@
 <p align="center">
-  <img src="Assets/Brand/app-icon-cat.png" alt="Open Island" width="128" height="128">
+  <img src="Assets/Brand/atoll-app-icon.png" alt="Atoll" width="200" height="200">
 </p>
 
-<h1 align="center">Open Island</h1>
-
 <p align="center">
-  <strong>为什么要用闭源付费软件来监控你自己的 coding agents？</strong>
+  <strong>专为 AI 编程 Agent 打造的原生 macOS 伴侣。</strong>
   <br>
-  开源、本地优先、原生 macOS 的 AI coding agent 伴侣应用。
+  一个驻留在刘海区域、支持主题定制、本地优先的控制中心，监控你运行的每一个 Agent。
   <br><br>
   <strong>中文</strong> | <a href="README.md">English</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Octane0411/open-vibe-island/releases/latest"><img src="https://img.shields.io/github/v/release/Octane0411/open-vibe-island?style=flat-square&label=release&color=blue" alt="最新版本"></a>
-  <a href="https://github.com/Octane0411/open-vibe-island/stargazers"><img src="https://img.shields.io/github/stars/Octane0411/open-vibe-island?style=flat-square&color=yellow" alt="Stars"></a>
-  <a href="https://discord.gg/bPF2HpbCFb"><img src="https://img.shields.io/discord/1490752192368476253?style=flat-square&logo=discord&label=discord&color=5865F2" alt="Discord"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL%20v3-green?style=flat-square" alt="License: GPL v3"></a>
+  <a href="https://github.com/h4ckm1n-dev/atoll/releases/latest"><img src="https://img.shields.io/github/v/release/h4ckm1n-dev/atoll?style=flat-square&label=release&color=89b4fa" alt="最新版本"></a>
+  <a href="https://github.com/h4ckm1n-dev/atoll/stargazers"><img src="https://img.shields.io/github/stars/h4ckm1n-dev/atoll?style=flat-square&color=f9e2af" alt="Stars"></a>
+  <img src="https://img.shields.io/badge/macOS-14%2B-fab387?style=flat-square" alt="macOS 14+">
+  <img src="https://img.shields.io/badge/Swift-6.2-fab387?style=flat-square" alt="Swift 6.2">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL%20v3-a6e3a1?style=flat-square" alt="开源协议: GPL v3"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/Octane0411/open-vibe-island/releases">下载</a> ·
+  <a href="https://github.com/h4ckm1n-dev/atoll/releases">下载</a> ·
   <a href="#快速开始">快速开始</a> ·
-  <a href="docs/roadmap.zh-CN.md">路线图</a> ·
-  <a href="CONTRIBUTING.zh-CN.md">参与贡献</a>
+  <a href="#核心功能">核心功能</a> ·
+  <a href="#路线图">路线图</a> ·
+  <a href="docs/index.md">文档</a>
 </p>
 
-<p align="center">
-  <img src="docs/images/demo.gif" alt="Open Island 运行效果" width="720">
-</p>
+<img width="1800" height="1169" alt="Atoll 展示" src="https://github.com/user-attachments/assets/e8ffb3e8-2cb0-42a6-9b0a-f0591759950f" />
 
 ---
 
-## Open Island 是什么？
+## Atoll 是什么？
 
-Open Island 驻留在 Mac 的**刘海区域**（或顶部栏），为你的 AI coding agents 提供实时控制面板——会话状态、权限审批、一键跳回正确的终端。全程不打断你的工作流。
+**Atoll** 是一款原生 macOS 应用，它将你的 **刘海区域**（或顶部工具栏）转化为一个实时的、支持主题定制的 AI 编程 Agent 控制中心。它为你提供了会话管理、权限审批、内联 Diff 预览和计划执行的统一入口——全程本地运行，响应极快。
 
-可以理解为开源版的 [Vibe Island](https://vibeisland.app/)——**免费、本地运行、代码完全属于你**。
+名字源于其几何形状：环绕着平静礁湖的一圈陆地——恰如包裹着 Mac 刘海的面板，Agent 的活动如同海鱼跃出水面。
 
-> *You don't need to pay for a product you can vibe, since you are a vibe coder.*
+> *支持 11 款 Agent，15+ 种终端。环绕刘海的珊瑚环。*
 
-## 为什么选 Open Island？
+## 为什么选择 Atoll？
 
-- **开源** — GPL v3，fork 它、改它、发布你自己的版本
-- **本地优先** — 无服务器、无遥测、无需注册。一切在你的 Mac 上运行
-- **原生 macOS** — SwiftUI + AppKit，不是 Electron 套壳
-- **多 Agent** — 一个界面管理 Claude Code、Codex、Cursor、Gemini CLI、OpenCode 等
-- **多终端** — 一键跳回到准确的终端/IDE 会话
+- **本地优先**：无服务器、无遥测、无需账号。一切都在你的 Mac 上运行。
+- **原生 macOS**：基于 SwiftUI + AppKit 构建。专为 Mac 体验打造。
+- **深度集成**：开箱即用支持 11+ 种编程 Agent 和 15+ 种终端/IDE。
+- **全方位主题**：Catppuccin, Tokyo Night, Dracula 等。甚至 Diff 语法高亮也会随主题自动变色。
+- **行动导向**：不只是观察。直接在刘海中审批权限、回答问题，或一键跳回正确的终端会话。
+- **开源、GPL v3**：Fork 它、改它、发布你自己的版本。
 
-## 支持的 Agents 和终端
+---
 
-**10 个 Agents**：Claude Code、Codex、Cursor、Gemini CLI、Kimi CLI、OpenCode、Qoder、Qwen Code、Factory、CodeBuddy
+## 核心功能
 
-**15+ 终端和 IDE**：Terminal.app、Ghostty、iTerm2、WezTerm、Zellij、tmux、cmux、Kaku、VS Code、Cursor、Windsurf、Trae、JetBrains 全家桶（IDEA、WebStorm、PyCharm、GoLand、CLion、RubyMine、PhpStorm、Rider、RustRover）
+### 🎨 主题定制与个性化
+Atoll 为注重工作空间美感的开发者而生。
+- **端到端主题重绘**：在 Catppuccin, Tokyo Night, Dracula, Gruvbox 等主题间无缝切换。整个 UI，包括语法高亮的 Diff 视图，都会瞬间适配。
+- **内置主题编辑器**：不满意默认主题？使用包含 26 个色块的实时编辑器打造属于你的 JSON 主题并导出。
+- **毛玻璃效果**：提供实体、薄毛玻璃、超薄毛玻璃三种材质，让壁纸颜色自然透出。
+- **项目专属配色**：每个工作区都会根据路径生成唯一的稳定色调，让你一眼识别当前活跃的项目。
 
-<details>
-<summary>完整兼容列表</summary>
+### 📝 智能 Agent 掌控
+- **内联 Diff 预览**：在授予权限前，直接查看 Agent 准备修改的代码差异（Myers 算法，带语法高亮）。
+- **计划模式清单**：交互式的结构化清单。在审批前查看计划，在执行过程中跟踪 Agent 勾选的每一个步骤。
+- **审批驾驶舱**：在控制中心提供专用队列，集中管理多个待审批的权限请求和问题。
+- **会话时间线**：详细的审计日志，记录会话启动、工具调用、权限审批和完成的每一个瞬间。
 
-### Code Agents
+### ⌨️ 键盘优先与自动化
+- **刘海键盘导航**：完全通过键盘（Tab, 方向键, Enter, Esc）即可浏览岛屿、切换会话和执行操作。
+- **自动化深度链接**：通过 `atoll://` URL 控制 Atoll。完美适配 Raycast, Stream Deck 或 Shell 脚本。
+- **精准跳转**：一键（或快捷键）跳回到准确的终端面板、IDE 窗口或 `cmux` 会话。
 
-| Agent | 状态 | 说明 |
-|---|---|---|
-| **Claude Code** | 已支持 | Hook 集成、JSONL 会话发现、status line bridge、用量追踪 |
-| **Codex**（CLI） | 已支持 | 完整 hook 集成（SessionStart、UserPromptSubmit、Stop）、用量追踪 |
-| **Codex 桌面 App** | 已支持 | Hook 集成 + app-server JSON-RPC 直连，实时获取 thread/turn 生命周期。点击 session 通过 `codex://threads/<id>` 精确跳转到对应会话 |
-| **OpenCode** | 已支持 | JS 插件集成、权限/问答交互、进程检测 |
-| **Qoder** | 已支持 | Claude Code 分支——相同 hook 格式，配置位于 `~/.qoder/settings.json` |
-| **Qwen Code** | 已支持 | Claude Code 分支——相同 hook 格式，配置位于 `~/.qwen/settings.json` |
-| **Factory** | 已支持 | Claude Code 分支——相同 hook 格式，配置位于 `~/.factory/settings.json` |
-| **CodeBuddy** | 已支持 | Claude Code 分支——相同 hook 格式，配置位于 `~/.codebuddy/settings.json` |
-| **Cursor** | 已支持 | Hook 集成，通过 `~/.cursor/hooks.json` 配置，会话追踪，工作区跳转 |
-| **Gemini CLI** | 已支持 | Hook 集成，通过 `~/.gemini/settings.json` 配置，会话追踪，fire-and-forget 事件 |
-| **Kimi CLI** | 已支持 | Hook 集成，通过 `~/.kimi/config.toml` 的 `[[hooks]]` 数组配置，会话追踪，复用 Claude payload 协议 |
+### 🎵 刘海媒体控制与 Git 状态
+- **集成媒体面板**：在刘海下方的独立面板中直接控制音乐播放（播放/暂停/切歌）并查看专辑封面。
+- **Git 实时感知**：在刘海的会话行中实时显示当前分支、未提交更改数、新增与删除行数。
 
-### 终端和 IDE
+### ⌚ 移动端与 Watch 伴侣
+即便离开座位，也能掌控全局。
+- **远程审批**：在 iPhone 或 Apple Watch 上接收权限请求通知。
+- **快捷操作**：直接在手腕上点击“允许”或“拒绝” Agent 的操作。
+- **本地桥接**：基于本地网络的 SSE 桥接，安全地连接你的移动设备。
 
-| 终端 / IDE | 支持级别 | 说明 |
-|---|---|---|
-| **Terminal.app** | 完整 | Jump-back，TTY 定位 |
-| **Ghostty** | 完整 | Jump-back，ID 匹配 |
-| **cmux** | 完整 | Jump-back，Unix socket API |
-| **Kaku** | 完整 | Jump-back，CLI pane 定位 |
-| **WezTerm** | 完整 | Jump-back，CLI pane 定位 |
-| **iTerm2** | 完整 | Jump-back，session ID / TTY 匹配 |
-| **tmux**（终端复用器） | 完整 | Jump-back，session/window/pane 定位 |
-| **Zellij** | 完整 | Jump-back，CLI pane/tab 定位 |
-| **VS Code** | 工作区 | 通过 `code` CLI 激活工作区 |
-| **Cursor** | 工作区 | 通过 `cursor` CLI 激活工作区 |
-| **Windsurf** | 工作区 | 通过 `windsurf` CLI 激活工作区 |
-| **Trae** | 工作区 | 通过 `trae` CLI 激活工作区 |
-| **JetBrains 全家桶** | 工作区 | IDEA、WebStorm、PyCharm、GoLand、CLion、RubyMine、PhpStorm、Rider、RustRover |
-| **Warp** | 完整支持 | 通过 SQLite pane 查找 + AX 菜单点击精准跳转到目标 tab |
+### 🎥 为创作者打造
+- **直播模式**：一键脱敏敏感路径和文本，专为直播和录屏设计。
+- **OBS 覆盖层**：本地浏览器源，可将会话状态显示在直播画面中，而不泄露终端内容。
+- **创作者快启指南**：专为直播主和创作者设计的配置向导。
 
-### 其他功能
+---
 
-| 功能 | 说明 |
-|---|---|
-| 刘海 / 顶部栏覆盖层 | 刘海 Mac 在刘海区域，其他 Mac 顶部居中栏 |
-| 控制中心 | Hook 状态、用量仪表盘 |
-| 通知模式 | 自适应高度面板，用于权限请求和会话事件 |
-| 通知音效 | 可配置系统音效、静音切换 |
-| 国际化 | English、简体中文 |
-| 会话发现 | 从本地 transcript 自动发现，跨启动持久化 |
-| 自动更新 | 基于 Sparkle 的自动更新 |
-| 签名公证 | DMG 打包，Apple 公证 |
+## 支持的 Agents 与终端
 
-</details>
+**11 款 Agent**：Claude Code, Codex, Codex Desktop App, Cursor, Gemini CLI, Kimi CLI, OpenCode, Qoder, Qwen Code, Factory, CodeBuddy
+
+**15+ 终端与 IDE**：Terminal.app, Ghostty, iTerm2, WezTerm, Zellij, tmux, **cmux (原生)**, Kaku, Warp, VS Code, Cursor, Windsurf, Trae, JetBrains 全家桶
+
+---
 
 ## 快速开始
 
-### 方式一：直接下载
-
-从 [GitHub Releases](https://github.com/Octane0411/open-vibe-island/releases) 下载最新 DMG——已签名公证，开箱即用。
-
-### 方式二：从源码构建
+### 从源码构建
 
 ```bash
-git clone https://github.com/Octane0411/open-vibe-island.git
-cd open-vibe-island
-open Package.swift   # 在 Xcode 中打开，点击 Run
+git clone https://github.com/h4ckm1n-dev/atoll.git
+cd atoll
+zsh scripts/launch-dev-app.sh
 ```
 
-首次启动时，Open Island 会自动发现活跃的 agent 会话并启动 live bridge。Hook 安装在 app 内的**控制中心**管理。
+该脚本将构建应用，拷贝至 `~/Applications/Atoll Dev.app`，进行本地签名并启动。Hook 安装可在应用内的 **控制中心** 完成。
 
-> **系统要求**：macOS 14+、Swift 6.2、Xcode
-
-## 工作原理
-
-```
-Agent（Claude Code / Codex / Cursor / ...）
-  ↓ hook 事件
-OpenIslandHooks CLI（stdin → Unix socket）
-  ↓ JSON envelope
-BridgeServer（app 内）
-  ↓ 状态更新
-Notch 覆盖层 UI ← 你在这里看到它
-  ↓ 点击
-跳回 → 正确的终端 / IDE
-```
-
-Hooks **fail open**——如果 Open Island 没在运行，你的 agents 不受任何影响。
-
-<details>
-<summary>架构详情</summary>
-
-一个 Swift package 中的四个 target：
-
-| Target | 角色 |
-|---|---|
-| **OpenIslandApp** | SwiftUI + AppKit shell——菜单栏、覆盖面板、控制中心、设置 |
-| **OpenIslandCore** | 共享库——模型、bridge 传输（Unix socket IPC）、hooks、会话持久化 |
-| **OpenIslandHooks** | 轻量 CLI，由 agent hooks 调用，通过 Unix socket 转发 payload |
-| **OpenIslandSetup** | 安装器 CLI，管理 `~/.codex/config.toml` 和 hook entries |
-
-详见 [docs/architecture.md](docs/architecture.md)。
-
-</details>
-
-## 社区
-
-加入 **Discord** 参与讨论、反馈和更快的问题响应：
-
-[![Discord](https://img.shields.io/discord/1490752192368476253?style=for-the-badge&logo=discord&label=Join%20Discord&color=5865F2)](https://discord.gg/bPF2HpbCFb)
-
-我们欢迎 issue、pull request 和新的 maintainer。详见 [CONTRIBUTING.zh-CN.md](CONTRIBUTING.zh-CN.md)。
-
-<details>
-<summary>微信群</summary>
-
-<img src="docs/images/wechat-group.jpg" alt="微信群二维码" width="240">
-
-</details>
-
-## 通过 Code Agent 提交 Bug
-
-遇到问题？把下面的 prompt 复制到你的 agent（Claude Code、Codex 等）中，它会自动收集环境信息并创建规范的 issue：
-
-<details>
-<summary>点击展开</summary>
-
-```
-我在使用 Open Island (https://github.com/Octane0411/open-vibe-island) 时遇到了问题。
-
-请帮我提交一个 GitHub issue，按以下步骤操作：
-
-1. 收集我的环境信息：
-   - 运行 `sw_vers` 获取 macOS 版本
-   - 运行 `swift --version` 获取 Swift 版本
-   - 检查 Open Island 是否在运行：`ps aux | grep -i "open.island\|OpenIslandApp" | grep -v grep`
-   - 获取 app 版本：`defaults read ~/Applications/Open\ Island\ Dev.app/Contents/Info.plist CFBundleShortVersionString 2>/dev/null || echo "unknown"`
-   - 检查我当前使用的终端
-
-2. 询问我：
-   - 期望的行为是什么
-   - 实际发生了什么
-   - 复现步骤
-
-3. 使用 `gh issue create` 在 GitHub 上创建 issue，格式如下：
-   - 标题：简洁的问题概述
-   - 正文包含以下部分：**环境信息**、**问题描述**、**复现步骤**、**期望行为 vs 实际行为**
-   - 如果是 bug 请添加 "bug" 标签
-
-仓库：Octane0411/open-vibe-island
-```
-
-</details>
-
-## Star History
-
-<a href="https://star-history.com/#Octane0411/open-vibe-island&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Octane0411/open-vibe-island&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Octane0411/open-vibe-island&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=Octane0411/open-vibe-island&type=Date" />
- </picture>
-</a>
-
-## Contributors
-
-<a href="https://github.com/Octane0411/open-vibe-island/graphs/contributors">
-  <!-- CONTRIBUTORS-IMG:START -->
-  <img src="https://contrib.rocks/image?repo=Octane0411/open-vibe-island&t=1777472315" />
-  <!-- CONTRIBUTORS-IMG:END -->
-</a>
-
-## 路线图
-
-详见 [docs/roadmap.zh-CN.md](docs/roadmap.zh-CN.md)。
+> **系统要求**：macOS 14+, Swift 6.2, Xcode 16+
 
 ---
 
-## Agent Parts
+## 传承与愿景
 
-这部分内容是给 agents 阅读的。
+Atoll 的代码血脉源自 [@Octane0411](https://github.com/Octane0411) 的 [Open Island](https://github.com/Octane0411/open-vibe-island) 项目，并深受原始 [Vibe Island](https://vibeisland.app/) 的启发。
 
-这是一个面向终端原生 AI coding 工作流的开源 macOS companion app。
+Atoll 于 2026 年 5 月从 Open Island 分叉，旨在探索本地化 Agent 控制中心的极致可能。此后，它演变成了一个功能完备的生态系统：
+- 极其精细的 **主题引擎** 与注册表。
+- 连接 Apple Watch 与 iPhone 的 **移动端扩展**。
+- 深度集成的 **Git 与媒体控制**。
+- 进阶的 **开发者交互体验**，如计划清单和内联 Diff。
 
-`Open Island` 会在刘海区域或顶部栏放置一个轻量控制界面，让你可以在不中断当前 flow 的前提下观察 live coding agents、跟踪会话进度，并快速跳回正确的 terminal 上下文。
-
-### 为什么会有这个产品
-
-AI coding 正在成为日常开发流程的一部分，但围绕它的控制层仍然经常意味着把你的机器交给一个闭源、收费的 app。
-
-`Open Island` 选择了相反的路线：
-
-- 开源
-- Local first，无服务器依赖
-- 原生 macOS（SwiftUI + AppKit）
-- 适配 terminal 工作流，而不是替代它
-
-### 适合谁
-
-已经长期工作在 terminal 里的开发者，希望在 macOS 上和 coding agents 协作时拥有更好的上下文感，而不是在工具之间来回丢失状态。
-
-### Agent 集成
-
-- **Codex CLI** — 完整的 hook 集成。默认接收 `SessionStart`、`UserPromptSubmit` 和 `Stop` 事件。从本地 rollout 文件读取 5 小时和 7 天 account usage windows。支持从控制中心或 CLI 安装/卸载受管 hooks。
-- **Codex 桌面 App** — 通过 `__CFBundleIdentifier` 识别；hook session 标记为 `isCodexAppSession`，生命周期由 `NSWorkspace.shared.runningApplications` 判断（而不是每轮对话后退出的 CLI 子进程）。除 hook 外，Open Island 还会启动自己的 `codex app-server` 子进程，通过 stdio JSON-RPC 接收实时的 `thread/started`、`turn/started`、`turn/completed`、`thread/closed` 通知。点击 session 会通过 `codex://threads/<id>` URL scheme 精确打开对应对话。
-- **Claude Code** — 基于 hook 的集成，通过 `~/.claude/settings.json` 配置。从 `~/.claude/projects/` JSONL transcript 自动发现会话。跨应用启动持久化和恢复会话。受管 status line bridge，opt-in 安装。读取缓存的 5 小时和 7 天 usage windows。
-- **OpenCode** — JS 插件集成，通过 `~/.config/opencode/plugins/`。首次启动自动安装插件。接收会话生命周期、工具使用、权限和问答事件。支持权限审批和问答交互。通过 `ps` 进行进程检测。
-- **Qoder** — Claude Code 分支。相同 hook 格式和事件，配置位于 `~/.qoder/settings.json`。使用 `--source qoder` 调用 hooks binary。
-- **Qwen Code** — Claude Code 分支。相同 hook 格式和事件，配置位于 `~/.qwen/settings.json`。使用 `--source qwen` 调用 hooks binary。
-- **Factory** — Claude Code 分支。相同 hook 格式和事件，配置位于 `~/.factory/settings.json`。使用 `--source factory` 调用 hooks binary。
-- **CodeBuddy** — Claude Code 分支。相同 hook 格式和事件，配置位于 `~/.codebuddy/settings.json`。使用 `--source codebuddy` 调用 hooks binary。
-- **Cursor** — 基于 hook 的集成，通过 `~/.cursor/hooks.json` 配置。接收 `beforeSubmitPrompt`、`beforeShellExecution`、`beforeMCPExecution`、`beforeReadFile`、`afterFileEdit` 和 `stop` 事件。跨应用启动持久化会话。通过 `cursor -r` 跳回工作区。使用 `--source cursor` 调用 hooks binary。
-- **Gemini CLI** — 基于 hook 的集成，通过 `~/.gemini/settings.json` 配置。接收 `SessionStart`、`PreToolUse`、`PostToolUse`、`Stop` 和 `UserPromptSubmit` 事件。Fire-and-forget（无 block/deny）。使用 `--source gemini` 调用 hooks binary。
-- **Kimi CLI** — 基于 hook 的集成，通过 `~/.kimi/config.toml` 的 `[[hooks]]` 数组配置（Moonshot AI）。Kimi 的 hook payload 与 Claude Code 字段兼容，Open Island 复用 Claude 解码路径，仅新增了 TOML installer。订阅 `SessionStart`、`UserPromptSubmit`、`Stop`、`Notification`、`PreToolUse`、`PostToolUse`。需要 Kimi CLI Hooks Beta。使用 `--source kimi` 调用 hooks binary。可以从控制中心管理安装，或通过 CLI：
-
-  ```sh
-  swift run OpenIslandSetup installKimi    # 把受管 [[hooks]] 条目写入 ~/.kimi/config.toml
-  swift run OpenIslandSetup statusKimi     # 查看受管 hooks 是否已安装
-  swift run OpenIslandSetup uninstallKimi  # 移除受管条目，保留用户自定义的 [[hooks]]
-  ```
-
-### 终端支持
-
-- **Terminal.app**、**Ghostty**、**cmux**、**Kaku**、**WezTerm**、**iTerm2** 和 **Zellij** — 完整的 jump-back 支持，带会话附着匹配（cmux 通过 Unix socket API，Kaku/WezTerm/Zellij 通过 CLI pane 定位，iTerm2 通过 AppleScript session/TTY 探针）
-- **VS Code**、**VS Code Insiders**、**Cursor**、**Windsurf**、**Trae** — 工作区级跳转，通过对应 CLI（`code -r`、`cursor -r` 等）
-- **JetBrains 全家桶**（IntelliJ IDEA、WebStorm、PyCharm、GoLand、CLion、RubyMine、PhpStorm、Rider、RustRover） — 工作区级跳转，通过 IDE CLI launcher
-- **Warp** — 通过 SQLite pane 查找、pid 进程树消歧和 AX 菜单点击实现精准 tab 跳转
-
-### UI 与显示
-
-- **刘海覆盖层** — 在有刘海的 Mac 上，island 位于刘海区域；在外接显示器或无刘海 Mac 上，降级为紧凑的顶部居中栏
-- **控制中心** — Codex/Claude hook 状态、用量仪表盘、调试场景
-- **设置** — 通用、显示、声音、快捷键、实验室（高级）、关于
-- **通知模式** — 自适应高度的通知面板，用于权限请求和会话事件
-- **通知音效** — 可配置的系统音效（默认：Bottle），支持静音切换
-- **国际化** — 英文和简体中文
-
-### 会话管理
-
-- Live session 可见性，支持可展开的详情行
-- Session state reducer（`SessionState.apply`）作为唯一真相源
-- 从本地 transcript 文件和缓存自动发现会话
-- 通过 `ps`/`lsof` 进行进程发现，匹配活跃的 agent
-
-### 架构
-
-一个 Swift package 中的四个 target：
-
-| Target | 角色 |
-|---|---|
-| **OpenIslandApp** | SwiftUI + AppKit shell — 菜单栏、覆盖面板、控制中心、设置 |
-| **OpenIslandCore** | 共享库 — 模型、bridge 传输（Unix socket IPC）、hooks、会话持久化 |
-| **OpenIslandHooks** | 轻量 CLI，由 agent hooks 调用，通过 Unix socket 转发 payload |
-| **OpenIslandSetup** | 安装器 CLI，管理 `~/.codex/config.toml` 和 hook entries |
-
-### 快速开始（Agent）
-
-本地构建并运行：
-
-```bash
-open Package.swift
-```
-
-构建本地 `.app` 包：
-
-```bash
-zsh scripts/package-app.sh
-```
-
-该脚本会创建 `output/package/Open Island.app` 和 `output/package/Open Island.zip`。传入 `OPEN_ISLAND_SIGN_IDENTITY` 可以签名。详见 [docs/packaging.md](docs/packaging.md)。
-
-#### 连接 Codex
-
-在 Xcode 中打开 package 并运行 macOS app target。启动时，app 会恢复本地缓存，扫描最近的 `~/.codex/sessions/**/rollout-*.jsonl` 文件来恢复已有 Codex sessions，然后启动 live bridge 接收新 hook events。
-
-控制中心展示来自 `~/.codex` 的实时 Codex hook 安装状态，并可直接安装或卸载受管 hook entries。安装过程会把 helper 复制到 `~/Library/Application Support/OpenIsland/bin/OpenIslandHooks`，repo 重命名不会破坏已有 hooks。
-
-```bash
-swift build -c release --product OpenIslandHooks
-swift run OpenIslandSetup install
-swift run OpenIslandSetup status
-swift run OpenIslandSetup uninstall
-```
-
-#### 连接 Claude Code
-
-Claude usage 设置可在 app 控制中心启用，保持 opt-in。bridge 会把受管 `statusLine.command` 写入 `~/.open-island/bin/open-island-statusline`，把 `rate_limits` 缓存到 `/tmp/open-island-rl.json`，不会自动覆盖已有的自定义 status line。
-
-### 仓库导航
-
-- 从 [docs/index.md](docs/index.md) 开始查看文档地图。
-- 阅读 [docs/quality.md](docs/quality.md) 了解质量基线和验证方式。
-- 阅读 [docs/hooks.md](docs/hooks.md) 了解所有支持的 hook 事件、payload 字段和 directive 响应格式。
-- 运行 `scripts/harness.sh` 进行自动化检查（文档验证、测试、构建）。
-
-### 系统要求
-
-- macOS 14+
-- Swift 6.2
-- Xcode（用于 app target）
+虽然我们与 Open Island 共享基础的桥接/Hook 架构，但 Atoll 是一个独立的、专注于“Pro”开发者体验、高阶审美和多端协同的产品。
 
 ---
 
-## License
+## 开源协议
 
-[GPL v3](LICENSE)
+Copyright © 2026 Atoll Contributors.
+
+Atoll 是 **自由软件**：你可以根据自由软件基金会发布的 **GNU General Public License version 3** (GPL-3.0) 协议条款重新分发或修改它。完整协议内容见 [LICENSE](LICENSE)。
+
+---
+
+<p align="center">
+  <em>🌴 椰林树影下，与 AI Agent 共同打磨至深夜。</em>
+</p>

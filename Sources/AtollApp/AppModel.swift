@@ -398,6 +398,7 @@ final class AppModel {
         didSet {
             guard mediaControlsEnabled != oldValue else { return }
             UserDefaults.standard.set(mediaControlsEnabled, forKey: Self.mediaControlsEnabledDefaultsKey)
+            syncMediaPlaybackController()
         }
     }
     var mediaArtworkEnabled: Bool = false {
@@ -425,6 +426,7 @@ final class AppModel {
     }()
     let contextUsageRegistry = ContextUsageRegistry()
     let planModeRegistry = PlanModeRegistry()
+    let mediaPlaybackController = MediaPlaybackController()
     let themeManager = ThemeManager()
     private var _cachedStatusColors: [SessionPhase: Color] = [:]
 
@@ -517,6 +519,14 @@ final class AppModel {
     private func stopStreamOverlay() {
         streamOverlayEndpoint.stop()
         lastActionMessage = "Stream overlay disabled."
+    }
+
+    private func syncMediaPlaybackController() {
+        if mediaControlsEnabled {
+            mediaPlaybackController.start()
+        } else {
+            mediaPlaybackController.stop()
+        }
     }
 
     func statusColor(for phase: SessionPhase) -> Color {
@@ -879,6 +889,7 @@ final class AppModel {
         refreshOverlayDisplayConfiguration()
         hasFinishedInit = true
         refreshStreamOverlaySnapshot()
+        syncMediaPlaybackController()
         if streamOverlayEnabled {
             startStreamOverlay()
         }

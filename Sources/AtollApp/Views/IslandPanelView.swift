@@ -581,6 +581,18 @@ struct IslandPanelView: View {
                 installHooksHint
             }
 
+            if model.mediaControlsEnabled,
+               model.mediaPlaybackController.snapshot.hasContent {
+                MediaControlStrip(
+                    snapshot: model.mediaPlaybackController.snapshot,
+                    showsArtwork: model.mediaArtworkEnabled,
+                    palette: model.themeManager.palette,
+                    onPrevious: { model.mediaPlaybackController.previousTrack() },
+                    onPlayPause: { model.mediaPlaybackController.togglePlayPause() },
+                    onNext: { model.mediaPlaybackController.nextTrack() }
+                )
+            }
+
             if model.shouldShowSessionBootstrapPlaceholder {
                 sessionBootstrapPlaceholder
             } else if model.islandListSessions.isEmpty {
@@ -1113,6 +1125,111 @@ struct IslandPanelView: View {
         }
 
         return formatter.string(from: interval)
+    }
+}
+
+private struct MediaControlStrip: View {
+    let snapshot: MediaPlaybackSnapshot
+    let showsArtwork: Bool
+    let palette: ThemePalette
+    let onPrevious: () -> Void
+    let onPlayPause: () -> Void
+    let onNext: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            artworkView
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(displayTitle)
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.9))
+                    .lineLimit(1)
+
+                Text(displaySubtitle)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.42))
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            HStack(spacing: 6) {
+                mediaButton(systemName: "backward.fill", label: "Previous", action: onPrevious)
+                mediaButton(
+                    systemName: snapshot.isPlaying ? "pause.fill" : "play.fill",
+                    label: snapshot.isPlaying ? "Pause" : "Play",
+                    action: onPlayPause,
+                    isPrimary: true
+                )
+                mediaButton(systemName: "forward.fill", label: "Next", action: onNext)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(palette.crust.swiftUIColor.opacity(0.96))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .strokeBorder(palette.text.swiftUIColor.opacity(0.07))
+        )
+    }
+
+    @ViewBuilder
+    private var artworkView: some View {
+        if showsArtwork, let artwork = snapshot.artwork {
+            Image(nsImage: artwork)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 34, height: 34)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(.white.opacity(0.08))
+                )
+        } else {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(palette.surface0.swiftUIColor)
+                Image(systemName: "music.note")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.64))
+            }
+            .frame(width: 34, height: 34)
+        }
+    }
+
+    private var displayTitle: String {
+        let trimmed = snapshot.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Now Playing" : trimmed
+    }
+
+    private var displaySubtitle: String {
+        let subtitle = snapshot.subtitle
+        return subtitle.isEmpty ? (snapshot.isPlaying ? "Playing" : "Paused") : subtitle
+    }
+
+    private func mediaButton(
+        systemName: String,
+        label: String,
+        action: @escaping () -> Void,
+        isPrimary: Bool = false
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: isPrimary ? 10 : 9, weight: .bold))
+                .foregroundStyle(isPrimary ? palette.crust.swiftUIColor : palette.text.swiftUIColor.opacity(0.78))
+                .frame(width: isPrimary ? 28 : 24, height: isPrimary ? 28 : 24)
+                .background(
+                    Circle()
+                        .fill(isPrimary ? palette.text.swiftUIColor.opacity(0.9) : palette.surface0.swiftUIColor)
+                )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }
 

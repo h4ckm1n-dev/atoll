@@ -8,6 +8,12 @@ struct MediaPlaybackSnapshot: Equatable {
     var artist: String
     var album: String
     var isPlaying: Bool
+    var currentTime: Double
+    var duration: Double
+    var playbackRate: Double
+    var isShuffled: Bool
+    var repeatMode: MediaPlaybackRepeatMode
+    var updatedAt: Date
     var artwork: NSImage?
 
     static let empty = MediaPlaybackSnapshot(
@@ -15,6 +21,12 @@ struct MediaPlaybackSnapshot: Equatable {
         artist: "",
         album: "",
         isPlaying: false,
+        currentTime: 0,
+        duration: 0,
+        playbackRate: 0,
+        isShuffled: false,
+        repeatMode: .off,
+        updatedAt: .distantPast,
         artwork: nil
     )
 
@@ -23,12 +35,24 @@ struct MediaPlaybackSnapshot: Equatable {
         artist: String,
         album: String,
         isPlaying: Bool,
+        currentTime: Double,
+        duration: Double,
+        playbackRate: Double,
+        isShuffled: Bool,
+        repeatMode: MediaPlaybackRepeatMode,
+        updatedAt: Date,
         artwork: NSImage?
     ) {
         self.title = title
         self.artist = artist
         self.album = album
         self.isPlaying = isPlaying
+        self.currentTime = currentTime
+        self.duration = duration
+        self.playbackRate = playbackRate
+        self.isShuffled = isShuffled
+        self.repeatMode = repeatMode
+        self.updatedAt = updatedAt
         self.artwork = artwork
     }
 
@@ -37,6 +61,12 @@ struct MediaPlaybackSnapshot: Equatable {
         artist = payload.artist
         album = payload.album
         isPlaying = payload.isPlaying
+        currentTime = payload.currentTime
+        duration = payload.duration
+        playbackRate = payload.playbackRate
+        isShuffled = payload.isShuffled
+        repeatMode = payload.repeatMode
+        updatedAt = payload.updatedAt
         if includeArtwork, let artworkData = payload.artworkData {
             artwork = NSImage(data: artworkData)
         } else {
@@ -47,6 +77,18 @@ struct MediaPlaybackSnapshot: Equatable {
     var hasContent: Bool {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             || !artist.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var hasTimeline: Bool {
+        duration > 0
+    }
+
+    func estimatedPlaybackPosition(at date: Date = Date()) -> Double {
+        guard hasTimeline else { return 0 }
+        guard isPlaying else { return min(max(currentTime, 0), duration) }
+        let elapsed = date.timeIntervalSince(updatedAt)
+        let progressed = currentTime + elapsed * max(playbackRate, 0)
+        return min(max(progressed, 0), duration)
     }
 
     func describesSameTrack(as other: MediaPlaybackSnapshot) -> Bool {
@@ -69,11 +111,31 @@ struct MediaPlaybackSnapshot: Equatable {
     }
 }
 
+enum MediaPlaybackRepeatMode: Int, Equatable, Sendable {
+    case off = 1
+    case one = 2
+    case all = 3
+
+    var next: MediaPlaybackRepeatMode {
+        switch self {
+        case .off: .all
+        case .all: .one
+        case .one: .off
+        }
+    }
+}
+
 private struct MediaPlaybackPayload: Equatable, Sendable {
     var title: String
     var artist: String
     var album: String
     var isPlaying: Bool
+    var currentTime: Double
+    var duration: Double
+    var playbackRate: Double
+    var isShuffled: Bool
+    var repeatMode: MediaPlaybackRepeatMode
+    var updatedAt: Date
     var artworkData: Data?
 
     static let empty = MediaPlaybackPayload(
@@ -81,6 +143,12 @@ private struct MediaPlaybackPayload: Equatable, Sendable {
         artist: "",
         album: "",
         isPlaying: false,
+        currentTime: 0,
+        duration: 0,
+        playbackRate: 0,
+        isShuffled: false,
+        repeatMode: .off,
+        updatedAt: .distantPast,
         artworkData: nil
     )
 
@@ -95,6 +163,12 @@ private struct MediaPlaybackPayload: Equatable, Sendable {
             artist: artist.isEmpty ? fallback.artist : artist,
             album: album.isEmpty ? fallback.album : album,
             isPlaying: isPlaying || fallback.isPlaying,
+            currentTime: currentTime > 0 ? currentTime : fallback.currentTime,
+            duration: duration > 0 ? duration : fallback.duration,
+            playbackRate: playbackRate > 0 ? playbackRate : fallback.playbackRate,
+            isShuffled: isShuffled || fallback.isShuffled,
+            repeatMode: repeatMode != .off ? repeatMode : fallback.repeatMode,
+            updatedAt: updatedAt == .distantPast ? fallback.updatedAt : updatedAt,
             artworkData: artworkData ?? fallback.artworkData
         )
     }
@@ -107,6 +181,8 @@ private enum MediaRemoteCommand: Int {
 }
 
 private typealias MediaRemoteSendCommandFunction = @convention(c) (Int, AnyObject?) -> Void
+private typealias MediaRemoteSetElapsedTimeFunction = @convention(c) (Double) -> Void
+private typealias MediaRemoteSetModeFunction = @convention(c) (Int) -> Void
 
 @MainActor
 @Observable
@@ -224,6 +300,40 @@ final class MediaPlaybackController {
         scheduleQuickRefresh()
     }
 
+    func skip(seconds: Double) {
+        let target = snapshot.estimatedPlaybackPosition() + seconds
+        seek(to: target)
+    }
+
+    func seek(to seconds: Double) {
+        guard snapshot.duration > 0 else { return }
+        let clamped = min(max(seconds, 0), snapshot.duration)
+        if !client.seek(to: clamped) {
+            client.seekWithAdapter(to: clamped)
+        }
+        snapshot.currentTime = clamped
+        snapshot.updatedAt = Date()
+        scheduleQuickRefresh()
+    }
+
+    func toggleShuffle() {
+        let nextValue = !snapshot.isShuffled
+        if !client.setShuffle(enabled: nextValue) {
+            client.setShuffleWithAdapter(enabled: nextValue)
+        }
+        snapshot.isShuffled = nextValue
+        scheduleQuickRefresh()
+    }
+
+    func toggleRepeat() {
+        let nextMode = snapshot.repeatMode.next
+        if !client.setRepeatMode(nextMode) {
+            client.setRepeatWithAdapter(nextMode)
+        }
+        snapshot.repeatMode = nextMode
+        scheduleQuickRefresh()
+    }
+
     private func scheduleQuickRefresh() {
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(350))
@@ -232,7 +342,7 @@ final class MediaPlaybackController {
     }
 
     private func syncAdapterStream() {
-        guard refreshTask != nil, artworkEnabled else {
+        guard refreshTask != nil else {
             adapterStreamClient.stop()
             return
         }
@@ -245,8 +355,8 @@ final class MediaPlaybackController {
     }
 
     private func applyAdapterPayload(_ payload: MediaPlaybackPayload) {
-        guard refreshTask != nil, artworkEnabled else { return }
-        var nextSnapshot = MediaPlaybackSnapshot(payload: payload, includeArtwork: true)
+        guard refreshTask != nil else { return }
+        var nextSnapshot = MediaPlaybackSnapshot(payload: payload, includeArtwork: artworkEnabled)
         if nextSnapshot.artwork == nil,
            let existingArtwork = snapshot.artwork,
            nextSnapshot.describesSameTrack(as: snapshot) {
@@ -267,6 +377,9 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
     private let handle: UnsafeMutableRawPointer?
     private let getNowPlayingInfo: GetNowPlayingInfo?
     private let commandSender: MediaRemoteCommandSender?
+    private let setElapsedTime: MediaRemoteSetElapsedTimeFunction?
+    private let setShuffleMode: MediaRemoteSetModeFunction?
+    private let setRepeatMode: MediaRemoteSetModeFunction?
     private let adapterClient = MediaRemoteAdapterClient()
 
     var isAvailable: Bool {
@@ -289,6 +402,24 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
         } else {
             commandSender = nil
         }
+
+        if let symbol = handle.flatMap({ dlsym($0, "MRMediaRemoteSetElapsedTime") }) {
+            setElapsedTime = unsafeBitCast(symbol, to: MediaRemoteSetElapsedTimeFunction.self)
+        } else {
+            setElapsedTime = nil
+        }
+
+        if let symbol = handle.flatMap({ dlsym($0, "MRMediaRemoteSetShuffleMode") }) {
+            setShuffleMode = unsafeBitCast(symbol, to: MediaRemoteSetModeFunction.self)
+        } else {
+            setShuffleMode = nil
+        }
+
+        if let symbol = handle.flatMap({ dlsym($0, "MRMediaRemoteSetRepeatMode") }) {
+            setRepeatMode = unsafeBitCast(symbol, to: MediaRemoteSetModeFunction.self)
+        } else {
+            setRepeatMode = nil
+        }
     }
 
     func sendCommand(_ command: MediaRemoteCommand) -> Bool {
@@ -297,6 +428,43 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
             commandSender.send(command)
         }
         return true
+    }
+
+    func seek(to seconds: Double) -> Bool {
+        guard let setElapsedTime else { return false }
+        queue.async {
+            setElapsedTime(seconds)
+        }
+        return true
+    }
+
+    func seekWithAdapter(to seconds: Double) {
+        adapterClient.seek(to: seconds)
+    }
+
+    func setShuffle(enabled: Bool) -> Bool {
+        guard let setShuffleMode else { return false }
+        let mode = enabled ? 3 : 1
+        queue.async {
+            setShuffleMode(mode)
+        }
+        return true
+    }
+
+    func setShuffleWithAdapter(enabled: Bool) {
+        adapterClient.setShuffle(enabled: enabled)
+    }
+
+    func setRepeatMode(_ repeatMode: MediaPlaybackRepeatMode) -> Bool {
+        guard let setRepeatMode else { return false }
+        queue.async {
+            setRepeatMode(repeatMode.rawValue)
+        }
+        return true
+    }
+
+    func setRepeatWithAdapter(_ repeatMode: MediaPlaybackRepeatMode) {
+        adapterClient.setRepeatMode(repeatMode)
     }
 
     func fetchPayload(
@@ -355,6 +523,14 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
             artist: string(info, "kMRMediaRemoteNowPlayingInfoArtist"),
             album: string(info, "kMRMediaRemoteNowPlayingInfoAlbum"),
             isPlaying: isPlaying(info),
+            currentTime: double(info, "kMRMediaRemoteNowPlayingInfoElapsedTime") ?? 0,
+            duration: double(info, "kMRMediaRemoteNowPlayingInfoDuration") ?? 0,
+            playbackRate: double(info, "kMRMediaRemoteNowPlayingInfoPlaybackRate") ?? 0,
+            isShuffled: (int(info, "kMRMediaRemoteNowPlayingInfoShuffleMode") ?? 1) != 1,
+            repeatMode: MediaPlaybackRepeatMode(
+                rawValue: int(info, "kMRMediaRemoteNowPlayingInfoRepeatMode") ?? MediaPlaybackRepeatMode.off.rawValue
+            ) ?? .off,
+            updatedAt: date(info, "kMRMediaRemoteNowPlayingInfoTimestamp") ?? Date(),
             artworkData: includeArtwork ? artworkData(info) : nil
         )
     }
@@ -376,6 +552,26 @@ private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
         }
         if let value = info[key] as? NSNumber {
             return value.doubleValue
+        }
+        return nil
+    }
+
+    private static func int(_ info: [String: Any], _ key: String) -> Int? {
+        if let value = info[key] as? Int {
+            return value
+        }
+        if let value = info[key] as? NSNumber {
+            return value.intValue
+        }
+        return nil
+    }
+
+    private static func date(_ info: [String: Any], _ key: String) -> Date? {
+        if let date = info[key] as? Date {
+            return date
+        }
+        if let number = info[key] as? NSNumber {
+            return Date(timeIntervalSinceReferenceDate: number.doubleValue)
         }
         return nil
     }
@@ -415,7 +611,36 @@ private final class MediaRemoteAdapterClient: @unchecked Sendable {
         }
     }
 
+    func seek(to seconds: Double) {
+        let micros = Int64(min(max(seconds, 0), Double(Int64.max) / 1_000_000) * 1_000_000)
+        runCommand("seek", "\(micros)")
+    }
+
+    func setShuffle(enabled: Bool) {
+        runCommand("shuffle", enabled ? "3" : "1")
+    }
+
+    func setRepeatMode(_ repeatMode: MediaPlaybackRepeatMode) {
+        runCommand("repeat", "\(repeatMode.rawValue)")
+    }
+
+    private func runCommand(_ name: String, _ value: String) {
+        queue.async {
+            _ = Self.runAdapter(arguments: [name, value], timeout: 0.8)
+        }
+    }
+
     private static func readPayload(timeout: TimeInterval = 1.2) -> MediaPlaybackPayload? {
+        guard let data = runAdapter(arguments: ["get"], timeout: timeout) else { return nil }
+        guard data.isEmpty == false,
+              let response = try? JSONDecoder().decode(MediaRemoteAdapterPayload.self, from: data) else {
+            return nil
+        }
+
+        return response.resolvedPayload(mergingInto: .empty, isDiff: false)
+    }
+
+    private static func runAdapter(arguments: [String], timeout: TimeInterval) -> Data? {
         guard let scriptURL = MediaRemoteAdapterLocator.scriptURL(),
               let frameworkURL = MediaRemoteAdapterLocator.frameworkURL() else {
             return nil
@@ -424,7 +649,7 @@ private final class MediaRemoteAdapterClient: @unchecked Sendable {
         let process = Process()
         let outputPipe = Pipe()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/perl")
-        process.arguments = [scriptURL.path, frameworkURL.path, "get"]
+        process.arguments = [scriptURL.path, frameworkURL.path] + arguments
         process.standardOutput = outputPipe
         process.standardError = Pipe()
 
@@ -443,13 +668,7 @@ private final class MediaRemoteAdapterClient: @unchecked Sendable {
             return nil
         }
 
-        let data = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        guard data.isEmpty == false,
-              let response = try? JSONDecoder().decode(MediaRemoteAdapterPayload.self, from: data) else {
-            return nil
-        }
-
-        return response.resolvedPayload(mergingInto: .empty, isDiff: false)
+        return outputPipe.fileHandleForReading.readDataToEndOfFile()
     }
 }
 
@@ -609,8 +828,14 @@ private struct MediaRemoteAdapterPayload: Decodable {
     var title: String?
     var artist: String?
     var album: String?
+    var duration: Double?
+    var elapsedTime: Double?
+    var elapsedTimeNow: Double?
+    var timestamp: String?
     var playing: Bool?
     var playbackRate: Double?
+    var shuffleMode: Int?
+    var repeatMode: Int?
     var artworkData: String?
 
     func resolvedPayload(
@@ -618,11 +843,19 @@ private struct MediaRemoteAdapterPayload: Decodable {
         isDiff: Bool
     ) -> MediaPlaybackPayload {
         let fallback = isDiff ? base : .empty
+        let resolvedPlaybackRate = playbackRate ?? fallback.playbackRate
+        let resolvedTimestamp = parsedTimestamp ?? Date()
         return MediaPlaybackPayload(
             title: title ?? fallback.title,
             artist: artist ?? fallback.artist,
             album: album ?? fallback.album,
             isPlaying: playing ?? playbackRate.map { $0 > 0.01 } ?? fallback.isPlaying,
+            currentTime: elapsedTimeNow ?? elapsedTime ?? fallback.currentTime,
+            duration: duration ?? fallback.duration,
+            playbackRate: resolvedPlaybackRate,
+            isShuffled: shuffleMode.map { $0 != 1 } ?? fallback.isShuffled,
+            repeatMode: repeatMode.flatMap(MediaPlaybackRepeatMode.init(rawValue:)) ?? fallback.repeatMode,
+            updatedAt: elapsedTimeNow != nil ? Date() : (timestamp == nil && isDiff ? fallback.updatedAt : resolvedTimestamp),
             artworkData: decodedArtworkData ?? fallback.artworkData
         )
     }
@@ -631,6 +864,11 @@ private struct MediaRemoteAdapterPayload: Decodable {
         artworkData.flatMap {
             Data(base64Encoded: $0.trimmingCharacters(in: .whitespacesAndNewlines))
         }
+    }
+
+    private var parsedTimestamp: Date? {
+        guard let timestamp else { return nil }
+        return ISO8601DateFormatter().date(from: timestamp)
     }
 }
 

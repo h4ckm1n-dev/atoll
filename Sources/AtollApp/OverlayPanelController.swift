@@ -12,8 +12,8 @@ final class OverlayPanelController: NSObject {
     private static let openedContentWidthPadding: CGFloat = 28
     private static let openedContentBottomPadding: CGFloat = 0
     /// Must match `IslandPanelView` media dock reserves.
-    private static let mediaControlDockControlsReserve: CGFloat = 42
-    private static let mediaControlDockArtworkReserve: CGFloat = 112
+    private static let mediaControlDockControlsReserve: CGFloat = 98
+    private static let mediaControlDockArtworkReserve: CGFloat = 154
     private static let measuredSingleCardDockGap: CGFloat = 8
     private static let minimumSessionContentHeight: CGFloat = 132
     /// Must match `IslandPanelView.maxSessionListHeight` — the AutoHeightScrollView cap.

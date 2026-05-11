@@ -32,7 +32,7 @@
 
 ## What is Atoll?
 
-**Atoll** is a native macOS app that transforms your **notch** (or top-center bar) into a real-time, theme-aware control surface for your AI coding agents. It provides a central hub for session management, permission approvals, inline diff previews, and plan execution — all while staying local, native, and incredibly fast.
+**Atoll** is a native macOS app that transforms your **notch** (or top-center bar) into a real-time, theme-aware control surface for your AI coding agents. It provides a central hub for session management, permission approvals, inline diff previews, plan execution, Git status, usage telemetry, and system media control — all while staying local, native, and incredibly fast.
 
 The name reflects its design: a thin ring of activity wrapping your Mac's notch, like land around a calm lagoon.
 
@@ -44,7 +44,8 @@ The name reflects its design: a thin ring of activity wrapping your Mac's notch,
 - **Native macOS.** SwiftUI + AppKit. Built specifically for the Mac experience.
 - **Deep Integration.** Works with 11+ coding agents and 15+ terminals/IDEs out of the box.
 - **Theme Everything.** Catppuccin, Tokyo Night, Dracula, and more. Even the diff syntax colors match your theme.
-- **Action-Oriented.** Don't just watch; approve permissions, answer questions, and jump back to the right terminal in one click.
+- **Action-Oriented.** Don't just watch; approve permissions, answer questions, control media, and jump back to the right terminal in one click.
+- **Stream-Ready.** Compact cards, redaction, OBS surfaces, keyboard navigation, and right-click notch controls keep live coding calm.
 - **Open source, GPL v3.** Fork it, mod it, ship your own.
 
 ---
@@ -93,6 +94,7 @@ Atoll is built for users who care about their workspace aesthetic.
 - **In-App Theme Editor:** Don't like the defaults? Use the 26-picker live editor to craft your own JSON theme and export it.
 - **Frosted Material:** Choose between Solid, Frosted (thin), or Frosted (ultra-thin) materials that let your wallpaper bleed through.
 - **Project Colors:** Each workspace gets a stable, hash-derived tint so you know exactly which project is active at a glance.
+- **Live Avatars:** Pick from the built-in animated glyph set, unlock cyberpunk/hacker/manga styles in Lab, or upload a custom avatar image.
 
 ### 📝 Intelligent Agent Control
 - **Inline Diff Previews:** See exactly what an agent is about to change with Myers-diff'd syntax highlighting before granting permission.
@@ -102,12 +104,17 @@ Atoll is built for users who care about their workspace aesthetic.
 
 ### ⌨️ Keyboard-First & Automation
 - **Notch Navigation:** Navigate the island, cycle sessions, and execute actions entirely via keyboard (Tab, Arrows, Enter, Esc).
+- **Reply Flow:** Press Enter on a selected session to type in the notch, Enter again to send, and Enter once more to jump back to the related terminal.
+- **Right-Click Notch Menu:** Settings, debug tools, overlay visibility, and hook repair live behind the notch context menu instead of permanent chrome buttons.
 - **Automation Deep Links:** Control Atoll via `atoll://` URLs. Perfect for Raycast, Stream Deck, or shell scripts.
 - **Precision Jump:** One-click (or shortcut) to jump back to the exact terminal pane, IDE window, or `cmux` session.
 
 ### 🎵 Notch Media Controls & Git Status
-- **Integrated Media Dock:** Control music playback (Play/Pause/Skip) and view artwork directly from a discrete dock in the notch.
-- **Git Awareness:** Real-time status badges in the notch show current branch, uncommitted changes, additions, and removals.
+- **Apple-Style Media Player:** Control system Now Playing from the notch with artwork, title, artist, timeline, scrubbing, elapsed/duration, previous/next, play/pause, 15-second seek, shuffle, and repeat.
+- **Browser Media Support:** Uses macOS MediaRemote, so browser sources such as YouTube appear when macOS exposes them through Now Playing.
+- **Lab Toggles:** Enable or disable the media player and artwork independently from Settings -> Lab.
+- **Git Awareness:** Session badges show the current branch plus local diff counts, with additions and removals colored separately.
+- **Badge Controls:** Settings -> Lab lets you independently toggle AI tool, terminal, Git branch, Git diff, context usage, and age badges.
 
 ### ⌚ Mobile & Watch Companion
 Stay in control even when you're away from your desk.
@@ -181,6 +188,12 @@ zsh scripts/launch-dev-app.sh
 ```
 
 That builds the app, copies it to `~/Applications/Atoll Dev.app`, signs it locally, and launches it. Hook installation is managed from the **Control Center** inside the app.
+
+Run the same local verification path as CI with:
+
+```bash
+zsh scripts/harness.sh ci
+```
 
 > **Requirements**: macOS 14+, Swift 6.2, Xcode 16+
 

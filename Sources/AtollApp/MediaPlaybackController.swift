@@ -18,6 +18,32 @@ struct MediaPlaybackSnapshot: Equatable {
         artwork: nil
     )
 
+    init(
+        title: String,
+        artist: String,
+        album: String,
+        isPlaying: Bool,
+        artwork: NSImage?
+    ) {
+        self.title = title
+        self.artist = artist
+        self.album = album
+        self.isPlaying = isPlaying
+        self.artwork = artwork
+    }
+
+    fileprivate init(payload: MediaPlaybackPayload, includeArtwork: Bool) {
+        title = payload.title
+        artist = payload.artist
+        album = payload.album
+        isPlaying = payload.isPlaying
+        if includeArtwork, let artworkData = payload.artworkData {
+            artwork = NSImage(data: artworkData)
+        } else {
+            artwork = nil
+        }
+    }
+
     var hasContent: Bool {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             || !artist.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -31,11 +57,31 @@ struct MediaPlaybackSnapshot: Equatable {
     }
 }
 
+private struct MediaPlaybackPayload: Equatable, Sendable {
+    var title: String
+    var artist: String
+    var album: String
+    var isPlaying: Bool
+    var artworkData: Data?
+
+    static let empty = MediaPlaybackPayload(
+        title: "",
+        artist: "",
+        album: "",
+        isPlaying: false,
+        artworkData: nil
+    )
+}
+
 @MainActor
 @Observable
 final class MediaPlaybackController {
-    private let client = MediaRemoteNowPlayingClient()
+    @ObservationIgnored
+    private lazy var client = MediaRemoteNowPlayingClient()
     private var refreshTask: Task<Void, Never>?
+    private var isRefreshing = false
+    private var refreshGeneration = 0
+    private var artworkEnabled = false
 
     private(set) var snapshot: MediaPlaybackSnapshot = .empty
 
@@ -45,25 +91,63 @@ final class MediaPlaybackController {
 
     func start() {
         guard refreshTask == nil else { return }
-        refresh()
+        refreshGeneration += 1
+        let generation = refreshGeneration
         refreshTask = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(2))
+                self?.refresh(generation: generation)
+                try? await Task.sleep(for: .seconds(5))
                 guard !Task.isCancelled else { return }
-                self?.refresh()
             }
         }
     }
 
     func stop() {
+        refreshGeneration += 1
         refreshTask?.cancel()
         refreshTask = nil
+        isRefreshing = false
         snapshot = .empty
     }
 
+    func setArtworkEnabled(_ enabled: Bool) {
+        guard artworkEnabled != enabled else { return }
+        artworkEnabled = enabled
+        if !enabled, snapshot.artwork != nil {
+            snapshot.artwork = nil
+        }
+        guard refreshTask != nil else { return }
+        refresh(generation: refreshGeneration, force: true)
+    }
+
     func refresh() {
-        client.fetchSnapshot { [weak self] snapshot in
-            self?.snapshot = snapshot
+        refresh(generation: refreshGeneration)
+    }
+
+    private func refresh(generation: Int, force: Bool = false) {
+        guard refreshTask != nil else { return }
+        guard force || !isRefreshing else { return }
+        guard client.isAvailable else {
+            snapshot = .empty
+            return
+        }
+
+        isRefreshing = true
+        let includeArtwork = artworkEnabled
+        client.fetchPayload(includeArtwork: includeArtwork) { [weak self] payload in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.isRefreshing = false
+                guard self.refreshTask != nil,
+                      self.refreshGeneration == generation else { return }
+                let nextSnapshot = MediaPlaybackSnapshot(
+                    payload: payload,
+                    includeArtwork: includeArtwork && self.artworkEnabled
+                )
+                if nextSnapshot != self.snapshot {
+                    self.snapshot = nextSnapshot
+                }
+            }
         }
     }
 
@@ -85,18 +169,18 @@ final class MediaPlaybackController {
     private func scheduleQuickRefresh() {
         Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(350))
-            self?.refresh()
+            self?.refresh(generation: self?.refreshGeneration ?? 0, force: true)
         }
     }
 }
 
-@MainActor
-private final class MediaRemoteNowPlayingClient {
+private final class MediaRemoteNowPlayingClient: @unchecked Sendable {
     typealias NowPlayingInfoCompletion = @convention(block) (CFDictionary?) -> Void
     typealias IsPlayingCompletion = @convention(block) (Bool) -> Void
     typealias GetNowPlayingInfo = @convention(c) (DispatchQueue, NowPlayingInfoCompletion) -> Void
     typealias GetIsPlaying = @convention(c) (DispatchQueue, IsPlayingCompletion) -> Void
 
+    private let queue = DispatchQueue(label: "app.atoll.media-remote", qos: .utility)
     private let handle: UnsafeMutableRawPointer?
     private let getNowPlayingInfo: GetNowPlayingInfo?
     private let getIsPlaying: GetIsPlaying?
@@ -122,43 +206,56 @@ private final class MediaRemoteNowPlayingClient {
         }
     }
 
-    func fetchSnapshot(completion: @escaping (MediaPlaybackSnapshot) -> Void) {
+    func fetchPayload(
+        includeArtwork: Bool,
+        timeout: TimeInterval = 1,
+        completion: @escaping (MediaPlaybackPayload) -> Void
+    ) {
         guard let getNowPlayingInfo else {
             completion(.empty)
             return
         }
 
-        getNowPlayingInfo(.main) { [weak self] info in
-            guard let self else {
-                completion(.empty)
-                return
-            }
+        let queue = queue
+        let getIsPlaying = getIsPlaying
+        let state = MediaRemoteFetchState(completion: completion)
 
-            let partial = Self.snapshot(from: info, isPlaying: false)
-            guard let getIsPlaying else {
-                completion(partial)
-                return
-            }
+        queue.asyncAfter(deadline: .now() + timeout) {
+            state.finish(.empty)
+        }
 
-            getIsPlaying(.main) { isPlaying in
-                var snapshot = partial
-                snapshot.isPlaying = isPlaying
-                completion(snapshot)
+        queue.async {
+            getNowPlayingInfo(queue) { info in
+                let partial = Self.payload(from: info, isPlaying: false, includeArtwork: includeArtwork)
+                guard let getIsPlaying else {
+                    state.finish(partial)
+                    return
+                }
+
+                getIsPlaying(queue) { isPlaying in
+                    var payload = partial
+                    payload.isPlaying = isPlaying
+                    state.finish(payload)
+                }
             }
         }
     }
 
-    private static func snapshot(from info: CFDictionary?, isPlaying: Bool) -> MediaPlaybackSnapshot {
+    private static func payload(
+        from info: CFDictionary?,
+        isPlaying: Bool,
+        includeArtwork: Bool
+    ) -> MediaPlaybackPayload {
         guard let info = info as? [String: Any] else {
             return .empty
         }
 
-        return MediaPlaybackSnapshot(
+        return MediaPlaybackPayload(
             title: string(info, "kMRMediaRemoteNowPlayingInfoTitle"),
             artist: string(info, "kMRMediaRemoteNowPlayingInfoArtist"),
             album: string(info, "kMRMediaRemoteNowPlayingInfoAlbum"),
             isPlaying: isPlaying,
-            artwork: artwork(info, "kMRMediaRemoteNowPlayingInfoArtworkData")
+            artworkData: includeArtwork ? artworkData(info, "kMRMediaRemoteNowPlayingInfoArtworkData") : nil
         )
     }
 
@@ -166,11 +263,34 @@ private final class MediaRemoteNowPlayingClient {
         info[key] as? String ?? ""
     }
 
-    private static func artwork(_ info: [String: Any], _ key: String) -> NSImage? {
-        guard let data = info[key] as? Data else {
-            return nil
+    private static func artworkData(_ info: [String: Any], _ key: String) -> Data? {
+        if let data = info[key] as? Data {
+            return data
         }
-        return NSImage(data: data)
+        if let data = info[key] as? NSData {
+            return data as Data
+        }
+        return nil
+    }
+}
+
+private final class MediaRemoteFetchState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var isFinished = false
+    private let completion: (MediaPlaybackPayload) -> Void
+
+    init(completion: @escaping (MediaPlaybackPayload) -> Void) {
+        self.completion = completion
+    }
+
+    func finish(_ payload: MediaPlaybackPayload) {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !isFinished else {
+            return
+        }
+        isFinished = true
+        completion(payload)
     }
 }
 

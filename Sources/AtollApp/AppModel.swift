@@ -406,6 +406,7 @@ final class AppModel {
         didSet {
             guard mediaArtworkEnabled != oldValue else { return }
             UserDefaults.standard.set(mediaArtworkEnabled, forKey: Self.mediaArtworkEnabledDefaultsKey)
+            mediaPlaybackController.setArtworkEnabled(mediaArtworkEnabled)
         }
     }
     var sessionGitBadgesEnabled: Bool = true {
@@ -529,6 +530,7 @@ final class AppModel {
     }
 
     private func syncMediaPlaybackController() {
+        mediaPlaybackController.setArtworkEnabled(mediaArtworkEnabled)
         if mediaControlsEnabled {
             mediaPlaybackController.start()
         } else {

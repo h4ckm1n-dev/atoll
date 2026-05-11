@@ -586,10 +586,10 @@ struct IslandPanelView: View {
                 installHooksHint
             }
 
-            if model.mediaControlsEnabled,
-               model.mediaPlaybackController.snapshot.hasContent {
+            if model.mediaControlsEnabled {
                 MediaControlStrip(
                     snapshot: model.mediaPlaybackController.snapshot,
+                    isAvailable: model.mediaPlaybackController.isAvailable,
                     showsArtwork: model.mediaArtworkEnabled,
                     palette: model.themeManager.palette,
                     onPrevious: { model.mediaPlaybackController.previousTrack() },
@@ -1141,6 +1141,7 @@ struct IslandPanelView: View {
 
 private struct MediaControlStrip: View {
     let snapshot: MediaPlaybackSnapshot
+    let isAvailable: Bool
     let showsArtwork: Bool
     let palette: ThemePalette
     let onPrevious: () -> Void
@@ -1215,10 +1216,22 @@ private struct MediaControlStrip: View {
 
     private var displayTitle: String {
         let trimmed = snapshot.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !isAvailable {
+            return "Media unavailable"
+        }
+        if trimmed.isEmpty, !snapshot.hasContent {
+            return "Media Controls"
+        }
         return trimmed.isEmpty ? "Now Playing" : trimmed
     }
 
     private var displaySubtitle: String {
+        if !isAvailable {
+            return "macOS media bridge unavailable"
+        }
+        if !snapshot.hasContent {
+            return "Waiting for Music, Spotify, YouTube..."
+        }
         let subtitle = snapshot.subtitle
         return subtitle.isEmpty ? (snapshot.isPlaying ? "Playing" : "Paused") : subtitle
     }

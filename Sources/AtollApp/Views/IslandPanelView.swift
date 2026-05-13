@@ -391,6 +391,9 @@ struct IslandPanelView: View {
                             onSeek: { model.mediaPlaybackController.seek(to: $0) },
                             onToggleShuffle: { model.mediaPlaybackController.toggleShuffle() }
                         )
+                        // NotchShape's vertical sides start at x = openedTopRadius; inset
+                        // the dock by that amount so it sits within the panel's interior.
+                        .padding(.horizontal, NotchShape.openedTopRadius)
                     }
                 }
                 .overlay(alignment: .top) {

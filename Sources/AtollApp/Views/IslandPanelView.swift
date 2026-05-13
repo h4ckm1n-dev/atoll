@@ -389,10 +389,7 @@ struct IslandPanelView: View {
                             onPlayPause: { model.mediaPlaybackController.togglePlayPause() },
                             onNext: { model.mediaPlaybackController.nextTrack() },
                             onSeek: { model.mediaPlaybackController.seek(to: $0) },
-                            onSkipBackward: { model.mediaPlaybackController.skip(seconds: -15) },
-                            onSkipForward: { model.mediaPlaybackController.skip(seconds: 15) },
-                            onToggleShuffle: { model.mediaPlaybackController.toggleShuffle() },
-                            onToggleRepeat: { model.mediaPlaybackController.toggleRepeat() }
+                            onToggleShuffle: { model.mediaPlaybackController.toggleShuffle() }
                         )
                         .padding(.bottom, 8)
                     }
@@ -705,8 +702,8 @@ struct IslandPanelView: View {
         model.notchOpenReason == .notification && actionableSessionID != nil
     }
 
-    private static let mediaControlDockControlsReserve: CGFloat = 98
-    private static let mediaControlDockArtworkReserve: CGFloat = 154
+    private static let mediaControlDockControlsReserve: CGFloat = 100
+    private static let mediaControlDockArtworkReserve: CGFloat = 100
     private static let maxSessionListHeight: CGFloat = 560
 
     private var mediaControlDockContentReserve: CGFloat {
@@ -1162,10 +1159,7 @@ private struct MediaControlDock: View {
     let onPlayPause: () -> Void
     let onNext: () -> Void
     let onSeek: (Double) -> Void
-    let onSkipBackward: () -> Void
-    let onSkipForward: () -> Void
     let onToggleShuffle: () -> Void
-    let onToggleRepeat: () -> Void
 
     @State private var isDraggingTimeline = false
     @State private var draggedTimelineValue: Double = 0
@@ -1176,26 +1170,45 @@ private struct MediaControlDock: View {
                 ? draggedTimelineValue
                 : snapshot.estimatedPlaybackPosition(at: timeline.date)
 
-            VStack(spacing: 7) {
-                if showsArtwork {
-                    artworkView
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(alignment: .center, spacing: 10) {
-                        Text(trackHeader)
-                            .font(.system(size: 10.5, weight: .semibold))
-                            .foregroundStyle(palette.text.swiftUIColor.opacity(0.78))
+            VStack(spacing: 6) {
+                // Row 1: artwork + track info + waveform ornament
+                HStack(alignment: .center, spacing: 8) {
+                    artworkSquare
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(trackTitle)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(palette.text.swiftUIColor)
                             .lineLimit(1)
-
-                        Spacer(minLength: 0)
-
-                        Text("\(timeString(position)) / \(timeString(snapshot.duration))")
-                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(palette.text.swiftUIColor.opacity(0.38))
+                        Text(trackSubtitle)
+                            .font(.system(size: 10.5, weight: .medium))
+                            .foregroundStyle(palette.text.swiftUIColor.opacity(0.55))
                             .lineLimit(1)
                     }
+                    Spacer(minLength: 0)
+                    if snapshot.isPlaying {
+                        Image(systemName: "waveform")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(palette.text.swiftUIColor.opacity(0.45))
+                            .accessibilityHidden(true)
+                    }
+                    Button {
+                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.sound")!)
+                    } label: {
+                        Image(systemName: "airplayaudio")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(palette.text.swiftUIColor.opacity(0.55))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Audio output settings")
+                    .help("Audio output settings")
+                }
 
+                // Row 2: elapsed · scrubber · countdown
+                HStack(spacing: 5) {
+                    Text(timeString(position))
+                        .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(palette.text.swiftUIColor.opacity(0.55))
+                        .lineLimit(1)
                     MediaTimelineScrubber(
                         value: position,
                         duration: snapshot.duration,
@@ -1204,17 +1217,21 @@ private struct MediaControlDock: View {
                         draggedValue: $draggedTimelineValue,
                         onSeek: onSeek
                     )
-                    .frame(height: 12)
+                    .frame(height: 10)
+                    Text(remainingString(max(0, snapshot.duration - position)))
+                        .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(palette.text.swiftUIColor.opacity(0.55))
+                        .lineLimit(1)
                 }
 
-                HStack(spacing: 7) {
+                // Row 3: flat controls — shuffle · prev · play/pause · next · output
+                HStack(spacing: 22) {
                     mediaButton(
                         systemName: "shuffle",
                         label: "Shuffle",
                         action: onToggleShuffle,
                         isActive: snapshot.isShuffled
                     )
-                    mediaButton(systemName: "gobackward.15", label: "Back 15 seconds", action: onSkipBackward)
                     mediaButton(systemName: "backward.fill", label: "Previous", action: onPrevious)
                     mediaButton(
                         systemName: snapshot.isPlaying ? "pause.fill" : "play.fill",
@@ -1223,55 +1240,59 @@ private struct MediaControlDock: View {
                         isPrimary: true
                     )
                     mediaButton(systemName: "forward.fill", label: "Next", action: onNext)
-                    mediaButton(systemName: "goforward.15", label: "Forward 15 seconds", action: onSkipForward)
-                    mediaButton(
-                        systemName: repeatIcon,
-                        label: "Repeat",
-                        action: onToggleRepeat,
-                        isActive: snapshot.repeatMode != .off
-                    )
+                    Button {
+                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.sound")!)
+                    } label: {
+                        Image(systemName: "airplayaudio")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(palette.text.swiftUIColor.opacity(0.78))
+                            .frame(width: 26, height: 22)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Audio output settings")
+                    .help("Audio output settings")
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
             }
-            .padding(.horizontal, 10)
+            .padding(.horizontal, 11)
             .padding(.vertical, 8)
-            .frame(width: 334, height: showsArtwork ? 138 : 82)
+            .frame(width: 326, height: 88)
             .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(palette.crust.swiftUIColor.opacity(0.98))
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(palette.crust.swiftUIColor.opacity(0.96))
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(palette.text.swiftUIColor.opacity(0.08), lineWidth: 0.75)
-            )
-            .shadow(color: .black.opacity(0.24), radius: 10, y: 3)
-            .opacity(snapshot.hasContent ? 0.94 : 0.72)
+            .shadow(color: .black.opacity(0.28), radius: 9, y: 3)
+            .opacity(snapshot.hasContent ? 1 : 0.72)
             .help(helpText)
         }
     }
 
     @ViewBuilder
-    private var artworkView: some View {
+    private var artworkSquare: some View {
         if showsArtwork, let artwork = snapshot.artwork {
             Image(nsImage: artwork)
                 .resizable()
-                .aspectRatio(16.0 / 9.0, contentMode: .fill)
-                .frame(width: 96, height: 54)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 34, height: 34)
+                .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
                         .strokeBorder(palette.text.swiftUIColor.opacity(0.12), lineWidth: 0.5)
                 )
                 .accessibilityHidden(true)
         } else {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
                 .fill(palette.surface0.swiftUIColor.opacity(0.7))
-                .frame(width: 96, height: 54)
+                .frame(width: 34, height: 34)
                 .overlay {
                     Image(systemName: "music.note")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(palette.text.swiftUIColor.opacity(0.35))
                 }
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .strokeBorder(palette.text.swiftUIColor.opacity(0.10), lineWidth: 0.5)
+                )
                 .accessibilityHidden(true)
         }
     }
@@ -1285,30 +1306,17 @@ private struct MediaControlDock: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: isPrimary ? 10.5 : 8.5, weight: .bold))
+                .font(.system(size: isPrimary ? 17 : 12, weight: isPrimary ? .bold : .semibold))
                 .foregroundStyle(buttonTint(isPrimary: isPrimary, isActive: isActive))
-                .frame(width: isPrimary ? 27 : 21, height: isPrimary ? 23 : 20)
-                .background(
-                    Circle()
-                        .fill(buttonFill(isPrimary: isPrimary, isActive: isActive))
-                )
+                .frame(width: isPrimary ? 30 : 26, height: isPrimary ? 26 : 22)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)
     }
 
     private func buttonTint(isPrimary: Bool, isActive: Bool) -> Color {
-        if isActive {
-            return palette.green.swiftUIColor.opacity(0.95)
-        }
-        return palette.text.swiftUIColor.opacity(isPrimary ? 0.9 : 0.58)
-    }
-
-    private func buttonFill(isPrimary: Bool, isActive: Bool) -> Color {
-        if isActive {
-            return palette.green.swiftUIColor.opacity(0.12)
-        }
-        return Color.white.opacity(isPrimary ? 0.075 : 0.035)
+        if isActive { return palette.green.swiftUIColor.opacity(0.95) }
+        return palette.text.swiftUIColor.opacity(isPrimary ? 0.95 : 0.78)
     }
 
     private var trackTitle: String {
@@ -1321,17 +1329,6 @@ private struct MediaControlDock: View {
         return subtitle.isEmpty ? "Media" : subtitle
     }
 
-    private var trackHeader: String {
-        let title = trackTitle
-        let subtitle = trackSubtitle
-        guard title != "Now Playing", subtitle != "Media" else { return title }
-        return "\(title) - \(subtitle)"
-    }
-
-    private var repeatIcon: String {
-        snapshot.repeatMode == .one ? "repeat.1" : "repeat"
-    }
-
     private var helpText: String {
         if snapshot.hasContent {
             let title = snapshot.title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1342,14 +1339,20 @@ private struct MediaControlDock: View {
 
     private func timeString(_ seconds: Double) -> String {
         guard seconds.isFinite, seconds > 0 else { return "0:00" }
-        let totalSeconds = Int(seconds.rounded(.down))
-        let hours = totalSeconds / 3600
-        let minutes = (totalSeconds % 3600) / 60
-        let remainingSeconds = totalSeconds % 60
-        if hours > 0 {
-            return String(format: "%d:%02d:%02d", hours, minutes, remainingSeconds)
-        }
-        return String(format: "%d:%02d", minutes, remainingSeconds)
+        let total = Int(seconds.rounded(.down))
+        let h = total / 3600
+        let m = (total % 3600) / 60
+        let s = total % 60
+        return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
+    }
+
+    private func remainingString(_ remaining: Double) -> String {
+        guard remaining.isFinite, remaining > 0 else { return "-0:00" }
+        let total = Int(remaining.rounded(.down))
+        let h = total / 3600
+        let m = (total % 3600) / 60
+        let s = total % 60
+        return h > 0 ? String(format: "-%d:%02d:%02d", h, m, s) : String(format: "-%d:%02d", m, s)
     }
 }
 
@@ -1365,7 +1368,7 @@ private struct MediaTimelineScrubber: View {
         GeometryReader { geometry in
             let width = max(1, geometry.size.width)
             let progress = CGFloat(duration > 0 ? min(max(displayValue / duration, 0), 1) : 0)
-            let height: CGFloat = isDragging ? 6 : 4
+            let height: CGFloat = isDragging ? 5 : 3
 
             ZStack(alignment: .leading) {
                 Capsule()
@@ -1381,7 +1384,7 @@ private struct MediaTimelineScrubber: View {
                     .frame(width: 8, height: 8)
                     .offset(x: max(0, min(width - 8, width * progress - 4)))
             }
-            .frame(height: 14)
+            .frame(height: 10)
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)

@@ -10,13 +10,6 @@ private struct NotificationContentHeightKey: PreferenceKey {
     }
 }
 
-private struct OpenedContentHeightKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = max(value, nextValue())
-    }
-}
-
 private struct ContentHeightKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
@@ -124,7 +117,6 @@ struct IslandPanelView: View {
     @State private var isHovering = false
     @State private var lastCompletionTimestamp: Date?
     @State private var lastCelebrationTimestamp: Date?
-    @State private var measuredOpenedContentHeight: CGFloat = 0
 
     @AppStorage("appearance.panelMaterial")
     private var panelMaterialRaw: String = AppPanelMaterial.solid.rawValue
@@ -337,12 +329,7 @@ struct IslandPanelView: View {
         let outerHorizontalPadding: CGFloat = 28
         let outerBottomPadding: CGFloat = 14
         let openedWidth = max(0, layoutWidth - outerHorizontalPadding)
-        let maxOpenedHeight = max(closedNotchHeight, layoutHeight - outerBottomPadding)
-        let openedHeight: CGFloat = {
-            guard measuredOpenedContentHeight > 0 else { return maxOpenedHeight }
-            let natural = closedNotchHeight + measuredOpenedContentHeight + 12 + mediaControlDockContentReserve
-            return min(maxOpenedHeight, max(closedNotchHeight, natural))
-        }()
+        let openedHeight = max(closedNotchHeight, layoutHeight - outerBottomPadding)
 
         // Closed dimensions: sized to the actual notch + session indicators.
         let closedTotalWidth = closedNotchWidth + expansionWidth + (isPopping ? 18 : 0)
@@ -600,14 +587,6 @@ struct IslandPanelView: View {
             } else {
                 sessionList
             }
-        }
-        .overlay(
-            GeometryReader { geo in
-                Color.clear.preference(key: OpenedContentHeightKey.self, value: geo.size.height)
-            }
-        )
-        .onPreferenceChange(OpenedContentHeightKey.self) { height in
-            if height > 0 { measuredOpenedContentHeight = height }
         }
         .padding(.horizontal, 18)
         .padding(.top, 8)

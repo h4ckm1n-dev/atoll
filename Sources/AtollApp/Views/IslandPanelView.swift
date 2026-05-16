@@ -1288,8 +1288,7 @@ private struct MediaControlDock: View {
                         .help("Audio output settings")
                     }
                 }
-                .padding(.leading, 12)
-                .padding(.trailing, 30)
+                .padding(.horizontal, 20)
                 .padding(.top, 6)
                 .frame(height: 32, alignment: .center)
 

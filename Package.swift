@@ -30,6 +30,7 @@ let package = Package(
         .package(url: "https://github.com/gonzalezreal/swift-markdown-ui", from: "2.4.1"),
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.9.1"),
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.4.0"),
+        .package(url: "https://github.com/argmaxinc/argmax-oss-swift.git", from: "0.9.0"),
     ],
     targets: [
         .target(
@@ -43,6 +44,13 @@ let package = Package(
             name: "AtollCore",
             dependencies: ["CSQLiteShim"]
         ),
+        .target(
+            name: "AtollDictation",
+            dependencies: [
+                "AtollCore",
+                .product(name: "WhisperKit", package: "argmax-oss-swift"),
+            ]
+        ),
         .executableTarget(
             name: "AtollHooks",
             dependencies: ["AtollCore"]
@@ -55,6 +63,7 @@ let package = Package(
             name: "AtollApp",
             dependencies: [
                 "AtollCore",
+                "AtollDictation",
                 .product(name: "MarkdownUI", package: "swift-markdown-ui"),
                 .product(name: "Sparkle", package: "Sparkle"),
                 .product(name: "KeyboardShortcuts", package: "KeyboardShortcuts"),

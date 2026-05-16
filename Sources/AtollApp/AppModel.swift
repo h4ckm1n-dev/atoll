@@ -1,4 +1,5 @@
 import AppKit
+import AtollDictation
 import Foundation
 import Observation
 import AtollCore
@@ -93,6 +94,7 @@ final class AppModel {
     let monitoring = ProcessMonitoringCoordinator()
     let codexAppServer = CodexAppServerCoordinator()
     let updateChecker = UpdateChecker()
+    let dictationController = DictationController()
 
     var notchStatus: NotchStatus {
         get { overlay.notchStatus }

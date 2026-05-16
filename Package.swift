@@ -30,7 +30,7 @@ let package = Package(
         .package(url: "https://github.com/gonzalezreal/swift-markdown-ui", from: "2.4.1"),
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.9.1"),
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.4.0"),
-        .package(url: "https://github.com/argmaxinc/argmax-oss-swift.git", from: "0.9.0"),
+        .package(url: "https://github.com/argmaxinc/argmax-oss-swift.git", from: "1.0.0"),
     ],
     targets: [
         .target(

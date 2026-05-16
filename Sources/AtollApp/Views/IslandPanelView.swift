@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 @preconcurrency import MarkdownUI
 import AtollCore
+import AtollDictation
 
 private struct NotificationContentHeightKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
@@ -433,6 +434,13 @@ struct IslandPanelView: View {
                                 .stroke(palette.text.swiftUIColor.opacity(0.05), lineWidth: 1)
                         }
                         .opacity(showsIdleEdgeWhenCollapsed ? 1 : 0)
+                }
+                .overlay(alignment: .top) {
+                    if case .recording = model.dictationController.state {
+                        DictationListeningChip(palette: palette)
+                            .padding(.top, closedNotchHeight + 6)
+                            .allowsHitTesting(false)
+                    }
                 }
 
                 if let ts = lastCelebrationTimestamp,
@@ -3279,5 +3287,36 @@ private struct DismissButton: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
+    }
+}
+
+// MARK: - Dictation indicator
+
+/// Small floating chip shown above the panel content while dictation is active.
+/// Pulses a red dot to signal live microphone capture.
+private struct DictationListeningChip: View {
+    let palette: ThemePalette
+
+    @State private var isPulsing = false
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(Color.red)
+                .frame(width: 6, height: 6)
+                .opacity(isPulsing ? 1.0 : 0.4)
+                .animation(
+                    .easeInOut(duration: 0.7).repeatForever(autoreverses: true),
+                    value: isPulsing
+                )
+            Text("Listening")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(palette.text.swiftUIColor)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(palette.mantle.swiftUIColor.opacity(0.9))
+        .clipShape(Capsule())
+        .onAppear { isPulsing = true }
     }
 }

@@ -35,6 +35,11 @@ struct ShortcutsSettingsPane: View {
                     helpKey: "settings.shortcuts.cycleToNextAttentionSession.help",
                     name: .cycleToNextAttentionSession
                 )
+                shortcutRow(
+                    titleKey: "settings.shortcuts.toggleDictation",
+                    helpKey: "settings.shortcuts.toggleDictation.help",
+                    name: .toggleDictation
+                )
             }
         }
         .formStyle(.grouped)

@@ -181,6 +181,8 @@
 "settings.shortcuts.denyFocusedPermission.help" = "拒絕選取會話的待處理請求。";
 "settings.shortcuts.cycleToNextAttentionSession" = "下一個待處理會話";
 "settings.shortcuts.cycleToNextAttentionSession.help" = "選取下一個等待輸入的會話。";
+"settings.shortcuts.toggleDictation" = "切換語音輸入";
+"settings.shortcuts.toggleDictation.help" = "按下以向當前代理終端機聽寫內容（第三階段 — 當前轉錄結果暫不生效）。";
 
 /* Settings - About */
 "settings.about.version" = "版本 %@";

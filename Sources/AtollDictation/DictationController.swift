@@ -146,6 +146,13 @@ public final class DictationController {
         _ = await recorder.stop()
         state = .idle
     }
+
+    /// Resets state to `.idle` without touching the recorder or WhisperKit host.
+    /// Call this to clear a terminal `.failed` or `.completed` state before
+    /// starting a fresh recording cycle.
+    public func reset() {
+        state = .idle
+    }
 }
 
 // MARK: - WhisperKitHost

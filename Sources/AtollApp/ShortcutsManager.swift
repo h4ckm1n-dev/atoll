@@ -44,7 +44,9 @@ final class ShortcutsManager {
                     dc.reset()
                     try? await dc.startRecording()
                 case .recording:
-                    try? await dc.stopAndTranscribe()
+                    if let transcription = try? await dc.stopAndTranscribe() {
+                        model.routeDictationTranscript(transcription)
+                    }
                 case .preparing, .transcribing:
                     // Hotkey is a no-op while a transition is already in flight.
                     break

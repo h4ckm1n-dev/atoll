@@ -1410,6 +1410,34 @@ final class AppModel {
         replyToSession(session, text: text)
     }
 
+    func routeDictationTranscript(_ transcription: Transcription) {
+        let trimmed = transcription.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            lastActionMessage = "Dictation: nothing to send (empty transcript)."
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(1.5))
+                self?.dictationController.reset()
+            }
+            return
+        }
+
+        if let session = focusedSession,
+           TerminalTextSender.canReply(to: session, enabled: completionReplyEnabled) {
+            replyToSession(session, text: trimmed)
+            lastActionMessage = "Dictation: sent to \(session.title)."
+        } else {
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString(trimmed, forType: .string)
+            lastActionMessage = "Dictation: copied to clipboard (no focused agent session to receive)."
+        }
+
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1.5))
+            self?.dictationController.reset()
+        }
+    }
+
     func openActionableSession(_ sessionID: String) {
         openSessionInIsland(sessionID)
     }

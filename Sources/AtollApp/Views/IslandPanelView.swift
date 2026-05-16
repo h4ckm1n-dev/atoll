@@ -17,6 +17,13 @@ private struct ContentHeightKey: PreferenceKey {
     }
 }
 
+private struct OpenedContentHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
 /// Auto-height container: renders content directly (auto-sizing).
 /// When content exceeds maxHeight, wraps in ScrollView at fixed maxHeight.
 struct AutoHeightScrollView<Content: View>: View {
@@ -117,6 +124,7 @@ struct IslandPanelView: View {
     @State private var isHovering = false
     @State private var lastCompletionTimestamp: Date?
     @State private var lastCelebrationTimestamp: Date?
+    @State private var measuredOpenedContentHeight: CGFloat = 0
 
     @AppStorage("appearance.panelMaterial")
     private var panelMaterialRaw: String = AppPanelMaterial.solid.rawValue
@@ -329,7 +337,15 @@ struct IslandPanelView: View {
         let outerHorizontalPadding: CGFloat = 28
         let outerBottomPadding: CGFloat = 14
         let openedWidth = max(0, layoutWidth - outerHorizontalPadding)
-        let openedHeight = max(closedNotchHeight, layoutHeight - outerBottomPadding)
+        let maxOpenedHeight = max(closedNotchHeight, layoutHeight - outerBottomPadding)
+        let openedHeight: CGFloat = {
+            guard measuredOpenedContentHeight > 0 else { return maxOpenedHeight }
+            // Top chrome + 12pt gap + .top(8) padding + ghost content + dock reserve.
+            // .horizontal padding doesn't affect height; .top(8) and .bottom(reserve)
+            // are outside the ghost measurement, so they're added explicitly here.
+            let natural = closedNotchHeight + 12 + 8 + measuredOpenedContentHeight + mediaControlDockContentReserve
+            return min(maxOpenedHeight, max(closedNotchHeight, natural))
+        }()
 
         // Closed dimensions: sized to the actual notch + session indicators.
         let closedTotalWidth = closedNotchWidth + expansionWidth + (isPopping ? 18 : 0)
@@ -591,6 +607,44 @@ struct IslandPanelView: View {
         .padding(.horizontal, 18)
         .padding(.top, 8)
         .padding(.bottom, mediaControlDockContentReserve)
+        .background {
+            // Ghost: measures the true intrinsic height of the session content
+            // without a ScrollView so the panel can shrink to fit short lists.
+            // Must NOT be placed as an overlay/foreground — that caused the
+            // feedback loop in PR #36. The .fixedSize is what breaks the loop:
+            // the ghost asks for its natural height, ignoring the parent constraint.
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                VStack(spacing: 8) {
+                    if !model.hasAnyInstalledAgent {
+                        installHooksHint
+                    }
+
+                    if model.shouldShowSessionBootstrapPlaceholder {
+                        sessionBootstrapPlaceholder
+                    } else if model.islandListSessions.isEmpty {
+                        emptyState
+                    } else {
+                        sessionListContent(context: context)
+                            .padding(.vertical, 2)
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .opacity(0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear.preference(
+                            key: OpenedContentHeightKey.self,
+                            value: proxy.size.height
+                        )
+                    }
+                )
+            }
+        }
+        .onPreferenceChange(OpenedContentHeightKey.self) { height in
+            if height > 0 { measuredOpenedContentHeight = height }
+        }
     }
 
     /// Persistent hint at the top of the expanded island while no agent
@@ -1234,7 +1288,8 @@ private struct MediaControlDock: View {
                         .help("Audio output settings")
                     }
                 }
-                .padding(.horizontal, 12)
+                .padding(.leading, 12)
+                .padding(.trailing, 30)
                 .padding(.top, 6)
                 .frame(height: 32, alignment: .center)
 

@@ -1365,26 +1365,32 @@ private struct MediaControlDock: View {
                 .resizable()
                 .aspectRatio(contentMode: .fill)
                 .frame(width: 24, height: 24)
-                .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .strokeBorder(palette.text.swiftUIColor.opacity(0.10), lineWidth: 0.5)
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .strokeBorder(palette.text.swiftUIColor.opacity(0.12), lineWidth: 0.5)
                 )
                 .accessibilityHidden(true)
         } else {
-            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                .fill(palette.surface0.swiftUIColor.opacity(0.7))
-                .frame(width: 24, height: 24)
-                .overlay {
-                    Image(systemName: "music.note")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(palette.text.swiftUIColor.opacity(0.35))
-                }
-                .overlay(
-                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        .strokeBorder(palette.text.swiftUIColor.opacity(0.10), lineWidth: 0.5)
-                )
-                .accessibilityHidden(true)
+            ZStack {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                palette.text.swiftUIColor.opacity(0.12),
+                                palette.text.swiftUIColor.opacity(0.04)
+                            ],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                Image(systemName: "music.note")
+                    .symbolRenderingMode(.hierarchical)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(palette.text.swiftUIColor.opacity(0.6))
+            }
+            .frame(width: 24, height: 24)
+            .accessibilityHidden(true)
         }
     }
 

@@ -44,6 +44,8 @@ final class AppModel {
     private static let advancedAvatarsEnabledDefaultsKey = "feature.advancedAvatars.enabled"
     private static let suppressFrontmostNotificationsDefaultsKey = "app.suppressFrontmostNotifications"
     private static let celebrationsEnabledDefaultsKey = "appearance.celebrations.enabled"
+    private static let dictationModelDefaultsKey = "dictation.model"
+    private static let dictationModelDefault = "openai_whisper-tiny.en"
 
     /// Defaults pulled from the Catppuccin Mocha palette so the phase
     /// indicators match the active theme out of the box. Users can still
@@ -415,6 +417,13 @@ final class AppModel {
             guard mediaArtworkEnabled != oldValue else { return }
             UserDefaults.standard.set(mediaArtworkEnabled, forKey: Self.mediaArtworkEnabledDefaultsKey)
             mediaPlaybackController.setArtworkEnabled(mediaArtworkEnabled)
+        }
+    }
+    var dictationModel: String = AppModel.dictationModelDefault {
+        didSet {
+            guard hasFinishedInit, dictationModel != oldValue else { return }
+            UserDefaults.standard.set(dictationModel, forKey: Self.dictationModelDefaultsKey)
+            dictationController.config.model = dictationModel
         }
     }
     var sessionGitBadgesEnabled: Bool = true {
@@ -844,6 +853,7 @@ final class AppModel {
             Self.advancedAvatarsEnabledDefaultsKey: true,
             Self.suppressFrontmostNotificationsDefaultsKey: true,
             Self.celebrationsEnabledDefaultsKey: true,
+            Self.dictationModelDefaultsKey: Self.dictationModelDefault,
         ])
         isSoundMuted = UserDefaults.standard.bool(forKey: Self.soundMutedDefaultsKey)
         selectedSoundName = NotificationSoundService.selectedSoundName
@@ -862,6 +872,8 @@ final class AppModel {
         streamOverlayEnabled = UserDefaults.standard.bool(forKey: Self.streamOverlayEnabledDefaultsKey)
         mediaControlsEnabled = UserDefaults.standard.bool(forKey: Self.mediaControlsEnabledDefaultsKey)
         mediaArtworkEnabled = UserDefaults.standard.bool(forKey: Self.mediaArtworkEnabledDefaultsKey)
+        dictationModel = UserDefaults.standard.string(forKey: Self.dictationModelDefaultsKey) ?? Self.dictationModelDefault
+        dictationController.config.model = dictationModel
         sessionGitBadgesEnabled = UserDefaults.standard.bool(forKey: Self.sessionGitBadgesEnabledDefaultsKey)
         sessionToolBadgeEnabled = UserDefaults.standard.bool(forKey: Self.sessionToolBadgeEnabledDefaultsKey)
         sessionTerminalBadgeEnabled = UserDefaults.standard.bool(forKey: Self.sessionTerminalBadgeEnabledDefaultsKey)
@@ -1599,6 +1611,16 @@ final class AppModel {
 
     func toggleSoundMuted() {
         isSoundMuted.toggle()
+    }
+
+    /// Pushes the current `dictationModel` into the controller and drops the
+    /// cached WhisperKit instance. The next recording will re-prepare with the
+    /// selected model (downloading if needed).
+    func reloadDictationModel() {
+        dictationController.config.model = dictationModel
+        Task { @MainActor in
+            await dictationController.invalidate()
+        }
     }
 
     func approveFocusedPermission(_ approved: Bool) {

@@ -169,6 +169,14 @@
 "settings.lab.advancedAvatars" = "启用高级头像动画";
 "settings.lab.avatarHelp" = "解锁更有动态感的赛博朋克、黑客与漫画风格像素图形。";
 
+/* Settings - Dictation */
+"settings.tab.dictation" = "语音输入";
+"settings.dictation.section.model" = "模型";
+"settings.dictation.help" = "模型在首次使用时从 HuggingFace 下载。模型越大，识别越准确，但速度越慢。Tiny/Base 仅支持英语，Large 系列支持 80 种以上语言。";
+"settings.dictation.loaded" = "当前加载：%@";
+"settings.dictation.pending" = "待更新 — 将在下次使用时重载";
+"settings.dictation.reload" = "重载模型";
+
 /* Settings - Shortcuts */
 "settings.shortcuts.section.actions" = "操作";
 "settings.shortcuts.toggleOverlay" = "切换 Atoll 显示";

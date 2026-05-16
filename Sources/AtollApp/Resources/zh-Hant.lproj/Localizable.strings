@@ -169,6 +169,14 @@
 "settings.lab.advancedAvatars" = "啟用進階頭像動畫";
 "settings.lab.avatarHelp" = "解鎖更有動態感的賽博龐克、駭客與漫畫風格像素圖形。";
 
+/* Settings - Dictation */
+"settings.tab.dictation" = "語音輸入";
+"settings.dictation.section.model" = "模型";
+"settings.dictation.help" = "模型在首次使用時從 HuggingFace 下載。模型越大，辨識越準確，但速度越慢。Tiny/Base 僅支援英語，Large 系列支援 80 種以上語言。";
+"settings.dictation.loaded" = "目前已載入：%@";
+"settings.dictation.pending" = "待更新 — 將於下次使用時重新載入";
+"settings.dictation.reload" = "重新載入模型";
+
 /* Settings - Shortcuts */
 "settings.shortcuts.section.actions" = "操作";
 "settings.shortcuts.toggleOverlay" = "切換 Atoll 顯示";

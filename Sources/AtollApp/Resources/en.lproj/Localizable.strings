@@ -169,6 +169,14 @@
 "settings.lab.advancedAvatars" = "Enable advanced avatar animations";
 "settings.lab.avatarHelp" = "Unlocks the more animated cyberpunk, hacker, and manga glyph styles.";
 
+/* Settings - Dictation */
+"settings.tab.dictation" = "Dictation";
+"settings.dictation.section.model" = "Model";
+"settings.dictation.help" = "Models download from HuggingFace on first use. Larger = more accurate but slower. Tiny/Base are English-only; Large variants support 80+ languages.";
+"settings.dictation.loaded" = "Currently loaded: %@";
+"settings.dictation.pending" = "Pending — will reload on next use";
+"settings.dictation.reload" = "Reload model";
+
 /* Settings - Shortcuts */
 "settings.shortcuts.section.actions" = "Actions";
 "settings.shortcuts.toggleOverlay" = "Toggle Island";

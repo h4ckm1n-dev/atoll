@@ -153,6 +153,18 @@ public final class DictationController {
     public func reset() {
         state = .idle
     }
+
+    /// Invalidates the cached WhisperKit instance. The next call to
+    /// `startRecording()` will re-prepare with the current `config.model`,
+    /// downloading the model if it has not been fetched before.
+    /// Safe to call from outside an active recording; calling while recording
+    /// is in progress leaves the session running — invalidation takes effect
+    /// on the next `startRecording()`.
+    public func invalidate() async {
+        await host.invalidate()
+        if case .completed = state { state = .idle }
+        if case .failed = state { state = .idle }
+    }
 }
 
 // MARK: - WhisperKitHost
@@ -168,6 +180,10 @@ private actor WhisperKitHost {
     func prepare(model: String) async throws {
         guard kit == nil else { return }
         kit = try await WhisperKit(WhisperKitConfig(model: model))
+    }
+
+    func invalidate() {
+        kit = nil
     }
 
     /// Transcribes the buffer. Returns the joined text and the detected

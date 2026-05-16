@@ -12,6 +12,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     case appearance
     case watch
     case shortcuts
+    case dictation
     case lab
     case about
 
@@ -26,6 +27,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .sound:      lang.t("settings.tab.sound")
         case .watch:      "Watch"
         case .shortcuts:  lang.t("settings.tab.shortcuts")
+        case .dictation:  lang.t("settings.tab.dictation")
         case .lab:        lang.t("settings.tab.lab")
         case .about:      lang.t("settings.tab.about")
         }
@@ -40,6 +42,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .sound:      "speaker.wave.2.fill"
         case .watch:      "applewatch"
         case .shortcuts:  "keyboard.fill"
+        case .dictation:  "waveform.badge.mic"
         case .lab:        "flask.fill"
         case .about:      "info.circle.fill"
         }
@@ -54,6 +57,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .sound:      .green
         case .watch:      .cyan
         case .shortcuts:  .gray
+        case .dictation:  .indigo
         case .lab:        .pink
         case .about:      .blue
         }
@@ -62,7 +66,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
     var section: SettingsSection {
         switch self {
         case .general, .setup, .display, .sound, .appearance, .watch: .system
-        case .shortcuts, .lab:                                        .advanced
+        case .shortcuts, .dictation, .lab:                            .advanced
         case .about:                                                  .app
         }
     }
@@ -150,6 +154,8 @@ struct SettingsView: View {
                 WatchSettingsPane(model: model)
             case .shortcuts:
                 ShortcutsSettingsPane(model: model)
+            case .dictation:
+                DictationSettingsPane(model: model)
             case .lab:
                 LabSettingsPane(model: model)
             case .about:

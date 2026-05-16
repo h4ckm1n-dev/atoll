@@ -436,8 +436,17 @@ struct IslandPanelView: View {
                         .opacity(showsIdleEdgeWhenCollapsed ? 1 : 0)
                 }
                 .overlay(alignment: .top) {
-                    if case .recording = model.dictationController.state {
-                        DictationListeningChip(palette: palette)
+                    let dictationState = model.dictationController.state
+                    if case .recording = dictationState {
+                        DictationListeningChip(state: .recording, palette: palette)
+                            .padding(.top, closedNotchHeight + 6)
+                            .allowsHitTesting(false)
+                    } else if case .transcribing = dictationState {
+                        DictationListeningChip(state: .transcribing, palette: palette)
+                            .padding(.top, closedNotchHeight + 6)
+                            .allowsHitTesting(false)
+                    } else if case .completed = dictationState {
+                        DictationListeningChip(state: .completed, palette: palette)
                             .padding(.top, closedNotchHeight + 6)
                             .allowsHitTesting(false)
                     }
@@ -3293,23 +3302,57 @@ private struct DismissButton: View {
 // MARK: - Dictation indicator
 
 /// Small floating chip shown above the panel content while dictation is active.
-/// Pulses a red dot to signal live microphone capture.
+/// Displays three states: recording (red pulsing), transcribing (blue pulsing),
+/// and completed (green static). The `.completed` state auto-dismisses via
+/// `routeDictationTranscript`'s 1.5 s Task sleep → `dictationController.reset()`.
 private struct DictationListeningChip: View {
+    enum ChipState {
+        case recording
+        case transcribing
+        case completed
+    }
+
+    let state: ChipState
     let palette: ThemePalette
 
     @State private var isPulsing = false
 
+    private var dotColor: Color {
+        switch state {
+        case .recording:    return palette.red.swiftUIColor
+        case .transcribing: return palette.blue.swiftUIColor
+        case .completed:    return palette.green.swiftUIColor
+        }
+    }
+
+    private var label: String {
+        switch state {
+        case .recording:    return "Listening"
+        case .transcribing: return "Transcribing…"
+        case .completed:    return "Sent ✓"
+        }
+    }
+
+    private var shouldPulse: Bool {
+        switch state {
+        case .recording, .transcribing: return true
+        case .completed:                return false
+        }
+    }
+
     var body: some View {
         HStack(spacing: 5) {
             Circle()
-                .fill(Color.red)
+                .fill(dotColor)
                 .frame(width: 6, height: 6)
-                .opacity(isPulsing ? 1.0 : 0.4)
+                .opacity(shouldPulse ? (isPulsing ? 1.0 : 0.4) : 1.0)
                 .animation(
-                    .easeInOut(duration: 0.7).repeatForever(autoreverses: true),
+                    shouldPulse
+                        ? .easeInOut(duration: 0.7).repeatForever(autoreverses: true)
+                        : .default,
                     value: isPulsing
                 )
-            Text("Listening")
+            Text(label)
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(palette.text.swiftUIColor)
         }
@@ -3317,6 +3360,6 @@ private struct DictationListeningChip: View {
         .padding(.vertical, 4)
         .background(palette.mantle.swiftUIColor.opacity(0.9))
         .clipShape(Capsule())
-        .onAppear { isPulsing = true }
+        .onAppear { if shouldPulse { isPulsing = true } }
     }
 }

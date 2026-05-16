@@ -181,6 +181,8 @@
 "settings.shortcuts.denyFocusedPermission.help" = "Deny the focused session's pending request.";
 "settings.shortcuts.cycleToNextAttentionSession" = "Next Attention Session";
 "settings.shortcuts.cycleToNextAttentionSession.help" = "Select the next session waiting on input.";
+"settings.shortcuts.toggleDictation" = "Toggle Dictation";
+"settings.shortcuts.toggleDictation.help" = "Hold to dictate into the focused agent terminal (Phase 3 — transcript is currently a no-op).";
 
 /* Settings - About */
 "settings.about.version" = "Version %@";

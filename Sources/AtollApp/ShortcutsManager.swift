@@ -7,6 +7,7 @@ extension KeyboardShortcuts.Name {
     static let approveFocusedPermission = Self("approveFocusedPermission")
     static let denyFocusedPermission = Self("denyFocusedPermission")
     static let cycleToNextAttentionSession = Self("cycleToNextAttentionSession")
+    static let toggleDictation = Self("toggleDictation")
 }
 
 @MainActor
@@ -32,6 +33,23 @@ final class ShortcutsManager {
         }
         KeyboardShortcuts.onKeyDown(for: .cycleToNextAttentionSession) { [model] in
             model.cycleToNextAttentionSession()
+        }
+        KeyboardShortcuts.onKeyDown(for: .toggleDictation) { [model] in
+            let dc = model.dictationController
+            Task { @MainActor in
+                switch dc.state {
+                case .idle:
+                    try? await dc.startRecording()
+                case .failed, .completed:
+                    dc.reset()
+                    try? await dc.startRecording()
+                case .recording:
+                    try? await dc.stopAndTranscribe()
+                case .preparing, .transcribing:
+                    // Hotkey is a no-op while a transition is already in flight.
+                    break
+                }
+            }
         }
     }
 }

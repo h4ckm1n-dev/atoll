@@ -132,6 +132,8 @@ cat > "$bundle_dir/Contents/Info.plist" <<EOF
     <string>14.0</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>Atoll needs automation access to focus Terminal and iTerm sessions for jump-back.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Atoll uses the microphone to dictate prompts to your agent terminal sessions.</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSPrincipalClass</key>

@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import AtollCore
+@preconcurrency import MarkdownUI
 
 // MARK: - Settings tabs
 
@@ -162,12 +163,10 @@ struct SettingsView: View {
                 AboutSettingsPane(model: model)
             }
 
-            if model.updateChecker.hasUpdate, let version = model.updateChecker.latestVersion {
-                UpdateBanner(version: version, lang: lang) {
-                    model.updateChecker.checkForUpdates()
-                }
-                .padding(.top, 8)
-                .padding(.trailing, 16)
+            if model.updateChecker.hasUpdate {
+                UpdateCard(updateChecker: model.updateChecker, lang: lang)
+                    .padding(.top, 8)
+                    .padding(.trailing, 16)
             }
         }
     }
@@ -1498,34 +1497,130 @@ struct RemoteConnectionSection: View {
     }
 }
 
-// MARK: - Update Banner
+// MARK: - Update Card
 
-struct UpdateBanner: View {
-    let version: String
+struct UpdateCard: View {
+    var updateChecker: UpdateChecker
     let lang: LanguageManager
-    var onUpdate: () -> Void
 
     @Environment(\.themePalette) private var palette
+    @State private var isExpanded = false
+
+    private var versionLabel: String {
+        if let name = updateChecker.latestReleaseName, !name.isEmpty {
+            return name
+        }
+        if let version = updateChecker.latestVersion {
+            return lang.t("settings.update.available", version)
+        }
+        return lang.t("settings.update.available", "")
+    }
 
     var body: some View {
-        Button(action: onUpdate) {
-            HStack(spacing: 6) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                Text(lang.t("settings.update.available", version))
-                    .font(.system(size: 12, weight: .medium))
-                Image(systemName: "arrow.down.to.line")
-                    .font(.system(size: 10, weight: .bold))
+        VStack(alignment: .leading, spacing: 0) {
+            headerRow
+            if isExpanded {
+                Divider()
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                changelogSection
+                actionRow
             }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                Capsule()
-                    .fill(palette.role(.working).swiftUIColor)
-            )
         }
-        .buttonStyle(.plain)
-        .shadow(color: palette.role(.working).swiftUIColor.opacity(0.3), radius: 4, y: 2)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(palette.surface0.swiftUIColor)
+        )
+        .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
+        .animation(.easeInOut(duration: 0.2), value: isExpanded)
+        .frame(maxWidth: 340)
+    }
+
+    // MARK: Private
+
+    private var headerRow: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "arrow.up.circle.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(palette.role(.working).swiftUIColor)
+            Text(versionLabel)
+                .font(.system(size: 12, weight: .semibold))
+                .lineLimit(1)
+            Spacer()
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 3) {
+                    Text(lang.t("settings.update.whatsNew"))
+                        .font(.system(size: 11))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
+                .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+    }
+
+    private var changelogSection: some View {
+        ScrollView {
+            Group {
+                if let notes = updateChecker.latestReleaseNotes, !notes.isEmpty {
+                    Markdown(notes)
+                        .markdownTextStyle { FontSize(12) }
+                } else {
+                    let fallbackURL = updateChecker.latestReleaseURL?.absoluteString
+                        ?? UpdateChecker.releasesURL.absoluteString
+                    Markdown(
+                        """
+                        \(lang.t("settings.update.notesUnavailable"))
+
+                        [\(lang.t("settings.update.viewOnGitHub"))](\(fallbackURL))
+                        """
+                    )
+                    .markdownTextStyle { FontSize(12) }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+        }
+        .frame(maxHeight: 280)
+    }
+
+    private var actionRow: some View {
+        HStack(spacing: 8) {
+            Button(lang.t("settings.update.updateNow")) {
+                updateChecker.checkForUpdates()
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+            .tint(palette.role(.working).swiftUIColor)
+
+            Button(lang.t("settings.update.viewOnGitHub")) {
+                NSWorkspace.shared.open(
+                    updateChecker.latestReleaseURL ?? UpdateChecker.releasesURL
+                )
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+
+            Spacer()
+
+            Button(lang.t("settings.update.later")) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isExpanded = false
+                }
+            }
+            .buttonStyle(.plain)
+            .font(.system(size: 11))
+            .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
     }
 }

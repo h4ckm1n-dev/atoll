@@ -202,6 +202,11 @@
 
 /* Settings - Update */
 "settings.update.available" = "v%@ Available — Update";
+"settings.update.whatsNew" = "What's new";
+"settings.update.updateNow" = "Update Now";
+"settings.update.viewOnGitHub" = "View on GitHub";
+"settings.update.later" = "Later";
+"settings.update.notesUnavailable" = "Release notes will appear when fetched from GitHub.";
 
 /* Island Panel - Bootstrap */
 "island.checkingTerminals" = "Checking open terminal sessions";

@@ -30,10 +30,10 @@ let package = Package(
         .package(url: "https://github.com/gonzalezreal/swift-markdown-ui", from: "2.4.1"),
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.9.1"),
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.4.0"),
-        // Pinned to 0.9.x: WhisperKit 1.0.0 added an `ArgmaxCLI` executable target
+        // Keep WhisperKit below 1.0.0: v1 added an `ArgmaxCLI` executable target
         // that creates a duplicate-ID resolution error when SwiftPM does universal
-        // builds (`--arch arm64 --arch x86_64`) in package-app.sh. v1 migration is
-        // a separate follow-up — needs investigation of the new package structure.
+        // builds (`--arch arm64 --arch x86_64`) in package-app.sh. 0.x updates are
+        // allowed; the v1 migration remains a separate package-structure follow-up.
         .package(url: "https://github.com/argmaxinc/argmax-oss-swift.git", "0.9.0"..<"1.0.0"),
         .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.4.0"),
     ],

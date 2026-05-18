@@ -18,6 +18,8 @@ Package.resolved
 
 # Local tooling artifacts
 .claude/
+.claude-flow/
+.codex/
 .playwright-mcp/
 output/
 

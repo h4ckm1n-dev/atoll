@@ -1618,13 +1618,14 @@ private struct LiquidGlassPanelFill: View {
 
             ZStack {
                 Rectangle().fill(.ultraThinMaterial)
-                Rectangle().fill(palette.crust.swiftUIColor.opacity(0.36))
+                Rectangle().fill(palette.crust.swiftUIColor.opacity(0.10))
+                Rectangle().fill(Color.white.opacity(0.035))
                 Rectangle().fill(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.22),
-                            Color.white.opacity(0.06),
-                            palette.sky.swiftUIColor.opacity(0.12),
+                            Color.white.opacity(0.30),
+                            Color.white.opacity(0.075),
+                            palette.sky.swiftUIColor.opacity(0.055),
                             Color.clear,
                         ],
                         startPoint: UnitPoint(x: highlightX - 0.18, y: -0.08),
@@ -1634,8 +1635,8 @@ private struct LiquidGlassPanelFill: View {
                 Rectangle().fill(
                     RadialGradient(
                         colors: [
-                            palette.blue.swiftUIColor.opacity(0.20),
-                            palette.mauve.swiftUIColor.opacity(0.08),
+                            palette.blue.swiftUIColor.opacity(0.075),
+                            palette.mauve.swiftUIColor.opacity(0.035),
                             Color.clear,
                         ],
                         center: UnitPoint(x: orbX, y: 0.05),
@@ -1646,7 +1647,7 @@ private struct LiquidGlassPanelFill: View {
                 Rectangle().fill(
                     RadialGradient(
                         colors: [
-                            Color.white.opacity(0.16),
+                            Color.white.opacity(0.12),
                             Color.clear,
                         ],
                         center: UnitPoint(x: 0.82, y: 0.0),
@@ -1670,15 +1671,17 @@ private struct SessionCardGlassBackground: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
         let inactive = presence == .inactive
+        let baseOpacity = isActionable ? 0.18 : (inactive ? 0.09 : 0.12)
+        let accentOpacity = isActionable ? 0.055 : (inactive ? 0.012 : 0.024)
 
         ZStack {
             shape.fill(.ultraThinMaterial)
             shape.fill(
                 LinearGradient(
                     colors: [
-                        palette.surface0.swiftUIColor.opacity(isActionable ? 0.74 : (inactive ? 0.46 : 0.58)),
-                        palette.crust.swiftUIColor.opacity(isActionable ? 0.82 : (inactive ? 0.68 : 0.76)),
-                        palette.mantle.swiftUIColor.opacity(isActionable ? 0.44 : 0.34),
+                        Color.white.opacity(isActionable ? 0.105 : 0.065),
+                        palette.surface0.swiftUIColor.opacity(baseOpacity),
+                        palette.crust.swiftUIColor.opacity(baseOpacity + 0.035),
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -1687,21 +1690,21 @@ private struct SessionCardGlassBackground: View {
             shape.fill(
                 RadialGradient(
                     colors: [
-                        tint.opacity(isActionable ? 0.20 : (inactive ? 0.05 : 0.10)),
-                        tint.opacity(isActionable ? 0.07 : 0.03),
+                        tint.opacity(accentOpacity),
+                        tint.opacity(accentOpacity * 0.38),
                         Color.clear,
                     ],
                     center: .topLeading,
                     startRadius: 0,
-                    endRadius: isActionable ? 220 : 150
+                    endRadius: isActionable ? 240 : 170
                 )
             )
             shape.fill(
                 LinearGradient(
                     colors: [
-                        Color.white.opacity(isActionable ? 0.12 : 0.08),
-                        Color.white.opacity(0.015),
-                        Color.black.opacity(isActionable ? 0.10 : 0.08),
+                        Color.white.opacity(isActionable ? 0.12 : 0.075),
+                        Color.white.opacity(0.018),
+                        Color.black.opacity(isActionable ? 0.055 : 0.035),
                     ],
                     startPoint: .top,
                     endPoint: .bottom
@@ -1709,16 +1712,29 @@ private struct SessionCardGlassBackground: View {
             )
 
             if isSelected {
-                shape.fill(Color.white.opacity(isActionable ? 0.055 : 0.04))
+                shape.fill(Color.white.opacity(isActionable ? 0.075 : 0.052))
             }
+
+            shape.strokeBorder(
+                LinearGradient(
+                    colors: [
+                        Color.white.opacity(isActionable ? 0.28 : 0.18),
+                        Color.white.opacity(isActionable ? 0.10 : 0.055),
+                        Color.black.opacity(0.08),
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                ),
+                lineWidth: 0.75
+            )
 
             VStack(spacing: 0) {
                 Rectangle()
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color.white.opacity(isActionable ? 0.28 : 0.18),
-                                Color.white.opacity(0.04),
+                                Color.white.opacity(isActionable ? 0.20 : 0.12),
+                                Color.white.opacity(0.025),
                                 Color.clear,
                             ],
                             startPoint: .leading,
@@ -1728,7 +1744,7 @@ private struct SessionCardGlassBackground: View {
                     .frame(height: 1)
                 Spacer(minLength: 0)
                 Rectangle()
-                    .fill(Color.black.opacity(0.10))
+                    .fill(Color.black.opacity(0.055))
                     .frame(height: 1)
             }
             .clipShape(shape)
@@ -1745,26 +1761,28 @@ private struct InsetGlassPanelBackground: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         let accent = tint ?? palette.text.swiftUIColor
+        let veilOpacity = baseOpacity * 0.34
 
         ZStack {
             shape.fill(.ultraThinMaterial)
             shape.fill(
                 LinearGradient(
                     colors: [
-                        palette.surface0.swiftUIColor.opacity(baseOpacity),
-                        palette.crust.swiftUIColor.opacity(max(0.32, baseOpacity - 0.10)),
+                        Color.white.opacity(0.055),
+                        palette.surface0.swiftUIColor.opacity(veilOpacity),
+                        palette.crust.swiftUIColor.opacity(max(0.10, veilOpacity + 0.035)),
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             )
-            shape.fill(accent.opacity(0.035))
+            shape.fill(accent.opacity(0.018))
             shape.strokeBorder(
                 LinearGradient(
                     colors: [
-                        Color.white.opacity(0.12),
-                        accent.opacity(0.18),
-                        Color.black.opacity(0.08),
+                        Color.white.opacity(0.13),
+                        accent.opacity(0.08),
+                        Color.black.opacity(0.055),
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -1955,8 +1973,8 @@ private struct IslandSessionRow: View {
                     }
                 }
             }
-            .padding(.horizontal, isActionable ? 16 : 16)
-            .padding(.vertical, isActionable ? 14 : 14)
+            .padding(.horizontal, isActionable ? 16 : 14)
+            .padding(.vertical, isActionable ? 14 : 12)
 
             if isActionable {
                 actionableBody
@@ -1974,16 +1992,13 @@ private struct IslandSessionRow: View {
                 cornerRadius: cardCornerRadius
             )
         }
-        .overlay(alignment: .leading) {
-            sessionStatusRail(presence: presence)
-        }
         .overlay {
             RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
-                .strokeBorder(actionableBorderColor, lineWidth: isActionable ? 1.0 : 0.8)
+                .strokeBorder(actionableBorderColor, lineWidth: isActionable ? 0.85 : 0.65)
         }
         .compositingGroup()
-        .shadow(color: statusTint(for: presence).opacity(isActionable ? 0.20 : (isVisuallySelected ? 0.13 : 0)), radius: isActionable ? 18 : 10, y: 8)
-        .shadow(color: .black.opacity(isActionable ? 0.30 : 0.20), radius: isVisuallySelected || isActionable ? 14 : 6, y: isVisuallySelected || isActionable ? 8 : 3)
+        .shadow(color: statusTint(for: presence).opacity(isActionable ? 0.07 : (isVisuallySelected ? 0.04 : 0)), radius: isActionable ? 16 : 8, y: 5)
+        .shadow(color: .black.opacity(isActionable ? 0.22 : 0.12), radius: isVisuallySelected || isActionable ? 14 : 7, y: isVisuallySelected || isActionable ? 7 : 3)
         .overlay(
             Group {
                 if !isActionable {
@@ -2016,12 +2031,12 @@ private struct IslandSessionRow: View {
             return themePalette.sky.swiftUIColor.opacity(0.66)
         }
         if isKeyboardSelected {
-            return themePalette.blue.swiftUIColor.opacity(0.52)
+            return themePalette.blue.swiftUIColor.opacity(0.34)
         }
         if isActionable {
-            return actionableStatusTint.opacity(isHighlighted ? 0.45 : 0.28)
+            return actionableStatusTint.opacity(isHighlighted ? 0.36 : 0.24)
         }
-        return isHighlighted ? themePalette.text.swiftUIColor.opacity(0.24) : themePalette.text.swiftUIColor.opacity(0.04)
+        return isHighlighted ? themePalette.text.swiftUIColor.opacity(0.16) : themePalette.text.swiftUIColor.opacity(0.035)
     }
 
     private var isVisuallySelected: Bool {
@@ -2029,12 +2044,12 @@ private struct IslandSessionRow: View {
     }
 
     private var cardCornerRadius: CGFloat {
-        isActionable ? 24 : 22
+        isActionable ? 22 : 18
     }
 
     private func statusOrb(for presence: IslandSessionPresence) -> some View {
         let tint = statusTint(for: presence)
-        let size: CGFloat = isActionable ? 12 : 10
+        let size: CGFloat = isActionable ? 9 : 8
         let inactive = presence == .inactive
 
         return ZStack {
@@ -2042,9 +2057,9 @@ private struct IslandSessionRow: View {
                 .fill(
                     RadialGradient(
                         colors: [
-                            Color.white.opacity(inactive ? 0.18 : 0.38),
-                            tint.opacity(inactive ? 0.32 : 0.92),
-                            tint.opacity(inactive ? 0.10 : 0.20),
+                            Color.white.opacity(inactive ? 0.16 : 0.34),
+                            tint.opacity(inactive ? 0.24 : 0.74),
+                            tint.opacity(inactive ? 0.08 : 0.16),
                         ],
                         center: UnitPoint(x: 0.34, y: 0.25),
                         startRadius: 0,
@@ -2052,36 +2067,12 @@ private struct IslandSessionRow: View {
                     )
                 )
             Circle()
-                .strokeBorder(Color.white.opacity(inactive ? 0.12 : 0.32), lineWidth: 0.7)
+                .strokeBorder(Color.white.opacity(inactive ? 0.12 : 0.26), lineWidth: 0.6)
         }
         .frame(width: size, height: size)
-        .padding(.top, isActionable ? 3 : 3.5)
-        .shadow(color: tint.opacity(inactive ? 0 : 0.45), radius: isActionable ? 7 : 5, y: 0)
+        .padding(.top, isActionable ? 4 : 4.5)
+        .shadow(color: tint.opacity(inactive ? 0 : 0.18), radius: isActionable ? 4 : 3, y: 0)
         .accessibilityHidden(true)
-    }
-
-    private func sessionStatusRail(presence: IslandSessionPresence) -> some View {
-        let tint = statusTint(for: presence)
-        let inactive = presence == .inactive
-
-        return Capsule(style: .continuous)
-            .fill(
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(inactive ? 0.12 : 0.36),
-                        tint.opacity(inactive ? 0.20 : 0.92),
-                        tint.opacity(inactive ? 0.05 : 0.18),
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .frame(width: isActionable ? 4 : 3)
-            .padding(.leading, 7)
-            .padding(.vertical, isActionable ? 16 : 15)
-            .opacity(inactive ? 0.55 : 1)
-            .shadow(color: tint.opacity(inactive ? 0 : 0.32), radius: isActionable ? 7 : 4)
-            .accessibilityHidden(true)
     }
 
     private var actionableStatusTint: Color {
@@ -2600,11 +2591,13 @@ private struct IslandSessionRow: View {
         .background {
             Capsule(style: .continuous).fill(.ultraThinMaterial)
             Capsule(style: .continuous)
-                .fill(themePalette.surface0.swiftUIColor.opacity(presence == .inactive ? 0.44 : 0.66))
+                .fill(Color.white.opacity(presence == .inactive ? 0.025 : 0.045))
+            Capsule(style: .continuous)
+                .fill(themePalette.surface0.swiftUIColor.opacity(presence == .inactive ? 0.12 : 0.18))
         }
         .overlay {
             Capsule(style: .continuous)
-                .strokeBorder(Color.white.opacity(presence == .inactive ? 0.035 : 0.075), lineWidth: 0.6)
+                .strokeBorder(Color.white.opacity(presence == .inactive ? 0.045 : 0.095), lineWidth: 0.6)
         }
     }
 
@@ -2648,11 +2641,13 @@ private struct IslandSessionRow: View {
             .background {
                 Capsule(style: .continuous).fill(.ultraThinMaterial)
                 Capsule(style: .continuous)
-                    .fill(themePalette.surface0.swiftUIColor.opacity(presence == .inactive ? 0.44 : 0.66))
+                    .fill(Color.white.opacity(presence == .inactive ? 0.025 : 0.045))
+                Capsule(style: .continuous)
+                    .fill(themePalette.surface0.swiftUIColor.opacity(presence == .inactive ? 0.12 : 0.18))
             }
             .overlay {
                 Capsule(style: .continuous)
-                    .strokeBorder(Color.white.opacity(presence == .inactive ? 0.035 : 0.075), lineWidth: 0.6)
+                    .strokeBorder(Color.white.opacity(presence == .inactive ? 0.045 : 0.095), lineWidth: 0.6)
             }
         }
     }

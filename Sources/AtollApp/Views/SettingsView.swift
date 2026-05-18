@@ -163,7 +163,11 @@ struct SettingsView: View {
             }
 
             if model.updateChecker.hasUpdate, let version = model.updateChecker.latestVersion {
-                UpdateBanner(version: version, lang: lang) {
+                UpdateBanner(
+                    version: version,
+                    releaseNotes: model.updateChecker.releaseNotesAttributed,
+                    lang: lang
+                ) {
                     model.updateChecker.checkForUpdates()
                 }
                 .padding(.top, 8)
@@ -428,6 +432,7 @@ struct AboutSettingsPane: View {
     var model: AppModel
 
     @Environment(\.themePalette) private var palette
+    @State private var changelogExpanded = false
     private var lang: LanguageManager { model.lang }
     private var primaryInk: Color { palette.text.swiftUIColor.opacity(0.94) }
 
@@ -468,6 +473,10 @@ struct AboutSettingsPane: View {
                     .disabled(!model.updateChecker.canCheckForUpdates)
                     .opacity(model.updateChecker.canCheckForUpdates ? 1 : 0.55)
                     .accessibilityIdentifier("settings.about.checkForUpdates")
+
+                    if model.updateChecker.hasUpdate, let version = model.updateChecker.latestVersion {
+                        latestReleaseRow(version: version)
+                    }
                 }
 
                 Section {
@@ -488,6 +497,55 @@ struct AboutSettingsPane: View {
         }
         .frame(maxWidth: .infinity)
         .navigationTitle(lang.t("settings.tab.about"))
+    }
+
+    @ViewBuilder
+    private func latestReleaseRow(version: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                    changelogExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.yellow)
+                    Text(lang.t("settings.about.latestRelease", version))
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: changelogExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if changelogExpanded {
+                changelogContent
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    @ViewBuilder
+    private var changelogContent: some View {
+        if let notes = model.updateChecker.releaseNotesAttributed {
+            ScrollView {
+                Text(notes)
+                    .font(.system(size: 11.5))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 4)
+            }
+            .frame(maxHeight: 300)
+        } else {
+            Link(lang.t("settings.update.banner.viewOnGitHub"), destination: UpdateChecker.releasesURL)
+                .font(.system(size: 11.5))
+                .foregroundStyle(.blue)
+        }
     }
 
     private func aboutActionRow(
@@ -1502,30 +1560,105 @@ struct RemoteConnectionSection: View {
 
 struct UpdateBanner: View {
     let version: String
+    let releaseNotes: AttributedString?
     let lang: LanguageManager
     var onUpdate: () -> Void
 
     @Environment(\.themePalette) private var palette
+    @State private var isExpanded = false
+
+    /// Backward-compatible initializer — release notes default to nil.
+    init(
+        version: String,
+        releaseNotes: AttributedString? = nil,
+        lang: LanguageManager,
+        onUpdate: @escaping () -> Void
+    ) {
+        self.version = version
+        self.releaseNotes = releaseNotes
+        self.lang = lang
+        self.onUpdate = onUpdate
+    }
 
     var body: some View {
-        Button(action: onUpdate) {
+        VStack(alignment: .trailing, spacing: 0) {
+            // Compact header — tap to expand, or install directly.
             HStack(spacing: 6) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 13, weight: .semibold))
-                Text(lang.t("settings.update.available", version))
-                    .font(.system(size: 12, weight: .medium))
-                Image(systemName: "arrow.down.to.line")
-                    .font(.system(size: 10, weight: .bold))
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                        isExpanded.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(lang.t("settings.update.banner.title"))
+                            .font(.system(size: 12, weight: .medium))
+                        Text("v\(version)")
+                            .font(.system(size: 12, weight: .semibold))
+                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 9, weight: .bold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.leading, 12)
+                    .padding(.trailing, 6)
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    onUpdate()
+                } label: {
+                    Text(lang.t("settings.update.banner.install"))
+                        .font(.system(size: 11.5, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(.white.opacity(0.18))
+                        )
+                }
+                .buttonStyle(.plain)
+                .padding(.trailing, 6)
             }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
             .background(
                 Capsule()
                     .fill(palette.role(.working).swiftUIColor)
             )
+
+            // Expanded changelog area.
+            if isExpanded {
+                VStack(alignment: .leading, spacing: 8) {
+                    if let notes = releaseNotes {
+                        ScrollView {
+                            Text(notes)
+                                .font(.system(size: 11.5))
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(10)
+                        }
+                        .frame(maxHeight: 300)
+                    } else {
+                        HStack {
+                            Link(lang.t("settings.update.banner.viewOnGitHub"),
+                                 destination: UpdateChecker.releasesURL)
+                                .font(.system(size: 11.5))
+                            Spacer()
+                        }
+                        .padding(10)
+                    }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(palette.role(.working).swiftUIColor.opacity(0.15))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .strokeBorder(palette.role(.working).swiftUIColor.opacity(0.25), lineWidth: 1)
+                        )
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
-        .buttonStyle(.plain)
         .shadow(color: palette.role(.working).swiftUIColor.opacity(0.3), radius: 4, y: 2)
     }
 }

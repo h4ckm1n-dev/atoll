@@ -202,6 +202,13 @@
 
 /* Settings - Update */
 "settings.update.available" = "v%@ Available — Update";
+"settings.update.banner.title" = "Update available";
+"settings.update.banner.body" = "Atoll %@ is available — view changelog or install now.";
+"settings.update.banner.showChangelog" = "Show changelog";
+"settings.update.banner.hideChangelog" = "Hide changelog";
+"settings.update.banner.viewOnGitHub" = "View release notes on GitHub →";
+"settings.update.banner.install" = "Install";
+"settings.about.latestRelease" = "Latest release: %@";
 
 /* Island Panel - Bootstrap */
 "island.checkingTerminals" = "Checking open terminal sessions";

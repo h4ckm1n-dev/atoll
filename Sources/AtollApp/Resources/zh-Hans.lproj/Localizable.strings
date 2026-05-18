@@ -202,6 +202,13 @@
 
 /* Settings - Update */
 "settings.update.available" = "v%@ 可更新 — 点击更新";
+"settings.update.banner.title" = "发现新版本";
+"settings.update.banner.body" = "Atoll %@ 已发布 — 查看更新日志或立即安装。";
+"settings.update.banner.showChangelog" = "查看更新日志";
+"settings.update.banner.hideChangelog" = "收起更新日志";
+"settings.update.banner.viewOnGitHub" = "在 GitHub 上查看发布说明 →";
+"settings.update.banner.install" = "安装";
+"settings.about.latestRelease" = "最新版本：%@";
 
 /* Island Panel - Bootstrap */
 "island.checkingTerminals" = "正在检查打开的终端会话";

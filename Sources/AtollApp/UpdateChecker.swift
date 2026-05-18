@@ -1,3 +1,4 @@
+import AppKit
 import Combine
 import Foundation
 import Sparkle
@@ -10,11 +11,13 @@ import Sparkle
 @MainActor
 @Observable
 final class UpdateChecker: NSObject {
-    static let releasesURL = URL(string: "https://github.com/Octane0411/open-vibe-island/releases")!
+    static let releasesURL = URL(string: "https://github.com/h4ckm1n-dev/atoll/releases")!
 
     private(set) var canCheckForUpdates = false
     private(set) var hasUpdate = false
     private(set) var latestVersion: String?
+    private(set) var releaseNotesAttributed: AttributedString?
+    private(set) var releaseNotesPlainText: String?
 
     @ObservationIgnored
     private var updaterController: SPUStandardUpdaterController!
@@ -76,9 +79,17 @@ extension UpdateChecker: SPUUpdaterDelegate {
 
     nonisolated func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
         let version = item.displayVersionString
+        // Capture release notes from the appcast item. Sparkle 2.9 exposes inline
+        // release notes via `itemDescription` (a String containing HTML/Markdown/
+        // plain text depending on `itemDescriptionFormat`). External notes URLs
+        // are exposed via `releaseNotesURL` and fetched lazily on demand — we
+        // don't fetch here to keep the delegate callback fast.
+        let descriptionHTML = item.itemDescription
         Task { @MainActor in
             self.hasUpdate = true
             self.latestVersion = version
+            self.releaseNotesAttributed = Self.parseReleaseNotes(fallbackHTML: descriptionHTML)
+            self.releaseNotesPlainText = descriptionHTML
         }
     }
 
@@ -86,6 +97,31 @@ extension UpdateChecker: SPUUpdaterDelegate {
         Task { @MainActor in
             self.hasUpdate = false
             self.latestVersion = nil
+            self.releaseNotesAttributed = nil
+            self.releaseNotesPlainText = nil
         }
+    }
+
+    // MARK: - Private helpers
+
+    /// Converts HTML release notes to an `AttributedString`.
+    ///
+    /// Must be called on `@MainActor` because `NSAttributedString(html:options:documentAttributes:)`
+    /// requires AppKit to be ready on the main thread.
+    @MainActor
+    private static func parseReleaseNotes(fallbackHTML: String?) -> AttributedString? {
+        guard let fallbackHTML, let data = fallbackHTML.data(using: .utf8) else {
+            return nil
+        }
+
+        let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
+            .documentType: NSAttributedString.DocumentType.html,
+            .characterEncoding: String.Encoding.utf8.rawValue
+        ]
+        guard let nsAttr = NSAttributedString(html: data, options: options, documentAttributes: nil) else {
+            // HTML parse failed — fall back to rendering as plain text.
+            return AttributedString(fallbackHTML)
+        }
+        return try? AttributedString(nsAttr, including: \.appKit)
     }
 }

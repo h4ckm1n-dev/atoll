@@ -208,7 +208,6 @@ struct ThemeTests {
         #expect(AppPanelMaterial.solid.rawValue == "solid")
         #expect(AppPanelMaterial.frostedThin.rawValue == "frosted-thin")
         #expect(AppPanelMaterial.frostedUltraThin.rawValue == "frosted-ultra-thin")
-        #expect(AppPanelMaterial.liquidGlass.rawValue == "liquid-glass")
     }
 
     private func approximatelyEqual(_ color: ProjectColor, hex: String) -> Bool {

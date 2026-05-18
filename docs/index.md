@@ -51,7 +51,6 @@ This index is the repository map for humans and coding agents. Read these files 
 ## Release
 
 - [docs/release-signing.md](./release-signing.md) for code signing and notarization details
-- [docs/releases/v1.3.0-atoll.md](./releases/v1.3.0-atoll.md) for the v1.3.0 Liquid Glass release notes
 
 ## Investigations
 

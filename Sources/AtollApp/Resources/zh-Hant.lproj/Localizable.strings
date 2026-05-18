@@ -364,11 +364,10 @@
 
 /* Panel material — added by feat/panel-material */
 "settings.panelMaterial.title" = "面板材質";
-"settings.panelMaterial.help" = "實心保留經典深色面板。毛玻璃讓桌布透出。Liquid Glass 會加入更亮的折射流光。";
+"settings.panelMaterial.help" = "毛玻璃模式會讓桌布透過面板顯示。「實心」保留 v1.0 的深海夜空配色。";
 "settings.panelMaterial.solid" = "實心";
-"settings.panelMaterial.frostedThin" = "毛玻璃";
-"settings.panelMaterial.frostedUltraThin" = "超薄";
-"settings.panelMaterial.liquidGlass" = "Liquid Glass";
+"settings.panelMaterial.frostedThin" = "毛玻璃(薄)";
+"settings.panelMaterial.frostedUltraThin" = "毛玻璃(超薄)";
 
 /* Theme editor — added by Phase 3B */
 "theme.editor.title" = "編輯主題";

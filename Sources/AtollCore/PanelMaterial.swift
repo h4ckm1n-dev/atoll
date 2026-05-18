@@ -13,9 +13,6 @@ public enum AppPanelMaterial: String, Codable, CaseIterable, Sendable {
     /// `.ultraThinMaterial` + `palette.crust.opacity(0.55)` overlay.
     /// More translucent — wallpaper bleeds through more visibly.
     case frostedUltraThin = "frosted-ultra-thin"
-    /// Liquid Glass-inspired material with a brighter refractive edge and
-    /// a subtle moving highlight.
-    case liquidGlass = "liquid-glass"
 
     /// Localization key suffix used by the picker labels.
     public var localizationKey: String {
@@ -23,7 +20,6 @@ public enum AppPanelMaterial: String, Codable, CaseIterable, Sendable {
         case .solid:             return "settings.panelMaterial.solid"
         case .frostedThin:       return "settings.panelMaterial.frostedThin"
         case .frostedUltraThin:  return "settings.panelMaterial.frostedUltraThin"
-        case .liquidGlass:       return "settings.panelMaterial.liquidGlass"
         }
     }
 }

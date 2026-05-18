@@ -176,8 +176,6 @@ struct IslandPanelView: View {
                     Rectangle().fill(.ultraThinMaterial)
                     Rectangle().fill(palette.crust.swiftUIColor.opacity(0.55))
                 }
-            case .liquidGlass:
-                LiquidGlassPanelFill(palette: palette)
             }
         }
     }
@@ -1603,196 +1601,6 @@ private struct OpenedHeaderMetrics {
     let rightLaneWidth: CGFloat
 }
 
-private struct LiquidGlassPanelFill: View {
-    let palette: ThemePalette
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        TimelineView(.animation) { timeline in
-            let phase = reduceMotion
-                ? 0.34
-                : timeline.date.timeIntervalSinceReferenceDate
-                    .truncatingRemainder(dividingBy: 9.0) / 9.0
-            let highlightX = CGFloat(-0.18 + phase * 1.36)
-            let orbX = CGFloat(0.18 + phase * 0.58)
-
-            ZStack {
-                Rectangle().fill(.ultraThinMaterial)
-                Rectangle().fill(palette.crust.swiftUIColor.opacity(0.10))
-                Rectangle().fill(Color.white.opacity(0.035))
-                Rectangle().fill(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.30),
-                            Color.white.opacity(0.075),
-                            palette.sky.swiftUIColor.opacity(0.055),
-                            Color.clear,
-                        ],
-                        startPoint: UnitPoint(x: highlightX - 0.18, y: -0.08),
-                        endPoint: UnitPoint(x: highlightX + 0.56, y: 1.0)
-                    )
-                )
-                Rectangle().fill(
-                    RadialGradient(
-                        colors: [
-                            palette.blue.swiftUIColor.opacity(0.075),
-                            palette.mauve.swiftUIColor.opacity(0.035),
-                            Color.clear,
-                        ],
-                        center: UnitPoint(x: orbX, y: 0.05),
-                        startRadius: 8,
-                        endRadius: 260
-                    )
-                )
-                Rectangle().fill(
-                    RadialGradient(
-                        colors: [
-                            Color.white.opacity(0.12),
-                            Color.clear,
-                        ],
-                        center: UnitPoint(x: 0.82, y: 0.0),
-                        startRadius: 2,
-                        endRadius: 180
-                    )
-                )
-            }
-        }
-    }
-}
-
-private struct SessionCardGlassBackground: View {
-    let palette: ThemePalette
-    let tint: Color
-    let presence: IslandSessionPresence
-    let isActionable: Bool
-    let isSelected: Bool
-    let cornerRadius: CGFloat
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        let inactive = presence == .inactive
-        let baseOpacity = isActionable ? 0.18 : (inactive ? 0.09 : 0.12)
-        let accentOpacity = isActionable ? 0.055 : (inactive ? 0.012 : 0.024)
-
-        ZStack {
-            shape.fill(.ultraThinMaterial)
-            shape.fill(
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(isActionable ? 0.105 : 0.065),
-                        palette.surface0.swiftUIColor.opacity(baseOpacity),
-                        palette.crust.swiftUIColor.opacity(baseOpacity + 0.035),
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            shape.fill(
-                RadialGradient(
-                    colors: [
-                        tint.opacity(accentOpacity),
-                        tint.opacity(accentOpacity * 0.38),
-                        Color.clear,
-                    ],
-                    center: .topLeading,
-                    startRadius: 0,
-                    endRadius: isActionable ? 240 : 170
-                )
-            )
-            shape.fill(
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(isActionable ? 0.12 : 0.075),
-                        Color.white.opacity(0.018),
-                        Color.black.opacity(isActionable ? 0.055 : 0.035),
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-
-            if isSelected {
-                shape.fill(Color.white.opacity(isActionable ? 0.075 : 0.052))
-            }
-
-            shape.strokeBorder(
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(isActionable ? 0.28 : 0.18),
-                        Color.white.opacity(isActionable ? 0.10 : 0.055),
-                        Color.black.opacity(0.08),
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                lineWidth: 0.75
-            )
-
-            VStack(spacing: 0) {
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(isActionable ? 0.20 : 0.12),
-                                Color.white.opacity(0.025),
-                                Color.clear,
-                            ],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .frame(height: 1)
-                Spacer(minLength: 0)
-                Rectangle()
-                    .fill(Color.black.opacity(0.055))
-                    .frame(height: 1)
-            }
-            .clipShape(shape)
-        }
-    }
-}
-
-private struct InsetGlassPanelBackground: View {
-    let palette: ThemePalette
-    var tint: Color? = nil
-    var radius: CGFloat = 18
-    var baseOpacity: Double = 0.58
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        let accent = tint ?? palette.text.swiftUIColor
-        let veilOpacity = baseOpacity * 0.34
-
-        ZStack {
-            shape.fill(.ultraThinMaterial)
-            shape.fill(
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0.055),
-                        palette.surface0.swiftUIColor.opacity(veilOpacity),
-                        palette.crust.swiftUIColor.opacity(max(0.10, veilOpacity + 0.035)),
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            shape.fill(accent.opacity(0.018))
-            shape.strokeBorder(
-                LinearGradient(
-                    colors: [
-                        Color.white.opacity(0.13),
-                        accent.opacity(0.08),
-                        Color.black.opacity(0.055),
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                lineWidth: 0.8
-            )
-        }
-    }
-}
-
 // MARK: - Session row (opened state)
 
 private struct IslandSessionRow: View {
@@ -1841,14 +1649,10 @@ private struct IslandSessionRow: View {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top, spacing: 12) {
-                        HStack(spacing: 8) {
-                            statusOrb(for: presence)
-
-                            Text(streamSafe(session.spotlightHeadlineText))
-                                .font(.system(size: isActionable ? 15 : 14, weight: .semibold))
-                                .foregroundStyle(headlineColor(for: presence))
-                                .lineLimit(1)
-                        }
+                        Text(streamSafe(session.spotlightHeadlineText))
+                            .font(.system(size: isActionable ? 15 : 14, weight: .semibold))
+                            .foregroundStyle(headlineColor(for: presence))
+                            .lineLimit(1)
 
                         Spacer(minLength: 8)
 
@@ -1973,8 +1777,8 @@ private struct IslandSessionRow: View {
                     }
                 }
             }
-            .padding(.horizontal, isActionable ? 16 : 14)
-            .padding(.vertical, isActionable ? 14 : 12)
+            .padding(.horizontal, isActionable ? 16 : 16)
+            .padding(.vertical, isActionable ? 14 : 14)
 
             if isActionable {
                 actionableBody
@@ -1982,35 +1786,28 @@ private struct IslandSessionRow: View {
                     .padding(.bottom, 14)
             }
         }
-        .background {
-            SessionCardGlassBackground(
-                palette: themePalette,
-                tint: statusTint(for: presence),
-                presence: presence,
-                isActionable: isActionable,
-                isSelected: isVisuallySelected,
-                cornerRadius: cardCornerRadius
-            )
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
-                .strokeBorder(actionableBorderColor, lineWidth: isActionable ? 0.85 : 0.65)
-        }
+        .background(
+            RoundedRectangle(cornerRadius: isActionable ? 24 : 22, style: .continuous)
+                .fill(isVisuallySelected ? themePalette.text.swiftUIColor.opacity(isActionable ? 0.07 : 0.055) : themePalette.crust.swiftUIColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: isActionable ? 24 : 22, style: .continuous)
+                .strokeBorder(actionableBorderColor)
+        )
         .compositingGroup()
-        .shadow(color: statusTint(for: presence).opacity(isActionable ? 0.07 : (isVisuallySelected ? 0.04 : 0)), radius: isActionable ? 16 : 8, y: 5)
-        .shadow(color: .black.opacity(isActionable ? 0.22 : 0.12), radius: isVisuallySelected || isActionable ? 14 : 7, y: isVisuallySelected || isActionable ? 7 : 3)
+        .shadow(color: .black.opacity(0.24), radius: isVisuallySelected ? 8 : 0, y: isVisuallySelected ? 6 : 0)
         .overlay(
             Group {
                 if !isActionable {
                     Rectangle()
-                        .fill(Color.white.opacity(isVisuallySelected ? 0.03 : 0.02))
+                        .fill(Color.white.opacity(isVisuallySelected ? 0 : 0.02))
                         .frame(height: 1)
                 }
             },
             alignment: .bottom
         )
         .modifier(ConditionalDrawingGroup(enabled: useDrawingGroup && !isActionable))
-        .contentShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: isActionable ? 24 : 22, style: .continuous))
         .animation(.easeInOut(duration: 0.15), value: isHighlighted)
         .animation(.easeInOut(duration: 0.15), value: isKeyboardSelected)
         .animation(.easeInOut(duration: 0.15), value: isKeyboardReplyFocused)
@@ -2031,48 +1828,16 @@ private struct IslandSessionRow: View {
             return themePalette.sky.swiftUIColor.opacity(0.66)
         }
         if isKeyboardSelected {
-            return themePalette.blue.swiftUIColor.opacity(0.34)
+            return themePalette.blue.swiftUIColor.opacity(0.52)
         }
         if isActionable {
-            return actionableStatusTint.opacity(isHighlighted ? 0.36 : 0.24)
+            return actionableStatusTint.opacity(isHighlighted ? 0.45 : 0.28)
         }
-        return isHighlighted ? themePalette.text.swiftUIColor.opacity(0.16) : themePalette.text.swiftUIColor.opacity(0.035)
+        return isHighlighted ? themePalette.text.swiftUIColor.opacity(0.24) : themePalette.text.swiftUIColor.opacity(0.04)
     }
 
     private var isVisuallySelected: Bool {
         isHighlighted || isKeyboardSelected || isKeyboardReplyFocused
-    }
-
-    private var cardCornerRadius: CGFloat {
-        isActionable ? 22 : 18
-    }
-
-    private func statusOrb(for presence: IslandSessionPresence) -> some View {
-        let tint = statusTint(for: presence)
-        let size: CGFloat = isActionable ? 9 : 8
-        let inactive = presence == .inactive
-
-        return ZStack {
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            Color.white.opacity(inactive ? 0.16 : 0.34),
-                            tint.opacity(inactive ? 0.24 : 0.74),
-                            tint.opacity(inactive ? 0.08 : 0.16),
-                        ],
-                        center: UnitPoint(x: 0.34, y: 0.25),
-                        startRadius: 0,
-                        endRadius: size
-                    )
-                )
-            Circle()
-                .strokeBorder(Color.white.opacity(inactive ? 0.12 : 0.26), lineWidth: 0.6)
-        }
-        .frame(width: size, height: size)
-        .padding(.top, isActionable ? 4 : 4.5)
-        .shadow(color: tint.opacity(inactive ? 0 : 0.18), radius: isActionable ? 4 : 3, y: 0)
-        .accessibilityHidden(true)
     }
 
     private var actionableStatusTint: Color {
@@ -2176,14 +1941,14 @@ private struct IslandSessionRow: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background {
-                    InsetGlassPanelBackground(
-                        palette: themePalette,
-                        tint: themePalette.role(.completion).swiftUIColor,
-                        radius: 10,
-                        baseOpacity: 0.42
-                    )
-                }
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(themePalette.crust.swiftUIColor.opacity(0.45))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(themePalette.text.swiftUIColor.opacity(0.06))
+                )
             }
         }
     }
@@ -2241,14 +2006,14 @@ private struct IslandSessionRow: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background {
-                    InsetGlassPanelBackground(
-                        palette: themePalette,
-                        tint: themePalette.role(.attention).swiftUIColor,
-                        radius: 18,
-                        baseOpacity: 0.62
-                    )
-                }
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(themePalette.surface0.swiftUIColor)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(themePalette.role(.attention).swiftUIColor.opacity(0.18))
+                )
             }
 
             HStack(spacing: 8) {
@@ -2299,14 +2064,14 @@ private struct IslandSessionRow: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            InsetGlassPanelBackground(
-                palette: themePalette,
-                tint: themePalette.role(.attention).swiftUIColor,
-                radius: 12,
-                baseOpacity: 0.46
-            )
-        }
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(themePalette.crust.swiftUIColor.opacity(0.45))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(themePalette.text.swiftUIColor.opacity(0.06))
+        )
     }
 
     // MARK: - Question action area
@@ -2341,14 +2106,16 @@ private struct IslandSessionRow: View {
                 .frame(height: 1)
             completionReplyInput
         }
-        .background {
-            InsetGlassPanelBackground(
-                palette: themePalette,
-                tint: themePalette.sky.swiftUIColor,
-                radius: 14,
-                baseOpacity: 0.38
-            )
-        }
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                // Below the perceptible-tint threshold (≤0.04) — palette.text would
+                // vanish here on dark themes; kept as Color.white literal.
+                .fill(Color.white.opacity(0.03))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(themePalette.text.swiftUIColor.opacity(0.06))
+        )
     }
 
     // MARK: - Completion action area
@@ -2392,14 +2159,14 @@ private struct IslandSessionRow: View {
                 completionReplyInput
             }
         }
-        .background {
-            InsetGlassPanelBackground(
-                palette: themePalette,
-                tint: themePalette.role(.completion).swiftUIColor,
-                radius: 18,
-                baseOpacity: 0.50
-            )
-        }
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(themePalette.crust.swiftUIColor.opacity(0.45))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(themePalette.text.swiftUIColor.opacity(0.08))
+        )
     }
 
     @ViewBuilder
@@ -2588,17 +2355,7 @@ private struct IslandSessionRow: View {
         .foregroundStyle(tint ?? badgeTextColor(for: presence))
         .padding(.horizontal, 7)
         .padding(.vertical, 3.5)
-        .background {
-            Capsule(style: .continuous).fill(.ultraThinMaterial)
-            Capsule(style: .continuous)
-                .fill(Color.white.opacity(presence == .inactive ? 0.025 : 0.045))
-            Capsule(style: .continuous)
-                .fill(themePalette.surface0.swiftUIColor.opacity(presence == .inactive ? 0.12 : 0.18))
-        }
-        .overlay {
-            Capsule(style: .continuous)
-                .strokeBorder(Color.white.opacity(presence == .inactive ? 0.045 : 0.095), lineWidth: 0.6)
-        }
+        .background(themePalette.surface0.swiftUIColor, in: Capsule())
     }
 
     private func gitBranchBadge(
@@ -2638,17 +2395,7 @@ private struct IslandSessionRow: View {
             .font(.system(size: 9, weight: .semibold))
             .padding(.horizontal, 7)
             .padding(.vertical, 3.5)
-            .background {
-                Capsule(style: .continuous).fill(.ultraThinMaterial)
-                Capsule(style: .continuous)
-                    .fill(Color.white.opacity(presence == .inactive ? 0.025 : 0.045))
-                Capsule(style: .continuous)
-                    .fill(themePalette.surface0.swiftUIColor.opacity(presence == .inactive ? 0.12 : 0.18))
-            }
-            .overlay {
-                Capsule(style: .continuous)
-                    .strokeBorder(Color.white.opacity(presence == .inactive ? 0.045 : 0.095), lineWidth: 0.6)
-            }
+            .background(themePalette.surface0.swiftUIColor, in: Capsule())
         }
     }
 
@@ -2727,14 +2474,14 @@ private struct LiveCodingDiffSummaryView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            InsetGlassPanelBackground(
-                palette: palette,
-                tint: palette.role(.attention).swiftUIColor,
-                radius: 18,
-                baseOpacity: 0.60
-            )
-        }
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(palette.surface0.swiftUIColor)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(palette.role(.attention).swiftUIColor.opacity(0.18))
+        )
     }
 }
 
@@ -2772,14 +2519,16 @@ private struct StructuredQuestionPromptView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            InsetGlassPanelBackground(
-                palette: palette ?? .mocha,
-                tint: (palette ?? .mocha).role(.question).swiftUIColor,
-                radius: 18,
-                baseOpacity: 0.48
-            )
-        }
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                // Below the perceptible-tint threshold (≤0.04) — palette.text would
+                // vanish here on dark themes; kept as Color.white literal.
+                .fill(Color.white.opacity(0.04))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder((palette ?? .mocha).text.swiftUIColor.opacity(0.06))
+        )
     }
 
     // MARK: - Per-question row

@@ -10,17 +10,23 @@ import Sparkle
 @MainActor
 @Observable
 final class UpdateChecker: NSObject {
-    static let releasesURL = URL(string: "https://github.com/Octane0411/open-vibe-island/releases")!
+    static let releasesURL = URL(string: "https://github.com/h4ckm1n-dev/atoll/releases")!
 
     private(set) var canCheckForUpdates = false
     private(set) var hasUpdate = false
     private(set) var latestVersion: String?
+    private(set) var latestReleaseName: String?
+    private(set) var latestReleaseNotes: String?
+    private(set) var latestReleaseURL: URL?
 
     @ObservationIgnored
     private var updaterController: SPUStandardUpdaterController!
 
     @ObservationIgnored
     private var cancellable: AnyCancellable?
+
+    @ObservationIgnored
+    private let releaseFetcher = GitHubReleaseFetcher()
 
     override init() {
         super.init()
@@ -58,12 +64,23 @@ final class UpdateChecker: NSObject {
             .sink { [weak self] value in
                 self?.canCheckForUpdates = value
             }
+
+        Task { await refreshLatestReleaseFromGitHub() }
         #endif
     }
 
     /// Manually trigger an update check (from Settings UI).
     func checkForUpdates() {
         updaterController.checkForUpdates(nil)
+    }
+
+    // MARK: - Private
+
+    private func refreshLatestReleaseFromGitHub() async {
+        guard let release = await releaseFetcher.fetchLatest() else { return }
+        latestReleaseName = release.displayName
+        latestReleaseNotes = release.body
+        latestReleaseURL = release.htmlURL
     }
 }
 
@@ -79,6 +96,7 @@ extension UpdateChecker: SPUUpdaterDelegate {
         Task { @MainActor in
             self.hasUpdate = true
             self.latestVersion = version
+            await self.refreshLatestReleaseFromGitHub()
         }
     }
 

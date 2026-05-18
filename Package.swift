@@ -28,7 +28,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/gonzalezreal/swift-markdown-ui", from: "2.4.1"),
-        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.9.1"),
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.9.2"),
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.4.0"),
         // Pinned to 0.9.x: WhisperKit 1.0.0 added an `ArgmaxCLI` executable target
         // that creates a duplicate-ID resolution error when SwiftPM does universal

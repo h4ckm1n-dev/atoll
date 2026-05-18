@@ -45,7 +45,7 @@ final class AppModel {
     private static let suppressFrontmostNotificationsDefaultsKey = "app.suppressFrontmostNotifications"
     private static let celebrationsEnabledDefaultsKey = "appearance.celebrations.enabled"
     private static let dictationModelDefaultsKey = "dictation.model"
-    private static let dictationModelDefault = "openai_whisper-tiny.en"
+    private static let dictationModelDefault = "parakeet-tdt-0.6b-v3"
 
     /// Defaults pulled from the Catppuccin Mocha palette so the phase
     /// indicators match the active theme out of the box. Users can still

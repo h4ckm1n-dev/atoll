@@ -3,12 +3,6 @@
 
 import Foundation
 import Observation
-// @preconcurrency: WhisperKit's transcribe(audioArray:) is `nonisolated` but
-// the WhisperKit class itself isn't Sendable. Without this attribute, every
-// cross-context call (actor → nonisolated method on owned reference) trips
-// Swift 6 strict concurrency. The downgrade-to-warnings is the standard fix
-// for pre-Swift-6 libraries.
-@preconcurrency import WhisperKit
 
 // MARK: - DictationError
 
@@ -25,7 +19,7 @@ public enum DictationError: Error, LocalizedError, Sendable {
         case .notRecording:
             return "No recording is in progress."
         case .whisperKitInitFailed(let reason):
-            return "WhisperKit failed to initialize: \(reason)"
+            return "Engine failed to initialize: \(reason)"
         case .transcriptionFailed(let reason):
             return "Transcription failed: \(reason)"
         }
@@ -35,12 +29,16 @@ public enum DictationError: Error, LocalizedError, Sendable {
 // MARK: - DictationController
 
 /// Main entry point for voice dictation. Drives the full lifecycle:
-/// microphone capture → WhisperKit transcription → `Transcription` value.
+/// microphone capture → transcription engine → `Transcription` value.
 ///
 /// `@Observable` + `@MainActor`: state mutations are always on the main actor
 /// and the Observation framework propagates changes to SwiftUI automatically.
 /// The `AudioRecorder` actor handles thread-safe audio capture; we cross into
 /// it with `await` from the main actor.
+///
+/// The active transcription engine is selected by `config.model`:
+/// - Identifiers prefixed with `parakeet-` route to `ParakeetEngine` (FluidAudio / ANE).
+/// - All other identifiers route to `WhisperKitEngine`.
 @MainActor
 @Observable
 public final class DictationController {
@@ -56,12 +54,11 @@ public final class DictationController {
     // MARK: - Private
 
     private let recorder = AudioRecorder()
-    // WhisperKit is a non-Sendable class. Wrapping it in a dedicated actor
-    // keeps the reference fully isolated to that actor, so cross-context
-    // method calls happen via `await host.transcribe(_:)` rather than by
-    // sending the kit reference itself. This is the architecturally clean
-    // Swift 6 pattern for non-Sendable framework types.
-    private let host = WhisperKitHost()
+
+    // One engine instance per backend. Engines hold their model weights lazily
+    // so only the selected engine ever downloads anything.
+    private let whisperEngine: any TranscriptionEngine = WhisperKitEngine()
+    private let parakeetEngine: any TranscriptionEngine = ParakeetEngine()
 
     // MARK: - Init
 
@@ -71,14 +68,14 @@ public final class DictationController {
 
     // MARK: - Public API
 
-    /// Lazily initializes WhisperKit (model download happens here on first call).
-    /// Subsequent calls are no-ops once initialization succeeds.
+    /// Lazily initializes the selected engine (model download happens here on
+    /// first call). Subsequent calls are no-ops once initialization succeeds.
     public func prepare() async throws {
-        if await host.isReady { return }
+        let activeEngine = engine(for: config.model)
+        if await activeEngine.isReady() { return }
         state = .preparing
         do {
-            try await host.prepare(model: config.model)
-            // Return to idle so callers know we're ready.
+            try await activeEngine.prepare(modelID: config.model)
             if case .preparing = state { state = .idle }
         } catch {
             let message = error.localizedDescription
@@ -95,7 +92,8 @@ public final class DictationController {
             return
         }
 
-        if await !host.isReady {
+        let activeEngine = engine(for: config.model)
+        if await !activeEngine.isReady() {
             try await prepare()
         }
 
@@ -124,7 +122,8 @@ public final class DictationController {
         let buffer = await recorder.stop()
 
         do {
-            let (text, language) = try await host.transcribe(audioArray: buffer)
+            let activeEngine = engine(for: config.model)
+            let (text, language) = try await activeEngine.transcribe(audioArray: buffer)
 
             let transcription = Transcription(
                 text: text,
@@ -147,54 +146,33 @@ public final class DictationController {
         state = .idle
     }
 
-    /// Resets state to `.idle` without touching the recorder or WhisperKit host.
+    /// Resets state to `.idle` without touching the recorder or engines.
     /// Call this to clear a terminal `.failed` or `.completed` state before
     /// starting a fresh recording cycle.
     public func reset() {
         state = .idle
     }
 
-    /// Invalidates the cached WhisperKit instance. The next call to
-    /// `startRecording()` will re-prepare with the current `config.model`,
+    /// Invalidates the cached model in the currently-selected engine. The next
+    /// call to `startRecording()` will re-prepare with the current `config.model`,
     /// downloading the model if it has not been fetched before.
     /// Safe to call from outside an active recording; calling while recording
     /// is in progress leaves the session running — invalidation takes effect
     /// on the next `startRecording()`.
     public func invalidate() async {
-        await host.invalidate()
+        await engine(for: config.model).invalidate()
         if case .completed = state { state = .idle }
         if case .failed = state { state = .idle }
     }
-}
 
-// MARK: - WhisperKitHost
+    // MARK: - Private helpers
 
-/// Actor owning the WhisperKit instance. Isolating the non-Sendable WhisperKit
-/// reference inside an actor means all cross-context calls go through actor
-/// hops (`await host.transcribe(...)`) rather than by sending the reference.
-private actor WhisperKitHost {
-    private var kit: WhisperKit?
-
-    var isReady: Bool { kit != nil }
-
-    func prepare(model: String) async throws {
-        guard kit == nil else { return }
-        kit = try await WhisperKit(WhisperKitConfig(model: model))
-    }
-
-    func invalidate() {
-        kit = nil
-    }
-
-    /// Transcribes the buffer. Returns the joined text and the detected
-    /// language. Returns ("", nil) for silence — not an error.
-    func transcribe(audioArray buffer: [Float]) async throws -> (text: String, language: String?) {
-        guard let kit else {
-            throw DictationError.whisperKitInitFailed("WhisperKit was deallocated unexpectedly.")
+    private func engine(for modelID: String) -> any TranscriptionEngine {
+        switch TranscriptionEngineKind.forModel(modelID) {
+        case .parakeet:
+            return parakeetEngine
+        case .whisper:
+            return whisperEngine
         }
-        let results = try await kit.transcribe(audioArray: buffer)
-        let text = results.map(\.text).joined(separator: " ").trimmingCharacters(in: .whitespaces)
-        let language = results.first?.language
-        return (text, language)
     }
 }

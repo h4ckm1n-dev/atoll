@@ -172,7 +172,7 @@
 /* Settings - Dictation */
 "settings.tab.dictation" = "Dictation";
 "settings.dictation.section.model" = "Model";
-"settings.dictation.help" = "Models download from HuggingFace on first use. Larger = more accurate but slower. Tiny/Base are English-only; Large variants support 80+ languages.";
+"settings.dictation.help" = "Parakeet uses NVIDIA's TDT architecture on Apple Neural Engine — fastest and most accurate for most users. Whisper supports 80+ languages and offers tiny variants for minimal disk usage. Models download from HuggingFace on first use.";
 "settings.dictation.loaded" = "Currently loaded: %@";
 "settings.dictation.pending" = "Pending — will reload on next use";
 "settings.dictation.reload" = "Reload model";

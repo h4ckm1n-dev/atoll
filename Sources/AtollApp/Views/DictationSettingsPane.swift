@@ -7,50 +7,71 @@ import AtollCore
 // MARK: - DictationModelOption
 
 private struct DictationModelOption: Identifiable {
-    let id: String          // WhisperKit model identifier
+    let id: String          // Engine model identifier
     let display: String     // Short display name shown in the picker
     let size: String        // Approximate download size
     let detail: String      // One-line description
 }
 
-private let dictationModelOptions: [DictationModelOption] = [
+/// Parakeet TDT models (FluidAudio / Apple Neural Engine).
+private let parakeetModelOptions: [DictationModelOption] = [
+    DictationModelOption(
+        id: "parakeet-tdt-0.6b-v3",
+        display: "Parakeet TDT v3 (Multilingual)",
+        size: "~610 MB",
+        detail: "25 European languages, NVIDIA Parakeet on Apple Neural Engine. Default, recommended."
+    ),
+    DictationModelOption(
+        id: "parakeet-tdt-0.6b-v2",
+        display: "Parakeet TDT v2 (English)",
+        size: "~480 MB",
+        detail: "English-only, slightly smaller and faster."
+    ),
+]
+
+/// OpenAI Whisper models (WhisperKit).
+private let whisperModelOptions: [DictationModelOption] = [
     DictationModelOption(
         id: "openai_whisper-tiny.en",
-        display: "Tiny (English)",
+        display: "Whisper Tiny (English)",
         size: "~40 MB",
-        detail: "Fastest, lowest accuracy. Default."
+        detail: "Smallest download, lowest accuracy."
     ),
     DictationModelOption(
         id: "openai_whisper-base.en",
-        display: "Base (English)",
+        display: "Whisper Base (English)",
         size: "~150 MB",
         detail: "Balanced speed and accuracy."
     ),
     DictationModelOption(
         id: "openai_whisper-small.en",
-        display: "Small (English)",
+        display: "Whisper Small (English)",
         size: "~500 MB",
         detail: "Good accuracy for technical terms."
     ),
     DictationModelOption(
         id: "openai_whisper-large-v3-v20240930_626MB",
-        display: "Large v3 (Distilled)",
+        display: "Whisper Large v3 (Distilled)",
         size: "~626 MB",
         detail: "Argmax compression of large-v3. Recommended."
     ),
     DictationModelOption(
         id: "openai_whisper-large-v3-turbo",
-        display: "Large v3 Turbo",
+        display: "Whisper Large v3 Turbo",
         size: "~800 MB",
         detail: "Fast multilingual, near Superwhisper quality."
     ),
     DictationModelOption(
         id: "openai_whisper-large-v3",
-        display: "Large v3 (Full)",
+        display: "Whisper Large v3 (Full)",
         size: "~3 GB",
-        detail: "Highest accuracy, slowest. Multilingual."
+        detail: "Highest Whisper accuracy, slowest. Multilingual."
     ),
 ]
+
+/// All options in display order: Parakeet first, Whisper second.
+private let allDictationModelOptions: [DictationModelOption] =
+    parakeetModelOptions + whisperModelOptions
 
 // MARK: - DictationSettingsPane
 
@@ -59,11 +80,10 @@ struct DictationSettingsPane: View {
 
     private var lang: LanguageManager { model.lang }
 
-    /// The model identifier the user has chosen. This drives both the picker
-    /// and the pending-status comparison. Bound directly through AppModel so
+    /// The model identifier the user has chosen. Bound directly through AppModel so
     /// the didSet handler in AppModel keeps `dictationController.config.model`
     /// in sync whenever this changes.
-    @State private var selectedModelID: String = "openai_whisper-tiny.en"
+    @State private var selectedModelID: String = "parakeet-tdt-0.6b-v3"
 
     var body: some View {
         Form {
@@ -84,13 +104,35 @@ struct DictationSettingsPane: View {
     private var modelPickerSection: some View {
         Section(lang.t("settings.dictation.section.model")) {
             Picker(lang.t("settings.dictation.section.model"), selection: $selectedModelID) {
-                ForEach(dictationModelOptions) { option in
+                // Parakeet group
+                Text("Parakeet — Apple Neural Engine")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .tag("__section_parakeet__")
+                    .disabled(true)
+
+                ForEach(parakeetModelOptions) { option in
+                    modelPickerRow(option).tag(option.id)
+                }
+
+                Divider()
+
+                // Whisper group
+                Text("Whisper — WhisperKit")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .tag("__section_whisper__")
+                    .disabled(true)
+
+                ForEach(whisperModelOptions) { option in
                     modelPickerRow(option).tag(option.id)
                 }
             }
             .pickerStyle(.radioGroup)
             .labelsHidden()
             .onChange(of: selectedModelID) { _, newValue in
+                // Section header tags are not valid model IDs — ignore them.
+                guard !newValue.hasPrefix("__section_") else { return }
                 model.dictationModel = newValue
             }
         }
@@ -146,6 +188,6 @@ struct DictationSettingsPane: View {
     }
 
     private func displayName(for modelID: String) -> String {
-        dictationModelOptions.first { $0.id == modelID }?.display ?? modelID
+        allDictationModelOptions.first { $0.id == modelID }?.display ?? modelID
     }
 }

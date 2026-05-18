@@ -172,7 +172,7 @@
 /* Settings - Dictation */
 "settings.tab.dictation" = "語音輸入";
 "settings.dictation.section.model" = "模型";
-"settings.dictation.help" = "模型在首次使用時從 HuggingFace 下載。模型越大，辨識越準確，但速度越慢。Tiny/Base 僅支援英語，Large 系列支援 80 種以上語言。";
+"settings.dictation.help" = "Parakeet 採用 NVIDIA TDT 架構，運行於 Apple 神經網路引擎，對大多數使用者而言速度最快、精度最高。Whisper 支援 80 種以上語言，並提供極小體積的模型供磁碟空間有限的使用者選用。模型在首次使用時從 HuggingFace 下載。";
 "settings.dictation.loaded" = "目前已載入：%@";
 "settings.dictation.pending" = "待更新 — 將於下次使用時重新載入";
 "settings.dictation.reload" = "重新載入模型";

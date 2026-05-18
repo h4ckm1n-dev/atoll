@@ -31,18 +31,20 @@ public struct Transcription: Equatable, Sendable, Codable {
 // MARK: - DictationConfig
 
 public struct DictationConfig: Sendable, Codable {
-    /// WhisperKit model identifier. Defaults to the tiny English-only model
-    /// (~40 MB) for fast first-launch UX.
+    /// Transcription engine model identifier. Prefix determines the backend:
+    /// - `parakeet-*` → ParakeetEngine (FluidAudio / Apple Neural Engine)
+    /// - `openai_whisper-*` → WhisperKitEngine
+    /// Defaults to Parakeet TDT v3 multilingual (~610 MB, first-launch download).
     public var model: String
 
     /// Maximum recording duration. Hard cap to prevent runaway captures.
     public var maxRecordingSeconds: TimeInterval
 
-    /// Sample rate for audio capture. Whisper expects 16 kHz mono Float32.
+    /// Sample rate for audio capture. Both Whisper and Parakeet expect 16 kHz mono Float32.
     public let sampleRate: Double
 
     public init(
-        model: String = "openai_whisper-tiny.en",
+        model: String = "parakeet-tdt-0.6b-v3",
         maxRecordingSeconds: TimeInterval = 60,
         sampleRate: Double = 16_000
     ) {

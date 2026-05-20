@@ -105,7 +105,15 @@ enum GitWorkspaceStatusReader {
         let statusLines = git(["-C", path, "status", "--porcelain=v1"]).outputLines
         let changedFileCount = statusLines.count
         let untrackedFileCount = statusLines.filter { $0.hasPrefix("??") }.count
-        let numstatLines = git(["-C", path, "diff", "--numstat", "HEAD", "--"]).outputLines
+
+        // Branch-aware diff scope, matching ~/.claude/statusline-command.sh:
+        // on main/master we count WIP (working tree vs HEAD); on a feature
+        // branch we count the cumulative PR-size diff vs the integration branch.
+        let diffArgs = diffArguments(
+            forBranch: branchName,
+            integrationBranch: integrationBranch(at: path)
+        )
+        let numstatLines = git(["-C", path, "diff", "--numstat"] + diffArgs + ["--"]).outputLines
         let counts = parseNumstat(lines: numstatLines)
 
         return GitWorkspaceSnapshot(
@@ -115,6 +123,25 @@ enum GitWorkspaceStatusReader {
             removals: counts.removals,
             untrackedFileCount: untrackedFileCount
         )
+    }
+
+    /// Selects `git diff` arguments based on the current branch.
+    ///
+    /// Mirrors `~/.claude/statusline-command.sh` so the island badge agrees
+    /// with the shell statusline:
+    /// - On `main`/`master`: diff working tree against `HEAD` (WIP count).
+    /// - On any other branch with an integration branch available: diff against
+    ///   the integration branch using three-dot syntax (PR-size count from the
+    ///   merge-base — committed changes only, upstream advances ignored).
+    /// - Otherwise: fall back to WIP.
+    static func diffArguments(forBranch branch: String, integrationBranch: String?) -> [String] {
+        if branch == "main" || branch == "master" {
+            return ["HEAD"]
+        }
+        if let integrationBranch {
+            return ["\(integrationBranch)...HEAD"]
+        }
+        return ["HEAD"]
     }
 
     static func parseNumstat(lines: [String]) -> (additions: Int, removals: Int) {
@@ -132,6 +159,19 @@ enum GitWorkspaceStatusReader {
 
     private static func isInsideWorkTree(_ path: String) -> Bool {
         git(["-C", path, "rev-parse", "--is-inside-work-tree"]).trimmedOutput == "true"
+    }
+
+    private static func integrationBranch(at path: String) -> String? {
+        if refExists("main", at: path) { return "main" }
+        if refExists("master", at: path) { return "master" }
+        return nil
+    }
+
+    private static func refExists(_ ref: String, at path: String) -> Bool {
+        // Bare ref name lets git resolve through HEAD → refs/heads/ → refs/remotes/,
+        // so repos that only have `origin/main` (no local tracking branch) still
+        // resolve correctly. Matches the statusline fallback semantics.
+        git(["-C", path, "rev-parse", "--verify", "--quiet", ref]).exitCode == 0
     }
 
     private static func currentBranchName(_ path: String) -> String? {

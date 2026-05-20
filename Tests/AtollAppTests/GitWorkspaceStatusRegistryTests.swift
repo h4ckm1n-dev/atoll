@@ -16,6 +16,50 @@ struct GitWorkspaceStatusRegistryTests {
     }
 
     @Test
+    func diffArgumentsCountsWipOnMainAndMaster() {
+        #expect(GitWorkspaceStatusReader.diffArguments(
+            forBranch: "main",
+            integrationBranch: "main"
+        ) == ["HEAD"])
+
+        #expect(GitWorkspaceStatusReader.diffArguments(
+            forBranch: "master",
+            integrationBranch: "master"
+        ) == ["HEAD"])
+    }
+
+    @Test
+    func diffArgumentsCountsAgainstIntegrationBranchOnFeatureBranch() {
+        #expect(GitWorkspaceStatusReader.diffArguments(
+            forBranch: "feat/badge",
+            integrationBranch: "main"
+        ) == ["main...HEAD"])
+
+        #expect(GitWorkspaceStatusReader.diffArguments(
+            forBranch: "fix/badge",
+            integrationBranch: "master"
+        ) == ["master...HEAD"])
+    }
+
+    @Test
+    func diffArgumentsFallsBackToWipWhenNoIntegrationBranchExists() {
+        #expect(GitWorkspaceStatusReader.diffArguments(
+            forBranch: "feat/badge",
+            integrationBranch: nil
+        ) == ["HEAD"])
+    }
+
+    @Test
+    func diffArgumentsHandlesDetachedHeadShaAsFeatureBranch() {
+        // currentBranchName falls back to the short SHA when detached;
+        // that hash isn't "main"/"master", so it should diff against main.
+        #expect(GitWorkspaceStatusReader.diffArguments(
+            forBranch: "abc1234",
+            integrationBranch: "main"
+        ) == ["main...HEAD"])
+    }
+
+    @Test
     func diffSummaryUsesCleanDirtyAndLineCounts() {
         #expect(GitWorkspaceSnapshot(
             branchName: "main",

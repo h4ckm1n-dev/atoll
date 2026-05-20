@@ -1,33 +1,114 @@
 name: Release
 
+# Dual trigger:
+#  - push of a v* tag (covers human tag pushes from a workstation)
+#  - workflow_run completion of Auto-tag with conclusion=success (covers
+#    bot-pushed tags from auto-tag.yml, which the default GITHUB_TOKEN
+#    cannot chain into a tag-push event by design).
 on:
   push:
     tags:
       - 'v*'
+  workflow_run:
+    workflows: ["Auto-tag"]
+    types: [completed]
+    branches: [main]
 
 permissions:
   contents: write
   pull-requests: write
 
+# Prevent concurrent runs against the same resolved tag — two release.yml
+# runs racing on the same v1.x.y would double-publish the GitHub release.
+concurrency:
+  group: release-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: false
+
 jobs:
   build-and-release:
     runs-on: macos-26
+    # workflow_run fires on every Auto-tag completion (success / failure /
+    # cancelled). We only want to release when Auto-tag actually pushed a tag,
+    # which corresponds to conclusion=success. Push-triggered runs pass through.
+    if: github.event_name == 'push' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     steps:
+      # When workflow_run-triggered, the default checkout ref is the default
+      # branch. We instead check out the SHA that Auto-tag tagged.
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
 
-      - name: Extract version from tag
-        id: version
+      - name: Fetch all tags
+        run: git fetch --tags --force
+
+      # Tag resolution:
+      #  - push event on a tag: github.ref_name is the tag (e.g. "v1.4.0").
+      #  - workflow_run event: find the v* tag pointing at the head_sha that
+      #    Auto-tag just published. There should be exactly one in normal
+      #    operation; if there are zero, Auto-tag must have failed to push
+      #    (defensive fallback to "no tag, skip release").
+      - name: Resolve tag and version
+        id: resolve
         env:
+          EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
-        run: echo "version=${REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          WF_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            tag="$REF_NAME"
+          else
+            tag="$(git tag --points-at "$WF_HEAD_SHA" --list 'v[0-9]*' | sort -V | tail -1)"
+          fi
 
-      # Best-effort signing. If APPLE_CERTIFICATE_P12 is absent, we ship an
-      # ad-hoc-signed DMG (script's fallback) and skip notarization. When
-      # secrets are present, the chain produces a Developer ID signed +
-      # notarized + stapled DMG exactly as before.
+          if [[ -z "$tag" ]]; then
+            echo "::warning::No v* tag found — exiting cleanly."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          version="${tag#v}"
+          {
+            echo "skip=false"
+            echo "tag=$tag"
+            echo "version=$version"
+          } >> "$GITHUB_OUTPUT"
+          echo "::notice::Resolved release target tag=$tag version=$version"
+
+      # Idempotency. If release.yml already published (or drafted) this tag
+      # — possibly because a human re-pushed the tag after Auto-tag, or
+      # workflow_run + push fire on overlapping events — skip without error.
+      - name: Skip if release already exists
+        id: existing
+        if: steps.resolve.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.resolve.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::notice::Release $TAG already exists — skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Below this point: every step gates on both skip flags being false.
+      # We define a single composite skip output for readability.
+      - name: Compute do_build
+        id: gate
+        run: |
+          set -euo pipefail
+          if [[ "${{ steps.resolve.outputs.skip }}" == "true" ]] \
+             || [[ "${{ steps.existing.outputs.skip }}" == "true" ]]; then
+            echo "do_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "do_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Check signing secrets
+        if: steps.gate.outputs.do_build == 'true'
         id: signing
         env:
           CERT: ${{ secrets.APPLE_CERTIFICATE_P12 }}
@@ -47,12 +128,13 @@ jobs:
           echo "::notice::Signing capability — cert:$have_cert notary:$have_notary sparkle:$have_sparkle"
 
       - name: Install dependencies
+        if: steps.gate.outputs.do_build == 'true'
         run: |
           brew install create-dmg
           pip3 install --break-system-packages Pillow
 
       - name: Import signing certificate
-        if: steps.signing.outputs.have_cert == 'true'
+        if: steps.gate.outputs.do_build == 'true' && steps.signing.outputs.have_cert == 'true'
         env:
           CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
           CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -62,7 +144,6 @@ jobs:
           HAVE_NOTARY: ${{ steps.signing.outputs.have_notary }}
         run: |
           set -euo pipefail
-
           CERT_FILE="$(mktemp).p12"
           printf '%s' "$CERTIFICATE_P12" | base64 --decode > "$CERT_FILE"
 
@@ -95,22 +176,24 @@ jobs:
           rm -f "$CERT_FILE"
 
       - name: Build and package
+        if: steps.gate.outputs.do_build == 'true'
         env:
           ATOLL_APP_NAME: "Atoll"
-          ATOLL_VERSION: ${{ steps.version.outputs.version }}
+          ATOLL_VERSION: ${{ steps.resolve.outputs.version }}
           ATOLL_BUILD_NUMBER: ${{ github.run_number }}
           ATOLL_SIGN_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           ATOLL_UNIVERSAL: "true"
         run: zsh scripts/package-app.sh
 
       - name: Verify artifacts
+        if: steps.gate.outputs.do_build == 'true'
         run: |
           test -f "output/package/Atoll.zip"
           test -f "output/package/Atoll.dmg"
           ls -lh output/package/
 
       - name: Verify code signature
-        if: steps.signing.outputs.have_cert == 'true'
+        if: steps.gate.outputs.do_build == 'true' && steps.signing.outputs.have_cert == 'true'
         run: |
           bundle="output/package/Atoll.app"
           echo "--- Signature info ---"
@@ -120,6 +203,7 @@ jobs:
           codesign --verify --deep --strict --verbose=2 "$bundle"
 
       - name: Verify bundle structure
+        if: steps.gate.outputs.do_build == 'true'
         run: |
           bundle="output/package/Atoll.app"
           echo "--- Bundle contents ---"
@@ -139,7 +223,7 @@ jobs:
           echo "Bundle structure OK"
 
       - name: Notarize (best-effort)
-        if: steps.signing.outputs.have_notary == 'true' && vars.SKIP_NOTARIZE != 'true'
+        if: steps.gate.outputs.do_build == 'true' && steps.signing.outputs.have_notary == 'true' && vars.SKIP_NOTARIZE != 'true'
         id: notarize
         continue-on-error: true
         env:
@@ -170,7 +254,7 @@ jobs:
           echo "notarized=true" >> "$GITHUB_OUTPUT"
 
       - name: Sign update with EdDSA (Sparkle)
-        if: steps.signing.outputs.have_sparkle == 'true'
+        if: steps.gate.outputs.do_build == 'true' && steps.signing.outputs.have_sparkle == 'true'
         id: sparkle_sign
         env:
           SPARKLE_EDDSA_KEY: ${{ secrets.SPARKLE_EDDSA_KEY }}
@@ -193,7 +277,7 @@ jobs:
       - name: Update appcast.xml
         if: steps.sparkle_sign.outputs.signed == 'true'
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.resolve.outputs.version }}
           BUILD_NUMBER: ${{ github.run_number }}
           ED_SIG: ${{ steps.sparkle_sign.outputs.ed_signature }}
           LENGTH: ${{ steps.sparkle_sign.outputs.length }}
@@ -205,7 +289,7 @@ jobs:
         if: steps.sparkle_sign.outputs.signed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.resolve.outputs.version }}
         run: |
           set -euo pipefail
           branch="chore/appcast-v${VERSION}"
@@ -226,14 +310,15 @@ jobs:
           gh pr merge "$branch" --merge --admin --delete-branch
 
       - name: Create GitHub Release
+        if: steps.gate.outputs.do_build == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REF_NAME: ${{ github.ref_name }}
+          TAG: ${{ steps.resolve.outputs.tag }}
         run: |
           set -euo pipefail
-          prev_tag="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo '')"
-          gh release create "$REF_NAME" \
-            --title "Atoll $REF_NAME" \
+          prev_tag="$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo '')"
+          gh release create "$TAG" \
+            --title "Atoll $TAG" \
             --generate-notes \
             --notes-start-tag "$prev_tag" \
             --draft \
@@ -241,30 +326,31 @@ jobs:
             "output/package/Atoll.zip#Atoll.zip (macOS, Universal)"
 
       - name: Append install instructions to release notes
+        if: steps.gate.outputs.do_build == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REF_NAME: ${{ github.ref_name }}
+          TAG: ${{ steps.resolve.outputs.tag }}
           NOTARIZED: ${{ steps.notarize.outputs.notarized }}
           HAVE_CERT: ${{ steps.signing.outputs.have_cert }}
         run: |
           set -euo pipefail
-          existing="$(gh release view "$REF_NAME" --json body -q .body)"
+          existing="$(gh release view "$TAG" --json body -q .body)"
           if [[ "$NOTARIZED" == "true" ]]; then
             install_note="> This build is signed and notarized by Apple. It will launch without Gatekeeper warnings."
           elif [[ "$HAVE_CERT" == "true" ]]; then
-            install_note="> This build is signed with a Developer ID certificate. On first launch, right-click → **Open** to bypass Gatekeeper."
+            install_note="> This build is signed with a Developer ID certificate. On first launch, right-click then Open to bypass Gatekeeper."
           else
-            install_note="> This build is **unsigned**. On first launch, right-click → **Open**, then confirm in System Settings → Privacy & Security to bypass Gatekeeper."
+            install_note="> This build is unsigned. On first launch, right-click then Open, then confirm in System Settings then Privacy and Security to bypass Gatekeeper."
           fi
-          gh release edit "$REF_NAME" --notes "$(cat <<EOF
+          gh release edit "$TAG" --notes "$(cat <<EOF
           ${existing}
 
           ---
 
           ## Installation
 
-          1. Download **Atoll.dmg**, open it, and drag **Atoll** to **Applications**.
-          2. Requires **macOS 14+** (Apple Silicon and Intel).
+          1. Download Atoll.dmg, open it, and drag Atoll to Applications.
+          2. Requires macOS 14+ (Apple Silicon and Intel).
 
           ${install_note}
           EOF

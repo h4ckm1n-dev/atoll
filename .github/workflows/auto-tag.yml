@@ -7,12 +7,14 @@ name: Auto-tag
 # the DMG and publishes a draft release.
 #
 # Security notes:
-#  - Untrusted head-commit fields (message, author.username) are only used
-#    inside GitHub's `if:` expression engine, never interpolated into a
-#    shell `run:` block.
-#  - The shell steps read commit subjects via `git log --pretty=%s` and
-#    only use them in bash [[ =~ ]] pattern matching, which does not
-#    execute. They are never passed through `echo $var` to a shell parser.
+#  - The job-level if: uses only `head_commit.author.username` (a GitHub
+#    expression value, never interpolated into a shell).
+#  - Untrusted head_commit.message is NOT used in expressions; the
+#    [skip release] check is done against the local `git log -1 --pretty=%s`
+#    output, which reads the SUBJECT line only (so a PR body that documents
+#    the marker does not accidentally trigger).
+#  - Shell steps read commit subjects via `git log --pretty=%s` and use bash
+#    [[ =~ ]] pattern matching; nothing is passed through a shell parser.
 
 on:
   push:
@@ -29,16 +31,28 @@ concurrency:
 jobs:
   tag:
     runs-on: ubuntu-latest
-    if: >-
-      github.event.head_commit.author.username != 'github-actions[bot]' &&
-      !contains(github.event.head_commit.message, '[skip release]')
+    if: github.event.head_commit.author.username != 'github-actions[bot]'
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Check for [skip release] in commit subject
+        id: skip_check
+        shell: bash
+        run: |
+          set -euo pipefail
+          subject="$(git log -1 --pretty='%s' HEAD)"
+          if [[ "$subject" == *"[skip release]"* ]]; then
+            echo "::notice::Subject contains [skip release] - skipping auto-tag."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Determine next version
+        if: steps.skip_check.outputs.skip != 'true'
         id: bump
         shell: bash
         run: |
@@ -101,7 +115,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Push tag
-        if: steps.bump.outputs.skip != 'true'
+        if: steps.skip_check.outputs.skip != 'true' && steps.bump.outputs.skip != 'true'
         env:
           NEXT: ${{ steps.bump.outputs.next }}
           BUMP: ${{ steps.bump.outputs.bump }}

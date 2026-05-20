@@ -78,16 +78,24 @@ jobs:
             exit 0
           fi
 
+          # Regex variables: bash [[ =~ ]] inline regex chokes on nested
+          # parens / escapes ("syntax error: unexpected token ')'"). Putting
+          # the pattern in a variable bypasses the conditional-expression
+          # parser entirely. Verified across bash 3.2 (macOS) and 5+ (runner).
+          breaking_re='^[a-z]+(\([^)]*\))?!:'
+          feat_re='^feat(\([^)]*\))?:'
+          fix_re='^fix(\([^)]*\))?:'
+
           bump="none"
           while IFS= read -r line; do
             [[ -z "$line" ]] && continue
-            if [[ "$line" =~ ^[a-z]+(\([^)]*\))?\!: ]] || [[ "$line" == *"BREAKING CHANGE"* ]]; then
+            if [[ "$line" =~ $breaking_re ]] || [[ "$line" == *"BREAKING CHANGE"* ]]; then
               bump="major"
               break
             fi
-            if [[ "$line" =~ ^feat(\([^)]*\))?: ]] && [[ "$bump" != "major" ]]; then
+            if [[ "$line" =~ $feat_re ]] && [[ "$bump" != "major" ]]; then
               bump="minor"
-            elif [[ "$line" =~ ^fix(\([^)]*\))?: ]] && [[ "$bump" == "none" ]]; then
+            elif [[ "$line" =~ $fix_re ]] && [[ "$bump" == "none" ]]; then
               bump="patch"
             fi
           done <<< "$commits"

@@ -1,0 +1,115 @@
+name: Auto-tag
+
+# Conventional-commit-aware tag bumper. On push to main, walks commits since
+# the last v* tag, derives the bump type (BREAKING -> major, feat -> minor,
+# fix -> patch, everything else -> skip), and pushes a new v<X.Y.Z> tag.
+# Pushing the tag chains into release.yml, which builds + signs + notarizes
+# the DMG and publishes a draft release.
+#
+# Security notes:
+#  - Untrusted head-commit fields (message, author.username) are only used
+#    inside GitHub's `if:` expression engine, never interpolated into a
+#    shell `run:` block.
+#  - The shell steps read commit subjects via `git log --pretty=%s` and
+#    only use them in bash [[ =~ ]] pattern matching, which does not
+#    execute. They are never passed through `echo $var` to a shell parser.
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: auto-tag
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.head_commit.author.username != 'github-actions[bot]' &&
+      !contains(github.event.head_commit.message, '[skip release]')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Determine next version
+        id: bump
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          last_tag="$(git tag --list 'v[0-9]*' --sort=-v:refname | head -1 || true)"
+          echo "last_tag=${last_tag:-<none>}"
+
+          if [[ -z "$last_tag" ]]; then
+            major=0; minor=1; patch=0
+            range="HEAD"
+          else
+            version="${last_tag#v}"
+            version="${version%-atoll}"
+            IFS='.' read -r major minor patch <<< "$version"
+            range="${last_tag}..HEAD"
+          fi
+
+          commits="$(git log "$range" --pretty='%s')"
+          if [[ -z "$commits" ]]; then
+            echo "::notice::No commits since ${last_tag:-<none>}; skipping tag bump."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          bump="none"
+          while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            if [[ "$line" =~ ^[a-z]+(\([^)]*\))?\!: ]] || [[ "$line" == *"BREAKING CHANGE"* ]]; then
+              bump="major"
+              break
+            fi
+            if [[ "$line" =~ ^feat(\([^)]*\))?: ]] && [[ "$bump" != "major" ]]; then
+              bump="minor"
+            elif [[ "$line" =~ ^fix(\([^)]*\))?: ]] && [[ "$bump" == "none" ]]; then
+              bump="patch"
+            fi
+          done <<< "$commits"
+
+          echo "detected bump=$bump"
+          if [[ "$bump" == "none" ]]; then
+            echo "::notice::No feat/fix/BREAKING commits since ${last_tag:-<none>}; skipping tag bump."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          case "$bump" in
+            major) major=$((major+1)); minor=0; patch=0 ;;
+            minor) minor=$((minor+1)); patch=0 ;;
+            patch) patch=$((patch+1)) ;;
+          esac
+
+          next="v${major}.${minor}.${patch}"
+          echo "next=$next"
+          {
+            echo "skip=false"
+            echo "next=$next"
+            echo "bump=$bump"
+            echo "last_tag=${last_tag:-<none>}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Push tag
+        if: steps.bump.outputs.skip != 'true'
+        env:
+          NEXT: ${{ steps.bump.outputs.next }}
+          BUMP: ${{ steps.bump.outputs.bump }}
+          LAST_TAG: ${{ steps.bump.outputs.last_tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$NEXT" -m "Atoll $NEXT (auto-tagged: $BUMP bump from $LAST_TAG)"
+          git push origin "$NEXT"
+          echo "::notice::Pushed $NEXT - this will trigger release.yml."

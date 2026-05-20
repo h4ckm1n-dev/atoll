@@ -1643,7 +1643,8 @@ private struct IslandSessionRow: View {
 
     private func rowBody(referenceDate: Date) -> some View {
         let rawPresence = session.islandPresence(at: referenceDate)
-        let presence = (rawPresence == .inactive && isManuallyExpanded) ? .active : rawPresence
+        let isExpandedFromInactive = rawPresence == .inactive && isManuallyExpanded
+        let presence = isExpandedFromInactive ? .active : rawPresence
         let showsExpandedContent = presence != .inactive
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
@@ -1679,6 +1680,22 @@ private struct IslandSessionRow: View {
                             if showsContextBadge, presence != .inactive, let usage = contextUsage {
                                 ContextLeftBadge(usage: usage, palette: themePalette)
                             }
+                            if rawPresence == .inactive && !isManuallyExpanded {
+                                if let planBadge = collapsedPlanBadgeText {
+                                    compactBadge(
+                                        planBadge,
+                                        presence: presence,
+                                        tint: themePalette.role(.completion).swiftUIColor.opacity(0.72)
+                                    )
+                                }
+                                if let taskBadge = collapsedTaskBadgeText {
+                                    compactBadge(
+                                        taskBadge,
+                                        presence: presence,
+                                        tint: themePalette.green.swiftUIColor.opacity(0.72)
+                                    )
+                                }
+                            }
                             if showsAgeBadge {
                                 compactBadge(session.spotlightAgeBadge, presence: presence)
                             }
@@ -1704,8 +1721,13 @@ private struct IslandSessionRow: View {
                             .lineLimit(1)
                     }
 
-                    if let planState, session.phase != .waitingForApproval {
-                        planDisclosure(state: streamSafe(planState))
+                    if showsExpandedContent || isActionable,
+                       let planState,
+                       session.phase != .waitingForApproval {
+                        planDisclosure(
+                            state: streamSafe(planState),
+                            forceExpanded: isExpandedFromInactive
+                        )
                     }
 
                     if showsExpandedContent,
@@ -1907,16 +1929,17 @@ private struct IslandSessionRow: View {
     /// (after the user has approved the plan); the pre-approval body
     /// renders the same data as a read-only review block instead.
     @ViewBuilder
-    private func planDisclosure(state: PlanState) -> some View {
+    private func planDisclosure(state: PlanState, forceExpanded: Bool = false) -> some View {
         let total = state.steps.count
         let checked = state.checkedIDs.count
+        let showsPlan = forceExpanded || planExpanded
 
         VStack(alignment: .leading, spacing: 6) {
             Button {
                 planExpanded.toggle()
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: planExpanded ? "chevron.down" : "chevron.right")
+                    Image(systemName: showsPlan ? "chevron.down" : "chevron.right")
                         .font(.system(size: 9, weight: .semibold))
                     Image(systemName: "list.bullet.rectangle")
                         .font(.system(size: 10))
@@ -1932,7 +1955,7 @@ private struct IslandSessionRow: View {
             }
             .buttonStyle(.plain)
 
-            if planExpanded {
+            if showsPlan {
                 PlanMarkdownView(
                     rawMarkdown: state.rawMarkdown,
                     palette: themePalette,
@@ -2297,6 +2320,40 @@ private struct IslandSessionRow: View {
         return lang.t("tasks.summary", done, prog, pend)
     }
 
+    private var collapsedPlanBadgeText: String? {
+        guard let planState, !planState.steps.isEmpty else { return nil }
+        return "Plan \(planState.checkedIDs.count)/\(planState.steps.count)"
+    }
+
+    private var collapsedTaskBadgeText: String? {
+        guard let tasks = session.claudeMetadata?.activeTasks, !tasks.isEmpty else { return nil }
+        let done = tasks.filter { $0.status == .completed }.count
+        let prog = tasks.filter { $0.status == .inProgress }.count
+        if done > 0 {
+            return "\(done) done"
+        }
+        if prog > 0 {
+            return "\(prog) active"
+        }
+        return "\(tasks.count) tasks"
+    }
+
+    private var hasCollapsedDetailsToExpand: Bool {
+        if planState?.steps.isEmpty == false {
+            return true
+        }
+        if session.claudeMetadata?.activeTasks.isEmpty == false {
+            return true
+        }
+        if session.spotlightPromptText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
+            return true
+        }
+        if session.lastAssistantMessageText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
+            return true
+        }
+        return false
+    }
+
     @ViewBuilder
     private func taskStatusIcon(_ status: ClaudeTaskInfo.Status) -> some View {
         switch status {
@@ -2334,11 +2391,16 @@ private struct IslandSessionRow: View {
 
     private func handlePrimaryTap() {
         let rawPresence = session.islandPresence(at: referenceDate)
-        if rawPresence == .inactive && !isManuallyExpanded {
+        if rawPresence == .inactive && !isManuallyExpanded && hasCollapsedDetailsToExpand {
             withAnimation(.easeInOut(duration: 0.2)) {
                 onManualExpansionChange?(true)
             }
         } else {
+            if isManuallyExpanded {
+                withAnimation(.easeInOut(duration: 0.16)) {
+                    onManualExpansionChange?(false)
+                }
+            }
             onJump()
         }
     }

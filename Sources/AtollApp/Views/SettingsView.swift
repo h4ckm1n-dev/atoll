@@ -139,35 +139,27 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var detailView: some View {
-        ZStack(alignment: .topTrailing) {
-            switch selectedTab {
-            case .general:
-                GeneralSettingsPane(model: model)
-            case .setup:
-                SetupSettingsPane(model: model)
-            case .appearance:
-                AppearanceSettingsPane(model: model)
-            case .display:
-                DisplaySettingsPane(model: model)
-            case .sound:
-                SoundSettingsPane(model: model)
-            case .watch:
-                WatchSettingsPane(model: model)
-            case .shortcuts:
-                ShortcutsSettingsPane(model: model)
-            case .dictation:
-                DictationSettingsPane(model: model)
-            case .lab:
-                LabSettingsPane(model: model)
-            case .about:
-                AboutSettingsPane(model: model)
-            }
-
-            if model.updateChecker.hasUpdate {
-                UpdateCard(updateChecker: model.updateChecker, lang: lang)
-                    .padding(.top, 8)
-                    .padding(.trailing, 16)
-            }
+        switch selectedTab {
+        case .general:
+            GeneralSettingsPane(model: model)
+        case .setup:
+            SetupSettingsPane(model: model)
+        case .appearance:
+            AppearanceSettingsPane(model: model)
+        case .display:
+            DisplaySettingsPane(model: model)
+        case .sound:
+            SoundSettingsPane(model: model)
+        case .watch:
+            WatchSettingsPane(model: model)
+        case .shortcuts:
+            ShortcutsSettingsPane(model: model)
+        case .dictation:
+            DictationSettingsPane(model: model)
+        case .lab:
+            LabSettingsPane(model: model)
+        case .about:
+            AboutSettingsPane(model: model)
         }
     }
 }
@@ -467,6 +459,12 @@ struct AboutSettingsPane: View {
                     .disabled(!model.updateChecker.canCheckForUpdates)
                     .opacity(model.updateChecker.canCheckForUpdates ? 1 : 0.55)
                     .accessibilityIdentifier("settings.about.checkForUpdates")
+
+                    if model.updateChecker.hasUpdate {
+                        UpdateCard(updateChecker: model.updateChecker, lang: lang)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 12, trailing: 12))
+                            .accessibilityIdentifier("settings.about.updateCard")
+                    }
                 }
 
                 Section {
@@ -1533,7 +1531,7 @@ struct UpdateCard: View {
         )
         .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
         .animation(.easeInOut(duration: 0.2), value: isExpanded)
-        .frame(maxWidth: 340)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: Private

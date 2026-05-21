@@ -11,6 +11,8 @@ This update makes Atoll's updater feel honest again: Settings now shows the newe
 ### Update Experience
 
 - Settings now checks the public GitHub release line, so a newer Atoll release can still appear even if the Sparkle feed is behind.
+- The in-app changelog now lives only in Settings, next to the update action, instead of floating over every settings page.
+- Release notes shown inside Atoll are curated around user-facing improvements instead of raw commit text.
 - When a one-click Sparkle install is not available, the primary action becomes a direct download path instead of a misleading update button.
 - Version detection now understands Atoll's current release line, so future updates do not get blocked by old Open Island build numbers.
 

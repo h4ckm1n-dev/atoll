@@ -88,7 +88,7 @@ final class UpdateChecker: NSObject {
     private func refreshLatestReleaseFromGitHub() async {
         guard let release = await releaseFetcher.fetchLatest() else { return }
         latestReleaseName = release.displayName
-        latestReleaseNotes = release.body
+        latestReleaseNotes = Self.inAppReleaseNotes(for: release) ?? release.body
         latestReleaseURL = release.htmlURL
         let releaseVersion = Self.normalizedVersionString(release.tagName)
         guard Self.isVersion(releaseVersion, newerThan: Self.currentVersionString) else { return }
@@ -132,6 +132,62 @@ final class UpdateChecker: NSObject {
                 let digits = component.prefix { $0.isNumber }
                 return Int(String(digits)) ?? 0
             }
+    }
+
+    private static func inAppReleaseNotes(for release: GitHubRelease) -> String? {
+        switch normalizedVersionString(release.tagName) {
+        case "1.5.0":
+            """
+            ## A smoother path to new Atoll builds
+
+            Atoll's release flow is now harder to stall, so new work can become a downloadable macOS app faster.
+
+            ### What feels better
+
+            - New versions created by automation now trigger the macOS build pipeline automatically.
+            - The release page stays cleaner when automation retries, with fewer duplicate uploads or half-finished drafts.
+            - Test builds can still be produced when Apple signing is not configured, so release work does not freeze while certificates are being prepared.
+
+            ### Why it matters
+
+            This update is mostly about delivery quality: fewer release-day surprises, faster access to fresh builds, and a more reliable path from feature work to the DMG you install.
+            """
+        case "1.4.0":
+            """
+            ## A more predictable release rhythm
+
+            Atoll can now turn meaningful work on `main` into a versioned release with less manual coordination.
+
+            ### What feels better
+
+            - New product work can create the next version tag automatically.
+            - Fixes, features, and breaking changes map to clearer version bumps.
+            - Release artifacts now use Atoll names consistently: `Atoll.app`, `Atoll.dmg`, and `Atoll.zip`.
+
+            ### Why it matters
+
+            The release history becomes easier to trust, and installing the right Atoll build becomes less confusing.
+            """
+        case "1.3.0":
+            """
+            ## A calmer, more useful island
+
+            Atoll became easier to scan while you work, with better progress signals and cleaner update information.
+
+            ### What feels better
+
+            - The island badge better reflects the branch you are actually working on.
+            - Completed plan cards collapse by default, keeping the island calm after work is done.
+            - Settings can show an expandable update card with release notes before you update.
+            - Installer artwork was refreshed so the download flow feels more polished.
+
+            ### Why it matters
+
+            The island stays focused on live coding context instead of becoming another noisy dashboard.
+            """
+        default:
+            nil
+        }
     }
 }
 

@@ -325,7 +325,7 @@ jobs:
             --title "Atoll $TAG" \
             --generate-notes \
             --notes-start-tag "$prev_tag" \
-            --draft \
+            --latest \
             "output/package/Atoll.dmg#Atoll.dmg (macOS, Universal)" \
             "output/package/Atoll.zip#Atoll.zip (macOS, Universal)"
 

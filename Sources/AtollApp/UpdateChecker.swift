@@ -12,7 +12,9 @@ import Sparkle
 final class UpdateChecker: NSObject {
     static let releasesURL = URL(string: "https://github.com/h4ckm1n-dev/atoll/releases")!
 
-    private(set) var canCheckForUpdates = false
+    private(set) var canCheckForUpdates = true
+    private(set) var sparkleCanCheckForUpdates = false
+    private(set) var sparkleUpdateAvailable = false
     private(set) var hasUpdate = false
     private(set) var latestVersion: String?
     private(set) var latestReleaseName: String?
@@ -44,8 +46,10 @@ final class UpdateChecker: NSObject {
         // Dev builds run from a local branch that often carries fixes not yet in
         // the upstream appcast. Letting Sparkle prompt the user to "update" to
         // 1.0.21 would overwrite the bundle and silently discard those fixes.
-        // Skip the auto-check entirely in debug — release bundles still update.
+        // Skip Sparkle entirely in debug, but still fetch the latest GitHub
+        // release so the Settings pane can expose stale release/appcast issues.
         print("[UpdateChecker] skipped in DEBUG build")
+        Task { await refreshLatestReleaseFromGitHub() }
         return
         #else
         let updater = updaterController.updater
@@ -62,7 +66,7 @@ final class UpdateChecker: NSObject {
         cancellable = updater.publisher(for: \.canCheckForUpdates)
             .receive(on: RunLoop.main)
             .sink { [weak self] value in
-                self?.canCheckForUpdates = value
+                self?.sparkleCanCheckForUpdates = value
             }
 
         Task { await refreshLatestReleaseFromGitHub() }
@@ -71,7 +75,12 @@ final class UpdateChecker: NSObject {
 
     /// Manually trigger an update check (from Settings UI).
     func checkForUpdates() {
-        updaterController.checkForUpdates(nil)
+        Task { await refreshLatestReleaseFromGitHub() }
+        #if !DEBUG
+        if sparkleCanCheckForUpdates {
+            updaterController.checkForUpdates(nil)
+        }
+        #endif
     }
 
     // MARK: - Private
@@ -81,6 +90,48 @@ final class UpdateChecker: NSObject {
         latestReleaseName = release.displayName
         latestReleaseNotes = release.body
         latestReleaseURL = release.htmlURL
+        let releaseVersion = Self.normalizedVersionString(release.tagName)
+        guard Self.isVersion(releaseVersion, newerThan: Self.currentVersionString) else { return }
+        hasUpdate = true
+        if latestVersion == nil {
+            latestVersion = releaseVersion
+        }
+    }
+
+    private static var currentVersionString: String {
+        (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "0"
+    }
+
+    private static func normalizedVersionString(_ raw: String) -> String {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let withoutPrefix = trimmed.hasPrefix("v") ? String(trimmed.dropFirst()) : trimmed
+        return withoutPrefix
+            .split(separator: "-", maxSplits: 1)
+            .first
+            .map(String.init) ?? withoutPrefix
+    }
+
+    private static func isVersion(_ candidate: String, newerThan current: String) -> Bool {
+        let lhs = numericComponents(candidate)
+        let rhs = numericComponents(current)
+        let count = max(lhs.count, rhs.count)
+        for index in 0..<count {
+            let left = index < lhs.count ? lhs[index] : 0
+            let right = index < rhs.count ? rhs[index] : 0
+            if left != right {
+                return left > right
+            }
+        }
+        return false
+    }
+
+    private static func numericComponents(_ version: String) -> [Int] {
+        normalizedVersionString(version)
+            .split(separator: ".")
+            .map { component in
+                let digits = component.prefix { $0.isNumber }
+                return Int(String(digits)) ?? 0
+            }
     }
 }
 
@@ -95,6 +146,7 @@ extension UpdateChecker: SPUUpdaterDelegate {
         let version = item.displayVersionString
         Task { @MainActor in
             self.hasUpdate = true
+            self.sparkleUpdateAvailable = true
             self.latestVersion = version
             await self.refreshLatestReleaseFromGitHub()
         }
@@ -103,7 +155,9 @@ extension UpdateChecker: SPUUpdaterDelegate {
     nonisolated func updaterDidNotFindUpdate(_ updater: SPUUpdater, error: any Error) {
         Task { @MainActor in
             self.hasUpdate = false
+            self.sparkleUpdateAvailable = false
             self.latestVersion = nil
+            await self.refreshLatestReleaseFromGitHub()
         }
     }
 }

@@ -4,6 +4,15 @@ All notable changes to Atoll are documented here. Format based on [Keep a Change
 
 ---
 
+## Unreleased
+
+### Fixes
+
+- fix(update): surface newer GitHub releases in Settings even when the Sparkle appcast is stale, and fall back to the release download page when Sparkle cannot install directly.
+- fix(release): use monotonic git-count build numbers for Sparkle, require `SPARKLE_EDDSA_KEY` before publishing, and generate Atoll appcast URLs instead of stale Open Island URLs.
+
+---
+
 ## v1.5.0
 
 Release pipeline plumbing — no user-facing app changes. Closes the `GITHUB_TOKEN` chaining gap that prevented auto-tagged releases from triggering the DMG build.

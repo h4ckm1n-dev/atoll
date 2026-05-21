@@ -1594,8 +1594,18 @@ struct UpdateCard: View {
 
     private var actionRow: some View {
         HStack(spacing: 8) {
-            Button(lang.t("settings.update.updateNow")) {
-                updateChecker.checkForUpdates()
+            Button(
+                updateChecker.sparkleUpdateAvailable
+                    ? lang.t("settings.update.updateNow")
+                    : lang.t("settings.update.downloadNow")
+            ) {
+                if updateChecker.sparkleUpdateAvailable {
+                    updateChecker.checkForUpdates()
+                } else {
+                    NSWorkspace.shared.open(
+                        updateChecker.latestReleaseURL ?? UpdateChecker.releasesURL
+                    )
+                }
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.small)

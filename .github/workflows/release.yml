@@ -69,12 +69,14 @@ jobs:
           fi
 
           version="${tag#v}"
+          build_number="$(git rev-list --count HEAD)"
           {
             echo "skip=false"
             echo "tag=$tag"
             echo "version=$version"
+            echo "build_number=$build_number"
           } >> "$GITHUB_OUTPUT"
-          echo "::notice::Resolved release target tag=$tag version=$version"
+          echo "::notice::Resolved release target tag=$tag version=$version build=$build_number"
 
       # Idempotency. If release.yml already published (or drafted) this tag
       # — possibly because a human re-pushed the tag after Auto-tag, or
@@ -126,6 +128,10 @@ jobs:
             echo "have_sparkle=$have_sparkle"
           } >> "$GITHUB_OUTPUT"
           echo "::notice::Signing capability — cert:$have_cert notary:$have_notary sparkle:$have_sparkle"
+          if [[ "$have_sparkle" != "true" ]]; then
+            echo "::error::SPARKLE_EDDSA_KEY is required. Without it, Sparkle cannot verify the update zip and appcast.xml is not updated."
+            exit 1
+          fi
 
       - name: Install dependencies
         if: steps.gate.outputs.do_build == 'true'
@@ -180,7 +186,11 @@ jobs:
         env:
           ATOLL_APP_NAME: "Atoll"
           ATOLL_VERSION: ${{ steps.resolve.outputs.version }}
-          ATOLL_BUILD_NUMBER: ${{ github.run_number }}
+          # Sparkle compares CFBundleVersion, not just the marketing version.
+          # Keep builds monotonic across the Open Island -> Atoll release line;
+          # workflow run numbers restarted at 1 and made v1.5.0 look older than
+          # the legacy v1.0.28 feed item whose build is 65.
+          ATOLL_BUILD_NUMBER: ${{ steps.resolve.outputs.build_number }}
           # Only pass the identity string when we actually imported the cert,
           # otherwise codesign tries to sign with an identity that isn't in the
           # runner keychain and fails with "no identity found". When empty, the
@@ -282,7 +292,7 @@ jobs:
         if: steps.sparkle_sign.outputs.signed == 'true'
         env:
           VERSION: ${{ steps.resolve.outputs.version }}
-          BUILD_NUMBER: ${{ github.run_number }}
+          BUILD_NUMBER: ${{ steps.resolve.outputs.build_number }}
           ED_SIG: ${{ steps.sparkle_sign.outputs.ed_signature }}
           LENGTH: ${{ steps.sparkle_sign.outputs.length }}
         run: |

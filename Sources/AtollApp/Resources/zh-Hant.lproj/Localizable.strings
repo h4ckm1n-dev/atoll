@@ -204,6 +204,7 @@
 "settings.update.available" = "v%@ 可更新 — 點擊更新";
 "settings.update.whatsNew" = "更新內容";
 "settings.update.updateNow" = "立即更新";
+"settings.update.downloadNow" = "下載";
 "settings.update.viewOnGitHub" = "在 GitHub 查看";
 "settings.update.later" = "稍後";
 "settings.update.notesUnavailable" = "版本說明將在從 GitHub 擷取後顯示。";

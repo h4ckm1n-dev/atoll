@@ -5,7 +5,7 @@
 #   zsh scripts/update-appcast.sh <version> <build_number> <ed_signature> <length> [pub_date]
 #
 # Example:
-#   zsh scripts/update-appcast.sh 1.0.3 10 "abc123==" 9014852
+#   zsh scripts/update-appcast.sh 1.0.3 970 "abc123==" 9014852
 #
 # If pub_date is omitted, the current UTC time is used.
 
@@ -30,7 +30,9 @@ if [[ ! -f "$appcast" ]]; then
     exit 1
 fi
 
-download_url="https://github.com/Octane0411/open-vibe-island/releases/download/v${VERSION}/Open.Island.zip"
+release_repo="${ATOLL_RELEASE_REPO:-h4ckm1n-dev/atoll}"
+release_asset="${ATOLL_RELEASE_ASSET_NAME:-Atoll.zip}"
+download_url="https://github.com/${release_repo}/releases/download/v${VERSION}/${release_asset}"
 
 # Use Python for reliable XML-adjacent text insertion
 python3 - "$appcast" "$VERSION" "$BUILD_NUMBER" "$ED_SIGNATURE" "$LENGTH" "$PUB_DATE" "$download_url" <<'PYEOF'
@@ -65,6 +67,17 @@ marker = "<!-- Items are added by the release workflow. See docs/releasing.md. -
 if marker not in content:
     print("Error: marker comment not found in appcast.xml", file=sys.stderr)
     sys.exit(1)
+
+# Keep the script idempotent so a failed release run can safely re-run and
+# replace the same version's item instead of stacking duplicate entries.
+import re
+escaped_version = re.escape(version)
+content = re.sub(
+    rf"\n        <item>\n(?:(?!        <item>).)*?<sparkle:shortVersionString>{escaped_version}</sparkle:shortVersionString>.*?\n        </item>",
+    "",
+    content,
+    flags=re.DOTALL,
+)
 
 content = content.replace(marker, marker + "\n" + new_item)
 

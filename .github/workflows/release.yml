@@ -181,7 +181,11 @@ jobs:
           ATOLL_APP_NAME: "Atoll"
           ATOLL_VERSION: ${{ steps.resolve.outputs.version }}
           ATOLL_BUILD_NUMBER: ${{ github.run_number }}
-          ATOLL_SIGN_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # Only pass the identity string when we actually imported the cert,
+          # otherwise codesign tries to sign with an identity that isn't in the
+          # runner keychain and fails with "no identity found". When empty, the
+          # script falls back to ad-hoc signing.
+          ATOLL_SIGN_IDENTITY: ${{ steps.signing.outputs.have_cert == 'true' && secrets.APPLE_SIGNING_IDENTITY || '' }}
           ATOLL_UNIVERSAL: "true"
         run: zsh scripts/package-app.sh
 

@@ -6,78 +6,85 @@ All notable changes to Atoll are documented here. Format based on [Keep a Change
 
 ## Unreleased
 
-### Fixes
+This update makes Atoll's updater feel honest again: Settings now shows the newest release when it exists, and gives you a clear path to get it instead of hiding behind a stale "no update" answer.
 
-- fix(update): surface newer GitHub releases in Settings even when the Sparkle appcast is stale, and fall back to the release download page when Sparkle cannot install directly.
-- fix(release): use monotonic git-count build numbers for Sparkle, require `SPARKLE_EDDSA_KEY` before publishing, and generate Atoll appcast URLs instead of stale Open Island URLs.
+### Update Experience
+
+- Settings now checks the public GitHub release line, so a newer Atoll release can still appear even if the Sparkle feed is behind.
+- When a one-click Sparkle install is not available, the primary action becomes a direct download path instead of a misleading update button.
+- Version detection now understands Atoll's current release line, so future updates do not get blocked by old Open Island build numbers.
+
+### Release Quality
+
+- Release builds now use monotonic build numbers that Sparkle can compare correctly.
+- The release pipeline now refuses to publish an auto-update release unless the Sparkle signing key is configured.
+- The appcast generator now points to Atoll's real GitHub repo and `Atoll.zip` artifact.
 
 ---
 
 ## v1.5.0
 
-Release pipeline plumbing — no user-facing app changes. Closes the `GITHUB_TOKEN` chaining gap that prevented auto-tagged releases from triggering the DMG build.
+Atoll's release train is now much harder to stall. This release focuses on getting new builds from `main` to a downloadable macOS app reliably, so users spend less time waiting for a DMG after features land.
 
 ### Changes since v1.4.0
 
-#### Features
+### Release Experience
 
-- feat(release): dual-trigger on tag push and Auto-tag workflow_run (#61) — release.yml now listens for both `push: tags: v*` (human tag pushes) and `workflow_run: ["Auto-tag"]` (bot-pushed tags). The default `GITHUB_TOKEN` cannot fire downstream workflows on tag push by design, so bot-pushed tags from `auto-tag.yml` were silently not triggering release.yml. The `workflow_run` path bridges that gap. Includes idempotency (skip if release already exists) and concurrency-by-SHA to prevent races.
+- New versions created by automation now trigger the macOS build pipeline automatically (#61).
+- The release workflow avoids duplicate uploads, so the GitHub Releases page stays clean even when automation retries.
+- Unsigned fallback builds can still be produced when Apple signing secrets are not configured, which keeps test builds moving instead of blocking the release entirely.
 
-#### Fixes
+### Behind the Scenes
 
-- fix(release): pass empty `ATOLL_SIGN_IDENTITY` when cert is not imported (folded into #61) — without this, `codesign` failed with `no identity found` whenever the signing identity name was set as a secret but the `.p12` cert wasn't. Now the two related secrets vary together as one unit.
+- The workflow now handles both human-created tags and automation-created tags.
+- Signing inputs are treated as a matched set, preventing broken `codesign` attempts when only part of the Apple signing setup exists.
 
 ---
 
 ## v1.4.0
 
-Release pipeline plumbing — no user-facing app changes. Adds conventional-commit-driven auto-tagging on every push to main, and makes the existing release workflow actually buildable for the first time post-`OpenIsland → Atoll` rename.
+Atoll gained a more predictable release rhythm. Merged work can now turn into a versioned release with less manual coordination, making feature delivery faster and reducing broken release-day surprises.
 
 ### Changes since v1.3.0
 
-#### Features
+### Release Experience
 
-- feat: auto-tag main on conventional-commit pushes (#58) — new `.github/workflows/auto-tag.yml`. Walks commits since the last `v*` tag, derives bump type (`BREAKING` → major, `feat` → minor, `fix` → patch, `chore`/`docs`/`refactor` skipped), and pushes the next `vX.Y.Z` tag. `[skip release]` in a commit subject opts out. Bot-authored commits are filtered to avoid release loops.
+- Atoll can now create the next version tag automatically when meaningful product work lands on `main` (#58).
+- Fixes, features, and breaking changes map to the right kind of version bump, which makes the release history easier to trust.
+- The release path now uses Atoll names and artifacts throughout, so packages are built as `Atoll.app`, `Atoll.dmg`, and `Atoll.zip` instead of leaking old Open Island names (#59).
 
-#### Fixes
+### Reliability
 
-- fix(release): best-effort signing and subject-only auto-tag skip (#59) — release.yml was broken in five overlapping ways since the Atoll rename: passed `OPEN_ISLAND_*` env vars (script reads `ATOLL_*`); verified `Contents/MacOS/OpenIslandApp` (script builds `AtollApp`); hard-coded `Open Island.app/.dmg/.zip` paths (script writes `Atoll.*`); used a stale keychain notary profile; and required signing secrets that were never configured. Now: signing is gated on cert presence, env vars and artifact names match the script, and the workflow ships an ad-hoc-signed unsigned DMG when secrets are absent. Also moved the auto-tag `[skip release]` check into a shell step that matches only the commit subject (not the body), fixing a self-skip when PR bodies documented the marker.
-- fix(auto-tag): move regexes into variables to avoid bash conditional-expression parser (#60) — inline regexes containing nested escaped parens (`^[a-z]+(\([^)]*\))?\!:`) crashed bash's `[[ =~ ]]` parser with `syntax error: unexpected token ')'` before the regex engine even ran. Moving each pattern into a variable bypasses the conditional parser. Verified across 10 conventional-commit shapes.
-
-#### Maintenance
-
-- chore(deps): Update actions/checkout action to v6 (#56)
+- The release workflow now degrades gracefully when signing is unavailable, so a missing certificate does not kill every build (#59).
+- Release skipping is controlled by the commit title only, which prevents release notes or PR bodies from accidentally cancelling a release (#59).
+- The auto-tag parser is more robust across common commit shapes (#60).
+- The GitHub checkout action was updated to keep the pipeline current (#56).
 
 ---
 
 ## v1.3.0
 
-Branch-aware island badge, refined session glass cards with collapse-by-default for completed plans, refreshed installer artwork, and a checked-in changelog as the release source of truth.
+Atoll became more useful at a glance. The island now gives better context about what changed, completed work takes less space, and Settings makes updates feel like part of the app instead of a trip through GitHub.
 
 ### Changes since v1.2.0-atoll
 
-#### Features
+### Island Experience
 
-- feat: branch-aware diff scope for island badge (#52)
-- feat(settings): expandable update card with GitHub changelog (#49)
-- feat: polish session glass cards (cae4358)
+- The island badge now understands your branch context, so the change count better reflects the work you are actually doing (#52).
+- Session cards received a more polished glass treatment, making active coding context easier to scan without feeling heavy.
+- Completed plan cards now collapse by default, keeping the island calm once work is done while still leaving progress visible (#53).
 
-#### Fixes
+### Settings and Updates
 
-- fix: collapse completed plan cards by default (#53)
-- fix: tune liquid glass contrast (8abd504)
+- Settings now includes an expandable update card with release notes, so users can see what is new before updating (#49).
+- Update details are presented in-app with the GitHub changelog available when more context is needed.
 
-#### Reverts
+### Packaging and Polish
 
-- revert: restore pre-session-glass state (0ba0133)
-
-#### Maintenance
-
-- chore: refresh dmg-background brand assets (#54)
-- chore(deps): Update dependency sparkle-project/Sparkle to from: "2.9.2" (#51)
-- chore(deps): Update dependency argmaxinc/argmax-oss-swift to v1 (#47)
-- chore: cut v1.3.0 — activate release workflow and add bilingual changelog (#55)
-- chore: prepare v1.3.0 release (268c875)
+- The installer artwork was refreshed so the first-run install flow feels more like Atoll and less like a generic build artifact (#54).
+- Sparkle and app dependencies were refreshed to keep the update and app runtime foundation current (#51, #47).
+- The changelog is now checked into the repo as the source of truth for release storytelling (#55).
+- A visual experiment was rolled back where it made the island less clear, keeping the app closer to its compact notch-first feel.
 
 ---
 

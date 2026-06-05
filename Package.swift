@@ -35,7 +35,7 @@ let package = Package(
         // builds (`--arch arm64 --arch x86_64`) in package-app.sh. v1 migration is
         // a separate follow-up — needs investigation of the new package structure.
         .package(url: "https://github.com/argmaxinc/argmax-oss-swift.git", "0.9.0"..<"0.18.0"),
-        .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.14.8"),
+        .package(url: "https://github.com/FluidInference/FluidAudio.git", from: "0.15.1"),
     ],
     targets: [
         .target(

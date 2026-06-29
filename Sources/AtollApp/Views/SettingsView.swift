@@ -422,8 +422,8 @@ struct AboutSettingsPane: View {
     private var lang: LanguageManager { model.lang }
     private var primaryInk: Color { palette.text.swiftUIColor.opacity(0.94) }
 
-    // ponytail: single fill-in — swap to the Lemon Squeezy $29 checkout URL once the product exists.
-    private static let getProURL = URL(string: "https://github.com/h4ckm1n-dev/atoll")!
+    // ponytail: Lemon Squeezy $29 founding-license checkout.
+    private static let getProURL = URL(string: "https://oraka.lemonsqueezy.com/checkout/buy/85b00843-0387-4375-99a1-b2c56492d8ab")!
 
     var body: some View {
         VStack(spacing: 0) {

@@ -195,6 +195,7 @@
 /* Settings - About */
 "settings.about.version" = "版本 %@";
 "settings.about.checkForUpdates" = "檢查更新…";
+"settings.about.getPro" = "升級 Atoll Pro ♥";
 "settings.about.quitApp" = "結束 Atoll";
 "island.quit.confirmTitle" = "結束 Atoll？";
 "island.quit.confirmAction" = "結束";

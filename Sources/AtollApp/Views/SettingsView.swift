@@ -422,6 +422,9 @@ struct AboutSettingsPane: View {
     private var lang: LanguageManager { model.lang }
     private var primaryInk: Color { palette.text.swiftUIColor.opacity(0.94) }
 
+    // ponytail: Lemon Squeezy $29 founding-license checkout.
+    private static let getProURL = URL(string: "https://oraka.lemonsqueezy.com/checkout/buy/85b00843-0387-4375-99a1-b2c56492d8ab")!
+
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
@@ -465,6 +468,18 @@ struct AboutSettingsPane: View {
                             .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 12, trailing: 12))
                             .accessibilityIdentifier("settings.about.updateCard")
                     }
+                }
+
+                Section {
+                    aboutActionRow(
+                        title: lang.t("settings.about.getPro"),
+                        systemImage: "sparkles",
+                        tint: .pink,
+                        action: {
+                            NSWorkspace.shared.open(Self.getProURL)
+                        }
+                    )
+                    .accessibilityIdentifier("settings.about.getPro")
                 }
 
                 Section {

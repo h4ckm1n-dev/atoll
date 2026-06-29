@@ -195,6 +195,7 @@
 /* Settings - About */
 "settings.about.version" = "Version %@";
 "settings.about.checkForUpdates" = "Check for Updates…";
+"settings.about.getPro" = "Get Atoll Pro ♥";
 "settings.about.quitApp" = "Quit Atoll";
 "island.quit.confirmTitle" = "Quit Atoll?";
 "island.quit.confirmAction" = "Quit";
